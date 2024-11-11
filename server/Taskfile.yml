@@ -1,10 +1,10 @@
 version: "3"
 
 dotenv:
-  - .env
+  - dev.env
 
 tasks:
-  postgres:
+  postgres-up:
     desc: Start a postgres container and create the DB.
     cmd: >
       docker run --name $DB_CONTAINER_NAME 
@@ -13,6 +13,12 @@ tasks:
       -e POSTGRES_PASSWORD=$DB_PASS 
       -e POSTGRES_DB=$DB_NAME 
       -d $DB_CONTAINER_IMAGE
+
+  postgres-down:
+    desc: Stop and remove the postgres container.
+    cmds:
+      - docker stop skyvault_db
+      - docker rm skyvault_db
 
   create-db:
     desc: Create a new DB.
@@ -40,3 +46,7 @@ tasks:
       - Pass the file name as the MIGRATION_FILE_NAME variable
       - Ex: MIGRATION_FILE_NAME=init_db task migrate-create
     cmd: migrate create -ext sql -dir $DB_MIGRATION_PATH -seq $MIGRATION_FILE_NAME
+
+  gen-db-models:
+    desc: Generate DB models.
+    cmd: jet -dsn="$DB_CONN_STR" -schema=public -path=$DB_GEN_MODELS_PATH
