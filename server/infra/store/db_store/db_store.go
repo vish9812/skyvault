@@ -5,9 +5,6 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	"log"
-	"log/slog"
-	"os"
 	"skyvault/common"
 	"time"
 
@@ -16,6 +13,7 @@ import (
 	_ "github.com/golang-migrate/migrate/v4/source/file"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/jackc/pgx/v5/stdlib"
+	"github.com/rs/zerolog/log"
 )
 
 var ErrNoRows = errors.New("no rows in result set")
@@ -24,36 +22,38 @@ type DBStore struct {
 	*pgxpool.Pool
 }
 
-func NewDBStore(connStr string) *DBStore {
+func NewDBStore(dsn string) *DBStore {
+	logger := log.With().Str("dsn", dsn).Logger()
+
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	pool, err := connectDatabase(connStr)
+	pool := connectDatabase(dsn)
+
+	err := pool.Ping(ctx)
 	if err != nil {
-		log.Fatal(err)
+		logger.Fatal().Err(err).Msg("failed to ping the db")
 	}
 
-	err = pool.Ping(ctx)
-	if err != nil {
-		slog.ErrorContext(ctx, "failed to ping the db", slog.Any("error", err))
-		os.Exit(1)
-	}
+	logger.Info().Msg("connected to the db")
 
 	return &DBStore{pool}
 }
 
-func connectDatabase(dsn string) (*pgxpool.Pool, error) {
+func connectDatabase(dsn string) *pgxpool.Pool {
+	logger := log.With().Str("dsn", dsn).Logger()
+
 	config, err := pgxpool.ParseConfig(dsn)
 	if err != nil {
-		return nil, fmt.Errorf("failed to parse dsn config: %w", err)
+		logger.Fatal().Err(err).Msg("failed to parse the dsn config")
 	}
 
 	pool, err := pgxpool.NewWithConfig(context.Background(), config)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create pool: %w", err)
+		logger.Fatal().Err(err).Msg("failed to create pool")
 	}
 
-	return pool, nil
+	return pool
 }
 
 func (s *DBStore) openStdDB() *sql.DB {
@@ -62,7 +62,7 @@ func (s *DBStore) openStdDB() *sql.DB {
 
 func (s *DBStore) closeStdDB(stdDB *sql.DB) {
 	if err := stdDB.Close(); err != nil {
-		log.Fatal("failed to close the std DB", err)
+		log.Fatal().Err(err).Msg("failed to close the std DB")
 	}
 }
 
@@ -72,22 +72,27 @@ func (s *DBStore) MigrateUp() {
 
 	driver, err := postgres.WithInstance(stdDB, &postgres.Config{})
 	if err != nil {
-		log.Fatal("failed to create postgres driver", err)
+		log.Fatal().Err(err).Msg("failed to create the postgres driver")
 	}
 	defer func() {
 		if err := driver.Close(); err != nil {
-			log.Fatal("failed to close the postgres driver", err)
+			log.Fatal().Err(err).Msg("failed to close the postgres driver")
 		}
 	}()
 
-	testMigrate, err := migrate.NewWithDatabaseInstance(fmt.Sprintf("file://%s", common.Configs.DB_MIGRATION_PATH), "postgres", driver)
+	migrationPath := fmt.Sprintf("file://%s", common.Configs.DB_MIGRATION_PATH)
+	logger := log.With().Str("migration_path", migrationPath).Logger()
+
+	testMigrate, err := migrate.NewWithDatabaseInstance(migrationPath, "postgres", driver)
 	if err != nil {
-		log.Fatal("failed to create migrate instance", err)
+		logger.Fatal().Err(err).Msg("failed to create migrate instance")
 	}
 	err = testMigrate.Up()
 	if err != nil {
-		log.Fatal("failed to migrate up", err)
+		logger.Fatal().Err(err).Msg("failed to migrate up")
 	}
+
+	logger.Info().Msg("db migrated up")
 }
 
 func (s *DBStore) NewAuthRepo() *AuthRepo {

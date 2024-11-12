@@ -3,7 +3,6 @@ package db_store
 import (
 	"context"
 	"fmt"
-	"log"
 	"os"
 	"skyvault/common"
 	"skyvault/common/utils"
@@ -14,18 +13,12 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-var testMainPool *pgxpool.Pool // Database connection pool used across tests
+var testMainPool *pgxpool.Pool // testMainPool used across tests to create and drop test DBs
 
 func TestMain(m *testing.M) {
-	err := common.LoadConfig("../../../", "test", "env")
-	if err != nil {
-		log.Fatalf("failed to load test config: %v", err)
-	}
+	common.LoadConfig("../../../", "test", "env")
 
-	testMainPool, err = connectDatabase(common.Configs.DB_CONN_STR)
-	if err != nil {
-		log.Fatalf("failed to connect to main test database: %v", err)
-	}
+	testMainPool = connectDatabase(common.Configs.DB_CONN_STR)
 
 	code := m.Run()
 
@@ -38,7 +31,7 @@ func newTestDBStore(t *testing.T) *DBStore {
 
 	_, err := testMainPool.Exec(context.Background(), fmt.Sprintf("CREATE DATABASE %s", dbName))
 	if err != nil {
-		t.Fatalf("Failed to create test database %s: %v", dbName, err)
+		t.Fatalf("failed to create test db: %s error: %v", dbName, err)
 	}
 
 	// postgres://${DB_USER}:${DB_PASS}@${DB_HOST}:${DB_HOST_PORT}/${DB_NAME}?sslmode=disable
@@ -52,7 +45,7 @@ func newTestDBStore(t *testing.T) *DBStore {
 		testDBStore.Close()
 		_, err := testMainPool.Exec(context.Background(), fmt.Sprintf("DROP DATABASE %s", dbName))
 		if err != nil {
-			t.Fatalf("Failed to drop test database %s: %v", dbName, err)
+			t.Fatalf("failed to drop test db: %s error: %v", dbName, err)
 		}
 	})
 
