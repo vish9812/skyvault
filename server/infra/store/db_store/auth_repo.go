@@ -1,19 +1,17 @@
-package store
+package db_store
 
 import (
 	"context"
 	"skyvault/domain/auth"
 	"time"
 
-	"skyvault/infra/store/internal/gen_jet/skyvault/public/model"
-	. "skyvault/infra/store/internal/gen_jet/skyvault/public/table"
+	"skyvault/infra/store/db_store/internal/gen_jet/skyvault/public/model"
+	. "skyvault/infra/store/db_store/internal/gen_jet/skyvault/public/table"
 	// . "github.com/go-jet/jet/v2/postgres"
 )
 
-var _ auth.Repo = &AuthRepo{}
-
 type AuthRepo struct {
-	db *dbStore
+	DB *DBStore
 }
 
 func domainUserToDBUser(user *auth.User) *model.Users {
@@ -37,7 +35,7 @@ func (r *AuthRepo) CreateUser(ctx context.Context, user *auth.User) error {
 	stmt := Users.INSERT(Users.AllColumns).MODEL(dbUser)
 
 	query, args := stmt.Sql()
-	_, err := r.db.Exec(ctx, query, args...)
+	_, err := r.DB.Exec(ctx, query, args...)
 
 	return err
 }

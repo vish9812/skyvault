@@ -1,4 +1,4 @@
-package store
+package db_store
 
 import (
 	"context"
@@ -15,7 +15,7 @@ import (
 var testMainPool *pgxpool.Pool // Database connection pool used across tests
 
 func TestMain(m *testing.M) {
-	err := common.LoadConfig("../../", "test", "env")
+	err := common.LoadConfig("../../../", "test", "env")
 	if err != nil {
 		log.Fatalf("failed to load test config: %v", err)
 	}
@@ -31,11 +31,7 @@ func TestMain(m *testing.M) {
 	os.Exit(code)
 }
 
-func newTestStore(t *testing.T) *Store {
-	return NewStore(newTestDBStore(t))
-}
-
-func newTestDBStore(t *testing.T) *dbStore {
+func newTestDBStore(t *testing.T) *DBStore {
 	dbName := fmt.Sprintf("skyvault_test_%s", utils.RandomName())
 
 	_, err := testMainPool.Exec(context.Background(), fmt.Sprintf("CREATE DATABASE %s", dbName))

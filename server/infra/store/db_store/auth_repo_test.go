@@ -1,4 +1,4 @@
-package store
+package db_store
 
 import (
 	"skyvault/common/utils"
@@ -11,7 +11,7 @@ import (
 )
 
 func TestCreateUser(t *testing.T) {
-	testStore := newTestStore(t)
+	testStore := newTestDBStore(t)
 	authRepo := testStore.NewAuthRepo()
 
 	user := auth.NewUser()

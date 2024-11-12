@@ -6,19 +6,20 @@ dotenv:
 tasks:
   postgres-up:
     desc: Start a postgres container and create the DB.
-    cmd: >
-      docker run --name $DB_CONTAINER_NAME 
-      -p $DB_HOST_PORT:$DB_CONTAINER_PORT 
-      -e POSTGRES_USER=$DB_USER 
-      -e POSTGRES_PASSWORD=$DB_PASS 
-      -e POSTGRES_DB=$DB_NAME 
-      -d $DB_CONTAINER_IMAGE
+    cmds:
+      - mkdir data
+      - docker compose --env-file dev.env up -d
 
   postgres-down:
     desc: Stop and remove the postgres container.
     cmds:
-      - docker stop skyvault_db
-      - docker rm skyvault_db
+      - docker compose --env-file dev.env down
+
+  nuke:
+    desc: Remove the containers and generated data.
+    cmds:
+      - task: postgres-down
+      - sudo rm -rf data
 
   create-db:
     desc: Create a new DB.
