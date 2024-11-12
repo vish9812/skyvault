@@ -1,0 +1,14 @@
+name: skyvault
+services:
+  postgres:
+    container_name: ${DB_CONTAINER_NAME}
+    image: $DB_CONTAINER_IMAGE
+    restart: always
+    environment:
+      POSTGRES_USER: $DB_USER
+      POSTGRES_PASSWORD: $DB_PASS
+      POSTGRES_DB: $DB_NAME
+    volumes:
+      - $DB_HOST_VOLUME:/var/lib/postgresql/data
+    ports:
+      - "$DB_HOST_PORT:$DB_CONTAINER_PORT"

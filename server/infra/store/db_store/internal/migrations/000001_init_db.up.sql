@@ -5,7 +5,6 @@ create table if not exists users (
 	username text not null unique,
 	email text not null unique,
 	password_hash text not null,
-	auth_service text not null,
 	created_at timestamp not null default (timezone('utc', now())),
 	updated_at timestamp not null default (timezone('utc', now()))
 );
