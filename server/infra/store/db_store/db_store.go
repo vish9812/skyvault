@@ -2,6 +2,8 @@ package db_store
 
 import (
 	"context"
+	"database/sql"
+	"errors"
 	"fmt"
 	"log"
 	"log/slog"
@@ -16,15 +18,15 @@ import (
 	"github.com/jackc/pgx/v5/stdlib"
 )
 
+var ErrNoRows = errors.New("no rows in result set")
+
 type DBStore struct {
 	*pgxpool.Pool
 }
 
 func NewDBStore(connStr string) *DBStore {
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-	defer func() {
-		cancel()
-	}()
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
 
 	pool, err := connectDatabase(connStr)
 	if err != nil {
@@ -54,13 +56,19 @@ func connectDatabase(dsn string) (*pgxpool.Pool, error) {
 	return pool, nil
 }
 
+func (s *DBStore) openStdDB() *sql.DB {
+	return stdlib.OpenDBFromPool(s.Pool)
+}
+
+func (s *DBStore) closeStdDB(stdDB *sql.DB) {
+	if err := stdDB.Close(); err != nil {
+		log.Fatal("failed to close the std DB", err)
+	}
+}
+
 func (s *DBStore) MigrateUp() {
-	stdDB := stdlib.OpenDBFromPool(s.Pool)
-	defer func() {
-		if err := stdDB.Close(); err != nil {
-			log.Fatal("failed to close the std DB opened from the pool", err)
-		}
-	}()
+	stdDB := s.openStdDB()
+	defer s.closeStdDB(stdDB)
 
 	driver, err := postgres.WithInstance(stdDB, &postgres.Config{})
 	if err != nil {

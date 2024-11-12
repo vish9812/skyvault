@@ -16,3 +16,7 @@ func (id ID) ToString() string {
 func (id ID) ToUUID() uuid.UUID {
 	return uuid.UUID(id)
 }
+
+func ToID(uuid uuid.UUID) ID {
+	return ID(uuid)
+}

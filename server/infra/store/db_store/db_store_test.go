@@ -7,9 +7,11 @@ import (
 	"os"
 	"skyvault/common"
 	"skyvault/common/utils"
+	"skyvault/domain/auth"
 	"testing"
 
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/stretchr/testify/require"
 )
 
 var testMainPool *pgxpool.Pool // Database connection pool used across tests
@@ -55,4 +57,19 @@ func newTestDBStore(t *testing.T) *DBStore {
 	})
 
 	return testDBStore
+}
+
+func createTestUser(t *testing.T, authRepo auth.Repo) *auth.User {
+	user := auth.NewUser()
+	user.Email = utils.RandomEmail()
+	randStr := utils.RandomName()
+	user.Username = randStr
+	user.FirstName = randStr
+	user.LastName = randStr
+	user.PasswordHash = randStr
+
+	err := authRepo.CreateUser(context.Background(), user)
+	require.Nil(t, err)
+
+	return user
 }

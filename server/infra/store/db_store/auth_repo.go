@@ -2,49 +2,53 @@ package db_store
 
 import (
 	"context"
+	"errors"
 	"skyvault/domain/auth"
 	"time"
 
 	"skyvault/infra/store/db_store/internal/gen_jet/skyvault/public/model"
 	. "skyvault/infra/store/db_store/internal/gen_jet/skyvault/public/table"
-	// . "github.com/go-jet/jet/v2/postgres"
+	"skyvault/infra/store/db_store/internal/mappers"
+
+	. "github.com/go-jet/jet/v2/postgres"
+	"github.com/go-jet/jet/v2/qrm"
 )
 
 type AuthRepo struct {
 	DB *DBStore
 }
 
-func domainUserToDBUser(user *auth.User) *model.Users {
-	t := time.Now().UTC()
-
-	return &model.Users{
-		ID:           user.ID.ToUUID(),
-		FirstName:    user.FirstName,
-		LastName:     user.LastName,
-		Email:        user.Email,
-		Username:     user.Username,
-		PasswordHash: user.PasswordHash,
-		CreatedAt:    t,
-		UpdatedAt:    t,
-	}
-}
-
 func (r *AuthRepo) CreateUser(ctx context.Context, user *auth.User) error {
-	dbUser := domainUserToDBUser(user)
+	dbUser := mappers.DomainUserToDBUser(user)
+	t := time.Now().UTC()
+	dbUser.CreatedAt, dbUser.UpdatedAt = t, t
 
 	stmt := Users.INSERT(Users.AllColumns).MODEL(dbUser)
 
-	query, args := stmt.Sql()
-	_, err := r.DB.Exec(ctx, query, args...)
+	stdDB := r.DB.openStdDB()
+	defer r.DB.closeStdDB(stdDB)
+
+	_, err := stmt.ExecContext(ctx, stdDB)
 
 	return err
 }
 
-// func (r *AuthRepo) Get(ctx context.Context, id int) *auth.User {
-// 	entity := &UserEntity{
-// 		ID:       id,
-// 		Username: "me",
-// 		Password: "pass",
-// 	}
-// 	return entity.ToModel()
-// }
+func (r *AuthRepo) GetUserByUsername(ctx context.Context, username string) (*auth.User, error) {
+	stmt := SELECT(Users.AllColumns.Except(Users.PasswordHash)).
+		FROM(Users).
+		WHERE(Users.Username.EQ(String(username)))
+
+	stdDB := r.DB.openStdDB()
+	defer r.DB.closeStdDB(stdDB)
+
+	var dbUser model.Users
+	err := stmt.QueryContext(ctx, stdDB, &dbUser)
+	if err != nil {
+		if errors.Is(err, qrm.ErrNoRows) {
+			return nil, ErrNoRows
+		}
+		return nil, err
+	}
+
+	return mappers.DBUserToDomainUser(&dbUser), nil
+}
