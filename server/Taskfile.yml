@@ -7,7 +7,7 @@ tasks:
   postgres-up:
     desc: Start a postgres container and create the DB.
     cmds:
-      - mkdir data
+      - mkdir $APP_DATA_FOLDER
       - docker compose --env-file dev.env up -d
 
   postgres-down:
@@ -19,7 +19,7 @@ tasks:
     desc: Remove the containers and generated data.
     cmds:
       - task: postgres-down
-      - sudo rm -rf data
+      - sudo rm -rf $APP_DATA_FOLDER
 
   create-db:
     desc: Create a new DB.

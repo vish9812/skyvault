@@ -19,7 +19,7 @@ import (
 var ErrNoRows = errors.New("no rows in result set")
 
 type DBStore struct {
-	*pgxpool.Pool
+	pool *pgxpool.Pool
 }
 
 func NewDBStore(dsn string) *DBStore {
@@ -37,7 +37,9 @@ func NewDBStore(dsn string) *DBStore {
 
 	logger.Info().Msg("connected to the db")
 
-	return &DBStore{pool}
+	dbStore := &DBStore{pool}
+	dbStore.migrateUp()
+	return dbStore
 }
 
 func connectDatabase(dsn string) *pgxpool.Pool {
@@ -57,7 +59,7 @@ func connectDatabase(dsn string) *pgxpool.Pool {
 }
 
 func (s *DBStore) openStdDB() *sql.DB {
-	return stdlib.OpenDBFromPool(s.Pool)
+	return stdlib.OpenDBFromPool(s.pool)
 }
 
 func (s *DBStore) closeStdDB(stdDB *sql.DB) {
@@ -66,7 +68,7 @@ func (s *DBStore) closeStdDB(stdDB *sql.DB) {
 	}
 }
 
-func (s *DBStore) MigrateUp() {
+func (s *DBStore) migrateUp() {
 	stdDB := s.openStdDB()
 	defer s.closeStdDB(stdDB)
 
@@ -89,7 +91,11 @@ func (s *DBStore) MigrateUp() {
 	}
 	err = testMigrate.Up()
 	if err != nil {
-		logger.Fatal().Err(err).Msg("failed to migrate up")
+		if errors.Is(err, migrate.ErrNoChange) {
+			logger.Info().Msg("no new migration needed")
+		} else {
+			logger.Fatal().Err(err).Msg("failed to migrate up")
+		}
 	}
 
 	logger.Info().Msg("db migrated up")
@@ -97,6 +103,6 @@ func (s *DBStore) MigrateUp() {
 
 func (s *DBStore) NewAuthRepo() *AuthRepo {
 	return &AuthRepo{
-		DB: s,
+		db: s,
 	}
 }

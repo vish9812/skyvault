@@ -12,7 +12,6 @@ func DomainUserToDBUser(user *auth.User) *model.Users {
 		FirstName:    user.FirstName,
 		LastName:     user.LastName,
 		Email:        user.Email,
-		Username:     user.Username,
 		PasswordHash: user.PasswordHash,
 	}
 }
@@ -23,6 +22,5 @@ func DBUserToDomainUser(dbUser *model.Users) *auth.User {
 		FirstName: dbUser.FirstName,
 		LastName:  dbUser.LastName,
 		Email:     dbUser.Email,
-		Username:  dbUser.Username,
 	}
 }

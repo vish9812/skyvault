@@ -15,7 +15,7 @@ import (
 )
 
 type AuthRepo struct {
-	DB *DBStore
+	db *DBStore
 }
 
 func (r *AuthRepo) CreateUser(ctx context.Context, user *auth.User) error {
@@ -25,21 +25,21 @@ func (r *AuthRepo) CreateUser(ctx context.Context, user *auth.User) error {
 
 	stmt := Users.INSERT(Users.AllColumns).MODEL(dbUser)
 
-	stdDB := r.DB.openStdDB()
-	defer r.DB.closeStdDB(stdDB)
+	stdDB := r.db.openStdDB()
+	defer r.db.closeStdDB(stdDB)
 
 	_, err := stmt.ExecContext(ctx, stdDB)
 
 	return err
 }
 
-func (r *AuthRepo) GetUserByUsername(ctx context.Context, username string) (*auth.User, error) {
+func (r *AuthRepo) GetUserByEmail(ctx context.Context, email string) (*auth.User, error) {
 	stmt := SELECT(Users.AllColumns.Except(Users.PasswordHash)).
 		FROM(Users).
-		WHERE(Users.Username.EQ(String(username)))
+		WHERE(Users.Email.EQ(String(email)))
 
-	stdDB := r.DB.openStdDB()
-	defer r.DB.closeStdDB(stdDB)
+	stdDB := r.db.openStdDB()
+	defer r.db.closeStdDB(stdDB)
 
 	var dbUser model.Users
 	err := stmt.QueryContext(ctx, stdDB, &dbUser)

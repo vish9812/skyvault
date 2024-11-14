@@ -11,16 +11,21 @@ var Configs *config
 
 type config struct {
 	APP_SERVER_PATH    string
+	APP_DATA_FOLDER    string
+	APP_PORT           int
+	APP_ADDR           string
 	DB_CONTAINER_IMAGE string
 	DB_CONTAINER_NAME  string
 	DB_HOST            string
 	DB_HOST_PORT       int
 	DB_CONTAINER_PORT  int
+	DB_HOST_VOLUME     string
 	DB_NAME            string
 	DB_USER            string
 	DB_PASS            string
 	DB_CONN_STR        string
 	DB_MIGRATION_PATH  string
+	DB_GEN_MODELS_PATH string
 }
 
 func LoadConfig(path, nameWithoutExtension, extensionWithoutDot string) {

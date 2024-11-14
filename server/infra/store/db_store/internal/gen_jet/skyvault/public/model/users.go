@@ -16,7 +16,6 @@ type Users struct {
 	ID           uuid.UUID `sql:"primary_key"`
 	FirstName    string
 	LastName     string
-	Username     string
 	Email        string
 	PasswordHash string
 	CreatedAt    time.Time

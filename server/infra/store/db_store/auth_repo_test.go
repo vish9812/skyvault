@@ -14,7 +14,7 @@ func TestCreateUser(t *testing.T) {
 	createTestUser(t, authRepo)
 }
 
-func TestGetUserByUsername(t *testing.T) {
+func TestGetUserByEmail(t *testing.T) {
 	t.Parallel()
 	testStore := newTestDBStore(t)
 	authRepo := testStore.NewAuthRepo()
@@ -22,14 +22,14 @@ func TestGetUserByUsername(t *testing.T) {
 	userA := createTestUser(t, authRepo)
 	userB := createTestUser(t, authRepo)
 
-	user, err := authRepo.GetUserByUsername(context.Background(), userA.Username)
+	user, err := authRepo.GetUserByEmail(context.Background(), userA.Email)
 	require.Nil(t, err)
 	require.EqualValues(t, userA.ID, user.ID, "userA ID mismatched")
 
-	user, err = authRepo.GetUserByUsername(context.Background(), userB.Username)
+	user, err = authRepo.GetUserByEmail(context.Background(), userB.Email)
 	require.Nil(t, err)
 	require.EqualValues(t, userB.ID, user.ID, "userB ID mismatched")
 
-	_, err = authRepo.GetUserByUsername(context.Background(), "not-existed")
+	_, err = authRepo.GetUserByEmail(context.Background(), "not-existed")
 	require.ErrorIs(t, err, ErrNoRows, "error mismatched")
 }

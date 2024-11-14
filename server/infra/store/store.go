@@ -5,18 +5,14 @@ import (
 	"skyvault/infra/store/db_store"
 )
 
-var _ auth.Repo = &BaseAuthRepo{}
+var _ auth.Repo = &db_store.AuthRepo{}
 
 type Store struct {
-	db *db_store.DBStore
+	*db_store.DBStore
 }
 
 func NewStore(dbStore *db_store.DBStore) *Store {
 	return &Store{
-		db: dbStore,
+		DBStore: dbStore,
 	}
-}
-
-type BaseAuthRepo struct {
-	db_store.AuthRepo
 }

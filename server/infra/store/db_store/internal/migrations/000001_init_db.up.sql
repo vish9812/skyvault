@@ -2,7 +2,6 @@ create table if not exists users (
 	id uuid primary key,
 	first_name text not null,
 	last_name text not null,
-	username text not null unique,
 	email text not null unique,
 	password_hash text not null,
 	created_at timestamp not null default (timezone('utc', now())),
