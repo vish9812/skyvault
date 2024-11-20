@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"skyvault/common"
+	"skyvault/domain"
 	"time"
 
 	"github.com/golang-migrate/migrate/v4"
@@ -17,6 +18,8 @@ import (
 )
 
 var ErrNoRows = errors.New("no rows in result set")
+
+var _ domain.Repo = &repo{}
 
 type DBStore struct {
 	pool *pgxpool.Pool
@@ -99,6 +102,10 @@ func (s *DBStore) migrateUp() {
 	}
 
 	logger.Info().Msg("db migrated up")
+}
+
+type repo struct {
+	AuthRepo
 }
 
 func (s *DBStore) NewAuthRepo() *AuthRepo {

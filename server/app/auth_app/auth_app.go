@@ -6,10 +6,11 @@ type AuthApp struct {
 	Store *store.Store
 }
 
-func (a *AuthApp) NewCreateUserCommandHandler() ICreateUserCommandHandler {
-	return &CreateUserCommandValidator{
-		Handler: &CreateUserCommandHandler{
+func (a *AuthApp) NewSignUpCommandHandler() ISignUpCommandHandler {
+	return &SignUpCommandValidator{
+		Handler: &SignUpCommandHandler{
 			Store: a.Store,
+			AuthRepo: a.Store.NewAuthRepo(),
 		},
 	}
 }

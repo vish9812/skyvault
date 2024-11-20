@@ -12,6 +12,8 @@ func TestCreateUser(t *testing.T) {
 	testStore := newTestDBStore(t)
 	authRepo := testStore.NewAuthRepo()
 	createTestUser(t, authRepo)
+
+	// TODO: test duplicate email id
 }
 
 func TestGetUserByEmail(t *testing.T) {

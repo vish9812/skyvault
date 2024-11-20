@@ -7,7 +7,7 @@ import (
 	"skyvault/domain/auth"
 )
 
-type CreateUserCommand struct {
+type SignUpCommand struct {
 	FirstName string `json:"first_name"`
 	LastName  string `json:"last_name"`
 	Email     string `json:"email"`
@@ -15,11 +15,11 @@ type CreateUserCommand struct {
 	Password  string `json:"password"`
 }
 
-type CreateUserCommandValidator struct {
-	Handler ICreateUserCommandHandler
+type SignUpCommandValidator struct {
+	Handler ISignUpCommandHandler
 }
 
-func (v *CreateUserCommandValidator) Handle(ctx context.Context, cmd *CreateUserCommand) (*auth.User, error) {
+func (v *SignUpCommandValidator) Handle(ctx context.Context, cmd *SignUpCommand) (*auth.User, error) {
 	if cmd.FirstName == "" {
 		return nil, errors.New("firstName is required")
 	}
