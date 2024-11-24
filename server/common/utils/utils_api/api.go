@@ -8,28 +8,26 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-// APIError is a custom struct for handling API errors.
-type APIError struct {
-	Status  int    `json:"-"`                 // HTTP status code
-	Message string `json:"message"`           // Error message
-	Code    string `json:"code,omitempty"`    // Optional application-specific error code
-	Details string `json:"details,omitempty"` // Additional details if necessary
-	Err     error  `json:"-"`
+// apiError is a custom struct for handling API errors.
+type apiError struct {
+	HTTPStatus int    `json:"http_status"`
+	Message    string `json:"message"`
+	AppCode    string `json:"app_code,omitempty"`
+	Err        error  `json:"-"`
 }
 
-func NewAPIError(status int, message, code, details string, err error) *APIError {
-	return &APIError{
-		Status:  status,
-		Message: message,
-		Code:    code,
-		Details: details,
-		Err:     err,
+func NewAPIError(status int, message, code string, err error) *apiError {
+	return &apiError{
+		HTTPStatus: status,
+		Message:    message,
+		AppCode:    code,
+		Err:        err,
 	}
 }
 
 // Error implements the error interface for APIError
-func (e APIError) Error() string {
-	return fmt.Sprintf("Status: %d, Message: %s, Code: %s, Details: %s, Error: %v", e.Status, e.Message, e.Code, e.Details, e.Err)
+func (e apiError) Error() string {
+	return fmt.Sprintf("HTTPStatus: %d, Message: %s, AppCode: %s, Error: %v", e.HTTPStatus, e.Message, e.AppCode, e.Err)
 }
 
 // JSONResponse is a helper for sending a normal JSON response.
@@ -42,20 +40,20 @@ func JSONResponse(w http.ResponseWriter, data any, statusCode int) {
 }
 
 // JSONErrorResponse is a helper for sending a JSON error response.
-func (e APIError) JSONErrorResponse(w http.ResponseWriter) {
-	if e.Status == 0 {
-		e.Status = http.StatusInternalServerError
+func (e apiError) JSONErrorResponse(w http.ResponseWriter) {
+	if e.HTTPStatus == 0 {
+		e.HTTPStatus = http.StatusInternalServerError
 	}
 	if e.Message == "" {
 		e.Message = http.StatusText(http.StatusInternalServerError)
 	}
 
 	e.LogError()
-	JSONResponse(w, e, e.Status)
+	JSONResponse(w, e, e.HTTPStatus)
 }
 
 // LogError logs the APIError and any nested errors recursively
-func (e *APIError) LogError() {
+func (e *apiError) LogError() {
 	log.Error().Err(e)
 	logNestedErrors(e.Err)
 }
@@ -66,7 +64,7 @@ func logNestedErrors(err error) {
 		return
 	}
 	log.Error().Err(err).Send()
-	if nested, ok := err.(*APIError); ok {
+	if nested, ok := err.(*apiError); ok {
 		logNestedErrors(nested.Err)
 	}
 }

@@ -1,9 +1,11 @@
 package auth_app
 
-import "skyvault/infra/store"
+import (
+	"skyvault/domain"
+)
 
 type AuthApp struct {
-	Store *store.Store
+	Store domain.IStore
 }
 
 func (a *AuthApp) NewSignUpCommandHandler() ISignUpCommandHandler {

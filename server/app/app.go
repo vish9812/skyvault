@@ -2,14 +2,14 @@ package app
 
 import (
 	"skyvault/app/auth_app"
-	"skyvault/infra/store"
+	"skyvault/domain"
 )
 
 type App struct {
-	Store *store.Store
+	Store domain.IStore
 }
 
-func NewApp(store *store.Store) *App {
+func NewApp(store domain.IStore) *App {
 	return &App{
 		Store: store,
 	}

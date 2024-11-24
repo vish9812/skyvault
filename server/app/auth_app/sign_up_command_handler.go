@@ -2,9 +2,10 @@ package auth_app
 
 import (
 	"context"
+	"net/http"
 	"skyvault/common/utils/utils_api"
+	"skyvault/domain"
 	"skyvault/domain/auth"
-	"skyvault/infra/store"
 )
 
 type ISignUpCommandHandler interface {
@@ -12,7 +13,7 @@ type ISignUpCommandHandler interface {
 }
 
 type SignUpCommandHandler struct {
-	Store *store.Store
+	Store domain.IStore
 }
 
 func (h *SignUpCommandHandler) Handle(ctx context.Context, cmd *SignUpCommand) (*auth.User, error) {
@@ -22,16 +23,13 @@ func (h *SignUpCommandHandler) Handle(ctx context.Context, cmd *SignUpCommand) (
 	user.LastName = cmd.LastName
 	hashedPassword, err := hashPassword(cmd.Password)
 	if err != nil {
-		return nil, utils_api.APIError{
-			Message: "failed to hash password",
-			Err:     err,
-		}
+		return nil, utils_api.NewAPIError(http.StatusInternalServerError, "failed to hash password", "", err)
 	}
 	user.PasswordHash = hashedPassword
-
+	
 	err = h.Store.NewAuthRepo().CreateUser(ctx, user)
 	if err != nil {
-		return nil, err
+		return nil, utils_api.NewAPIError(http.StatusInternalServerError, "failed to create user", "", err)
 	}
 
 	return user, nil

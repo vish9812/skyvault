@@ -64,7 +64,6 @@ func newTestUser() *auth.User {
 	user := auth.NewUser()
 	user.Email = utils.RandomEmail()
 	randStr := utils.RandomName()
-	user.Username = randStr
 	user.FirstName = randStr
 	user.LastName = randStr
 	user.PasswordHash = randStr

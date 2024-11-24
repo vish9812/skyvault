@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"skyvault/common"
 	"skyvault/domain"
+	"skyvault/domain/auth"
 	"time"
 
 	"github.com/golang-migrate/migrate/v4"
@@ -17,9 +18,9 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-var ErrNoRows = errors.New("no rows in result set")
-
 var _ domain.Repo = &repo{}
+
+var ErrNoRows = errors.New("no rows in result set")
 
 type DBStore struct {
 	pool *pgxpool.Pool
@@ -108,7 +109,7 @@ type repo struct {
 	AuthRepo
 }
 
-func (s *DBStore) NewAuthRepo() *AuthRepo {
+func (s *DBStore) NewAuthRepo() auth.Repo {
 	return &AuthRepo{
 		db: s,
 	}
