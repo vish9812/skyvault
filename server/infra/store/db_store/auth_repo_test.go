@@ -8,12 +8,28 @@ import (
 )
 
 func TestCreateUser(t *testing.T) {
-	t.Parallel()
-	testStore := newTestDBStore(t)
-	authRepo := testStore.NewAuthRepo()
-	createTestUser(t, authRepo)
+	t.Run("create user", func(t *testing.T) {
+		t.Parallel()
+		testStore := newTestDBStore(t)
+		authRepo := testStore.NewAuthRepo()
+		createTestUser(t, authRepo)
+	})
 
-	// TODO: test duplicate email id
+	t.Run("duplicate email id", func(t *testing.T) {
+		t.Parallel()
+
+		testStore := newTestDBStore(t)
+		authRepo := testStore.NewAuthRepo()
+		userA := createTestUser(t, authRepo)
+		require.NotNil(t, userA, "failed to create userA")
+
+		// Attempt to create another user with same email ID
+		userB := newTestUser()
+		userB.Email = userA.Email
+
+		err := authRepo.CreateUser(context.Background(), userB)
+		require.Error(t, err, "should have received error when creating userB")
+	})
 }
 
 func TestGetUserByEmail(t *testing.T) {

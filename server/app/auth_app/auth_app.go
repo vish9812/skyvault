@@ -10,7 +10,6 @@ func (a *AuthApp) NewSignUpCommandHandler() ISignUpCommandHandler {
 	return &SignUpCommandValidator{
 		Handler: &SignUpCommandHandler{
 			Store: a.Store,
-			AuthRepo: a.Store.NewAuthRepo(),
 		},
 	}
 }

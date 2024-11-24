@@ -13,7 +13,6 @@ type ISignUpCommandHandler interface {
 
 type SignUpCommandHandler struct {
 	Store *store.Store
-	AuthRepo auth.Repo
 }
 
 func (h *SignUpCommandHandler) Handle(ctx context.Context, cmd *SignUpCommand) (*auth.User, error) {

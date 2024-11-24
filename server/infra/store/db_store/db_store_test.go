@@ -16,7 +16,7 @@ import (
 var testMainPool *pgxpool.Pool // testMainPool used across tests to create and drop test DBs
 
 func TestMain(m *testing.M) {
-	common.LoadConfig("../../../", "test", "env")
+	common.LoadConfig("../../../", "dev", "env")
 
 	testMainPool = connectDatabase(common.Configs.DB_CONN_STR)
 
@@ -52,6 +52,15 @@ func newTestDBStore(t *testing.T) *DBStore {
 }
 
 func createTestUser(t *testing.T, authRepo auth.Repo) *auth.User {
+	user := newTestUser()
+
+	err := authRepo.CreateUser(context.Background(), user)
+	require.Nil(t, err)
+
+	return user
+}
+
+func newTestUser() *auth.User {
 	user := auth.NewUser()
 	user.Email = utils.RandomEmail()
 	randStr := utils.RandomName()
@@ -59,9 +68,5 @@ func createTestUser(t *testing.T, authRepo auth.Repo) *auth.User {
 	user.FirstName = randStr
 	user.LastName = randStr
 	user.PasswordHash = randStr
-
-	err := authRepo.CreateUser(context.Background(), user)
-	require.Nil(t, err)
-
 	return user
 }
