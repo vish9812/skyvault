@@ -1,0 +1,53 @@
+version: "3"
+
+dotenv:
+  - dev.env
+
+tasks:
+  postgres-up:
+    desc: Start a postgres container and create the DB.
+    cmds:
+      - mkdir $APP_DATA_FOLDER
+      - docker compose --env-file dev.env up -d
+
+  postgres-down:
+    desc: Stop and remove the postgres container.
+    cmds:
+      - docker compose --env-file dev.env down
+
+  nuke:
+    desc: Remove the containers and generated data.
+    cmds:
+      - task: postgres-down
+      - sudo rm -rf $APP_DATA_FOLDER
+
+  create-db:
+    desc: Create a new DB.
+    cmd: >
+      docker exec -it $DB_CONTAINER_NAME 
+      createdb --username=$DB_USER $DB_NAME
+
+  drop-db:
+    desc: Drop the DB.
+    cmd: >
+      docker exec -it $DB_CONTAINER_NAME 
+      dropdb --username=$DB_USER $DB_NAME
+
+  migrate-up:
+    desc: Migrate DB to the latest SQL file.
+    cmd: migrate -path $DB_MIGRATION_PATH -database $DB_DSN -verbose up
+
+  migrate-down:
+    desc: Migrate DB down to 1 previous version.
+    cmd: migrate -path $DB_MIGRATION_PATH -database $DB_DSN -verbose down 1
+
+  migrate-create:
+    desc: |
+      - Create the next up and down sql files.
+      - Pass the file name as the MIGRATION_FILE_NAME variable
+      - Ex: MIGRATION_FILE_NAME=init_db task migrate-create
+    cmd: migrate create -ext sql -dir $DB_MIGRATION_PATH -seq $MIGRATION_FILE_NAME
+
+  gen-db-models:
+    desc: Generate DB models.
+    cmd: jet -dsn="$DB_DSN" -schema=public -path=$DB_GEN_MODELS_PATH
