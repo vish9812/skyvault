@@ -14,8 +14,7 @@ import (
 type Profiles struct {
 	ID        int64 `sql:"primary_key"`
 	Email     string
-	FirstName string
-	LastName  string
+	FullName  string
 	CreatedAt time.Time
 	UpdatedAt time.Time
 }

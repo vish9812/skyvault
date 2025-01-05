@@ -15,8 +15,8 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { useState } from "react";
-import Image from "next/image";
-import Link from "next/link";
+import { Link } from "react-router";
+import authSvc from "@/services/auth.svc";
 // import { createAccount, signInUser } from "@/lib/actions/user.actions";
 // import OtpModal from "@/components/OTPModal";
 
@@ -25,6 +25,7 @@ type FormType = "sign-in" | "sign-up";
 const authFormSchema = (formType: FormType) => {
   return z.object({
     email: z.string().email(),
+    password: z.string().min(2).max(50),
     fullName:
       formType === "sign-up"
         ? z.string().min(2).max(50)
@@ -35,7 +36,7 @@ const authFormSchema = (formType: FormType) => {
 const AuthForm = ({ type }: { type: FormType }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
-  // const [accountId, setAccountId] = useState(null);
+  const [profileID, setProfileID] = useState(0);
 
   const formSchema = authFormSchema(type);
   const form = useForm<z.infer<typeof formSchema>>({
@@ -43,23 +44,27 @@ const AuthForm = ({ type }: { type: FormType }) => {
     defaultValues: {
       fullName: "",
       email: "",
+      password: "",
     },
   });
 
-  const onSubmit = async () => {
+  const onSubmit = async (values: z.infer<typeof formSchema>) => {
     setIsLoading(true);
     setErrorMessage("");
 
     try {
-      // const user = 
-        // type === "sign-up"
-        //   ? await createAccount({
-        //       fullName: values.fullName || "",
-        //       email: values.email,
-        //     })
-        //   : await signInUser({ email: values.email });
-
-      // setAccountId(user.accountId);
+      const profile =
+        type === "sign-up"
+          ? await authSvc.signUp({
+              fullName: values.fullName!,
+              email: values.email,
+              password: values.password,
+            })
+          : await authSvc.signIn({
+              email: values.email,
+              password: values.password,
+            });
+      setProfileID(profile.id);
     } catch {
       setErrorMessage("Failed to create account. Please try again.");
     } finally {
@@ -120,6 +125,29 @@ const AuthForm = ({ type }: { type: FormType }) => {
             )}
           />
 
+          <FormField
+            control={form.control}
+            name="password"
+            render={({ field }) => (
+              <FormItem>
+                <div className="shad-form-item">
+                  <FormLabel className="shad-form-label">Password</FormLabel>
+
+                  <FormControl>
+                    <Input
+                      placeholder="Enter your password"
+                      className="shad-input"
+                      type="password"
+                      {...field}
+                    />
+                  </FormControl>
+                </div>
+
+                <FormMessage className="shad-form-message" />
+              </FormItem>
+            )}
+          />
+
           <Button
             type="submit"
             className="form-submit-button"
@@ -128,7 +156,7 @@ const AuthForm = ({ type }: { type: FormType }) => {
             {type === "sign-in" ? "Sign In" : "Sign Up"}
 
             {isLoading && (
-              <Image
+              <img
                 src="/assets/icons/loader.svg"
                 alt="loader"
                 width={24}
@@ -147,7 +175,7 @@ const AuthForm = ({ type }: { type: FormType }) => {
                 : "Already have an account?"}
             </p>
             <Link
-              href={type === "sign-in" ? "/sign-up" : "/sign-in"}
+              to={type === "sign-in" ? "/sign-up" : "/sign-in"}
               className="ml-1 font-medium text-brand"
             >
               {" "}

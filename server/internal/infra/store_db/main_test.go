@@ -120,8 +120,7 @@ func profileRandom() *profile.Profile {
 	randStr := utils.RandomName()
 	profile := profile.NewProfile()
 	profile.Email = utils.RandomEmail()
-	profile.FirstName = randStr
-	profile.LastName = randStr
+	profile.FullName = randStr
 
 	return profile
 }

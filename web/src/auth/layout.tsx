@@ -1,12 +1,11 @@
-import React from "react";
-import Image from "next/image";
+import { Outlet } from "react-router";
 
-const Layout = ({ children }: { children: React.ReactNode }) => {
+const Layout = () => {
   return (
     <div className="flex min-h-screen">
       <section className="hidden w-1/2 items-center justify-center bg-brand p-10 lg:flex xl:w-2/5">
         <div className="flex max-h-[800px] max-w-[430px] flex-col justify-center space-y-12">
-          <Image
+          <img
             src="/assets/icons/logo-full.svg"
             alt="logo"
             width={224}
@@ -20,7 +19,7 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
               This is a place where you can store all your documents.
             </p>
           </div>
-          <Image
+          <img
             src="/assets/images/files.png"
             alt="Files"
             width={342}
@@ -32,7 +31,7 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
 
       <section className="flex flex-1 flex-col items-center bg-white p-4 py-10 lg:justify-center lg:p-10 lg:py-0">
         <div className="mb-16 lg:hidden">
-          <Image
+          <img
             src="/assets/icons/logo-full-brand.svg"
             alt="logo"
             width={224}
@@ -40,8 +39,7 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
             className="h-auto w-[200px] lg:w-[250px]"
           />
         </div>
-
-        {children}
+        <Outlet />
       </section>
     </div>
   );

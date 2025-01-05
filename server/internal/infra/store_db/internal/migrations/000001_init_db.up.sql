@@ -1,8 +1,7 @@
 create table if not exists profiles (
 	id bigserial primary key,
 	email text not null unique,
-	first_name text not null,
-	last_name text not null,
+	full_name text not null,
 	created_at timestamp not null default (timezone('utc', now())),
 	updated_at timestamp not null default (timezone('utc', now()))
 );
