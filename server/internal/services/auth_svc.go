@@ -22,16 +22,15 @@ func newAuthSvc(authRepo auth.Repo, profileRepo profile.Repo) IAuthSvc {
 }
 
 type SignUpReq struct {
-	Email     string `json:"email"`
-	Password  string `json:"password"`
-	FirstName string `json:"first_name"`
-	LastName  string `json:"last_name"`
+	Email    string `json:"email"`
+	Password string `json:"password"`
+	FullName string `json:"fullName"`
 }
 
 type SignUpResp struct {
-	ID        int64  `json:"id"`
-	FirstName string `json:"first_name"`
-	LastName  string `json:"last_name"`
+	ID       int64  `json:"id"`
+	Email    string `json:"email"`
+	FullName string `json:"fullName"`
 }
 
 func (s *AuthSvc) SignUp(ctx context.Context, req *SignUpReq) (*SignUpResp, error) {
@@ -77,7 +76,7 @@ func (s *AuthSvc) SignUp(ctx context.Context, req *SignUpReq) (*SignUpResp, erro
 		return nil, err
 	}
 
-	var resp *SignUpResp
+	resp := new(SignUpResp)
 	err = copier.Copy(resp, pro)
 	if err != nil {
 		return nil, err

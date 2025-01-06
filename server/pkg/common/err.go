@@ -5,6 +5,8 @@ import (
 	"strings"
 )
 
+var _ error = &ValidationError{}
+
 type ValidationError struct {
 	err error
 }
@@ -17,13 +19,13 @@ func (e *ValidationError) Error() string {
 	return e.err.Error()
 }
 
-// Unwrap implements the errors.Wrapper interface
+// Unwrap implements the anonymous errors.Unwrap interface
 func (e *ValidationError) Unwrap() error {
 	return e.err
 }
 
 func AsValidationError(err error) (*ValidationError, bool) {
-	var ve *ValidationError
+	ve := new(ValidationError)
 	if errors.As(err, &ve) {
 		return ve, true
 	}

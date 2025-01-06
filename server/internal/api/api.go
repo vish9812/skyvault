@@ -7,6 +7,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
+	"github.com/rs/cors"
 	"github.com/rs/zerolog"
 )
 
@@ -22,6 +23,7 @@ func NewAPI(app *common.App) *API {
 
 func (a *API) InitRoutes() {
 	router := chi.NewRouter()
+	router.Use(cors.Default().Handler)
 	router.Use(middleware.Recoverer)
 	// router.Use(middleware.Logger)
 	router.Use(middleware.Heartbeat("/api/v1/ping"))
@@ -30,6 +32,7 @@ func (a *API) InitRoutes() {
 
 	v1 := chi.NewRouter()
 	router.Mount("/api/v1", v1)
+
 	a.v1 = v1
 	a.Router = router
 }

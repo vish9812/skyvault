@@ -77,14 +77,14 @@ func startServer(app *common.App, apiServer *api.API) {
 }
 
 func waitForShutdown(app *common.App) {
-	stop := make(chan os.Signal, 1)
-	signal.Notify(stop, syscall.SIGINT, syscall.SIGTERM)
+	sig := make(chan os.Signal, 1)
+	signal.Notify(sig, syscall.SIGHUP, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
 
-	<-stop
+	<-sig
 
 	log.Info().Msg("shutting down server...")
 
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
 	if err := app.Server.Shutdown(ctx); err != nil {

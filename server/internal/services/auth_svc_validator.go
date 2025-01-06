@@ -18,13 +18,12 @@ const (
 )
 
 var (
-	errFirstNameRequired = common.NewValidationError(errors.New("firstName is required"))
-	errLastNameRequired  = common.NewValidationError(errors.New("lastName is required"))
-	errEmailRequired     = common.NewValidationError(errors.New("email is required"))
-	errEmailInvalid      = common.NewValidationError(errors.New("email is invalid"))
-	errPasswordRequired  = common.NewValidationError(errors.New("password is required"))
-	errPasswordMinLen    = common.NewValidationError(fmt.Errorf("password must be at least %d characters long", passwordMinLen))
-	errPasswordMaxLen    = common.NewValidationError(fmt.Errorf("password can be max. %d characters long", passwordMaxLen))
+	errFullNameRequired = common.NewValidationError(errors.New("full name is required"))
+	errEmailRequired    = common.NewValidationError(errors.New("email is required"))
+	errEmailInvalid     = common.NewValidationError(errors.New("email is invalid"))
+	errPasswordRequired = common.NewValidationError(errors.New("password is required"))
+	errPasswordMinLen   = common.NewValidationError(fmt.Errorf("password must be at least %d characters long", passwordMinLen))
+	errPasswordMaxLen   = common.NewValidationError(fmt.Errorf("password can be max. %d characters long", passwordMaxLen))
 )
 
 type AuthSvcValidator struct {
@@ -38,12 +37,8 @@ func newAuthSvcValidator(svc IAuthSvc) IAuthSvc {
 }
 
 func (v *AuthSvcValidator) SignUp(ctx context.Context, req *SignUpReq) (*SignUpResp, error) {
-	if req.FirstName == "" {
-		return nil, errFirstNameRequired
-	}
-
-	if req.LastName == "" {
-		return nil, errLastNameRequired
+	if req.FullName == "" {
+		return nil, errFullNameRequired
 	}
 
 	if req.Email == "" {
