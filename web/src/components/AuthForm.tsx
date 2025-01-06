@@ -13,15 +13,16 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { useState } from "react";
-import { Link } from "react-router";
+import { Link, useNavigate } from "react-router";
 import authSvc from "@/services/auth.svc";
+import consts from "@/lib/consts";
 
 type FormType = "sign-in" | "sign-up";
 
 const authFormSchema = (formType: FormType) => {
   return z.object({
     email: z.string().email(),
-    password: z.string().min(2).max(50),
+    password: z.string().min(4).max(50),
     fullName:
       formType === "sign-up"
         ? z.string().min(2).max(50)
@@ -30,9 +31,9 @@ const authFormSchema = (formType: FormType) => {
 };
 
 const AuthForm = ({ type }: { type: FormType }) => {
+  const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
-  const [profileID, setProfileID] = useState(0);
 
   const formSchema = authFormSchema(type);
   const form = useForm<z.infer<typeof formSchema>>({
@@ -49,18 +50,20 @@ const AuthForm = ({ type }: { type: FormType }) => {
     setErrorMessage("");
 
     try {
-      const profile =
-        type === "sign-up"
-          ? await authSvc.signUp({
-              fullName: values.fullName!,
-              email: values.email,
-              password: values.password,
-            })
-          : await authSvc.signIn({
-              email: values.email,
-              password: values.password,
-            });
-      setProfileID(profile.id);
+      if (type === "sign-up") {
+        await authSvc.signUp({
+          fullName: values.fullName!,
+          email: values.email,
+          password: values.password,
+        });
+      } else {
+        await authSvc.signIn({
+          email: values.email,
+          password: values.password,
+        });
+      }
+
+      navigate(consts.pageRoutes.home);
     } catch {
       setErrorMessage("Failed to create account. Please try again.");
     } finally {

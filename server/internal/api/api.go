@@ -2,12 +2,12 @@ package api
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 	"skyvault/pkg/common"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
-	"github.com/rs/cors"
 	"github.com/rs/zerolog"
 )
 
@@ -23,7 +23,7 @@ func NewAPI(app *common.App) *API {
 
 func (a *API) InitRoutes() {
 	router := chi.NewRouter()
-	router.Use(cors.Default().Handler)
+	// router.Use(cors.Default().Handler)
 	router.Use(middleware.Recoverer)
 	// router.Use(middleware.Logger)
 	router.Use(middleware.Heartbeat("/api/v1/ping"))
@@ -47,9 +47,15 @@ func (a *API) ResponseJSON(w http.ResponseWriter, status int, data interface{}) 
 }
 
 func (a *API) ResponseErrorAndLog(w http.ResponseWriter, code int, resMsg string, logEvent *zerolog.Event, logMsg string, err error) {
-	logEvent.Stack().Err(err).Msg(logMsg)
+	ae := new(common.AppErr)
+	if errors.As(err, &ae) {
+		logEvent = logEvent.Str("funcName", ae.FuncName)
+	}
+	
+	logEvent.Err(err).Msg(logMsg)
 
-	if ve, ok := common.AsValidationError(err); ok {
+	ve := new(common.ValidationError)
+	if errors.As(err, &ve) {
 		resMsg = resMsg + ": " + ve.Error()
 	}
 

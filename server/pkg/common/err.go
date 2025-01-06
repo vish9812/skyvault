@@ -5,6 +5,35 @@ import (
 	"strings"
 )
 
+type ErrMetaInfo struct {
+	FuncName string
+}
+
+var _ error = &AppErr{}
+
+type AppErr struct {
+	err error
+	*ErrMetaInfo
+}
+
+func NewAppErr(err error, funcName string) *AppErr {
+	return &AppErr{
+		err: err,
+		ErrMetaInfo: &ErrMetaInfo{
+			FuncName: funcName,
+		},
+	}
+}
+
+func (e *AppErr) Error() string {
+	return e.err.Error()
+}
+
+// Unwrap implements the anonymous errors.Unwrap interface
+func (e *AppErr) Unwrap() error {
+	return e.err
+}
+
 var _ error = &ValidationError{}
 
 type ValidationError struct {

@@ -38,24 +38,24 @@ func newAuthSvcValidator(svc IAuthSvc) IAuthSvc {
 
 func (v *AuthSvcValidator) SignUp(ctx context.Context, req *SignUpReq) (*SignUpResp, error) {
 	if req.FullName == "" {
-		return nil, errFullNameRequired
+		return nil, common.NewAppErr(errFullNameRequired, "SignUp")
 	}
 
 	if req.Email == "" {
-		return nil, errEmailRequired
+		return nil, common.NewAppErr(errEmailRequired, "SignUp")
 	}
 	if _, err := mail.ParseAddress(req.Email); err != nil {
-		return nil, errEmailInvalid
+		return nil, common.NewAppErr(errEmailInvalid, "SignUp")
 	}
 
 	if req.Password == "" {
-		return nil, errPasswordRequired
+		return nil, common.NewAppErr(errPasswordRequired, "SignUp")
 	}
 	if len(req.Password) < passwordMinLen {
-		return nil, errPasswordMinLen
+		return nil, common.NewAppErr(errPasswordMinLen, "SignUp")
 	}
 	if len(req.Password) > passwordMaxLen {
-		return nil, errPasswordMaxLen
+		return nil, common.NewAppErr(errPasswordMaxLen, "SignUp")
 	}
 
 	return v.svc.SignUp(ctx, req)

@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/signal"
 	"skyvault/internal/api"
+	"skyvault/internal/domain/auth"
 	"skyvault/internal/infra/store_db"
 	"skyvault/internal/services"
 	"skyvault/pkg/common"
@@ -48,7 +49,8 @@ func initDependencies(app *common.App) *api.API {
 	profileRepo := store_db.NewProfileRepo(store)
 
 	// Init services
-	authSvc := services.NewAuthSvc(authRepo, profileRepo)
+	authJWT := auth.NewAuthJWT(app)
+	authSvc := services.NewAuthSvc(authRepo, profileRepo, authJWT)
 
 	// Init API
 	apiServer := api.NewAPI(app)

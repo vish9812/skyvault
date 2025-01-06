@@ -1,51 +1,63 @@
 package auth
 
-// import (
-// 	"skyvault/pkg/common"
-// 	"time"
+import (
+	"errors"
+	"skyvault/pkg/common"
+	"skyvault/pkg/utils"
+	"time"
 
-// 	"github.com/golang-jwt/jwt/v5"
-// )
+	"github.com/golang-jwt/jwt/v5"
+)
 
-// type JWT struct {
-// 	app *common.App
-// }
+var ErrInvalidToken = errors.New("invalid jwt token")
 
-// func NewJWT(app *common.App) *JWT {
-// 	return &JWT{app: app}
-// }
+type JWT struct {
+	app            *common.App
+	jwtKey         []byte
+	expirationTime time.Duration
+}
 
-// type Claims struct {
-// 	UserID string `json:"user_id"`
-// 	jwt.RegisteredClaims
-// }
+func NewAuthJWT(app *common.App) *JWT {
+	return &JWT{
+		app:            app,
+		jwtKey:         []byte(app.Config.AUTH_JWT_KEY),
+		expirationTime: time.Duration(app.Config.AUTH_JWT_TOKEN_TIMEOUT_MIN) * time.Minute,
+	}
+}
 
-// func (j *JWT) generateToken(userID string) (string, error) {
-// 	expirationTime := time.Now().Add(time.Duration(j.app.Config.AUTH_JWT_TOKEN_TIMEOUT_MIN) * time.Minute)
-// 	claims := &Claims{
-// 		UserID: userID,
-// 		RegisteredClaims: jwt.RegisteredClaims{
-// 			ExpiresAt: jwt.NewNumericDate(expirationTime),
-// 		},
-// 	}
+type Claims struct {
+	UserID int64 `json:"uid"`
+	jwt.RegisteredClaims
+}
 
-// 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-// 	return token.SignedString(jwtSecret)
-// }
+func (a *JWT) Generate(userID int64, email string) (string, error) {
+	claims := &Claims{
+		UserID: userID,
+		RegisteredClaims: jwt.RegisteredClaims{
+			Issuer:    "skyvault",
+			Audience:  []string{"skyvault"},
+			IssuedAt:  jwt.NewNumericDate(utils.TimeNowUTC()),
+			ExpiresAt: jwt.NewNumericDate(utils.TimeNowUTC().Add(a.expirationTime)),
+			Subject:   email,
+			ID:        utils.UUID(),
+		},
+	}
 
-// func ValidateJWT(tokenStr string) (*Claims, error) {
-// 	claims := &Claims{}
-// 	token, err := jwt.ParseWithClaims(tokenStr, claims, func(token *jwt.Token) (interface{}, error) {
-// 		return jwtSecret, nil
-// 	})
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	return token.SignedString(a.jwtKey)
+}
 
-// 	if err != nil {
-// 		return nil, err
-// 	}
-
-// 	if !token.Valid {
-// 		return nil, jwt.ErrSignatureInvalid
-// 	}
-
-// 	return claims, nil
-// }
+// Claims validates the token and returns the claims
+func (a *JWT) Claims(tokenStr string) (*Claims, error) {
+	claims := &Claims{}
+	token, err := jwt.ParseWithClaims(tokenStr, claims, func(token *jwt.Token) (interface{}, error) {
+		return a.jwtKey, nil
+	}, jwt.WithAudience("skyvault"), jwt.WithIssuer("skyvault"), jwt.WithExpirationRequired(), jwt.WithIssuedAt(), jwt.WithJSONNumber(), jwt.WithLeeway(2*time.Minute), jwt.WithValidMethods([]string{jwt.SigningMethodHS256.Name}))
+	if err != nil {
+		return nil, errors.New("failed to parse with claims")
+	}
+	if !token.Valid {
+		return nil, common.NewValidationError(ErrInvalidToken)
+	}
+	return claims, nil
+}

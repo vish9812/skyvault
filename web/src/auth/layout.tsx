@@ -1,6 +1,22 @@
-import { Outlet } from "react-router";
+import consts from "@/lib/consts";
+import authSvc from "@/services/auth.svc";
+import { useEffect } from "react";
+import { Outlet, useNavigate } from "react-router";
 
-const Layout = () => {
+const AuthLayout = () => {
+  // If already authenticated, redirect to home
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (authSvc.isAuthenticated()) {
+      navigate(consts.pageRoutes.home);
+    }
+  }, [navigate]);
+
+  if (authSvc.isAuthenticated()) {
+    return null;
+  }
+
   return (
     <div className="flex min-h-screen">
       <section className="hidden w-1/2 items-center justify-center bg-brand p-10 lg:flex xl:w-2/5">
@@ -45,4 +61,4 @@ const Layout = () => {
   );
 };
 
-export default Layout;
+export default AuthLayout;
