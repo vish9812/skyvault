@@ -1,5 +1,3 @@
-"use client";
-
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
@@ -17,8 +15,6 @@ import { Input } from "@/components/ui/input";
 import { useState } from "react";
 import { Link } from "react-router";
 import authSvc from "@/services/auth.svc";
-// import { createAccount, signInUser } from "@/lib/actions/user.actions";
-// import OtpModal from "@/components/OTPModal";
 
 type FormType = "sign-in" | "sign-up";
 
@@ -184,10 +180,6 @@ const AuthForm = ({ type }: { type: FormType }) => {
           </div>
         </form>
       </Form>
-
-      {/* {accountId && (
-        <OtpModal email={form.getValues("email")} accountId={accountId} />
-      )} */}
     </>
   );
 };

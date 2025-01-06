@@ -7,7 +7,6 @@ import SignUp from "./auth/pages/sign-up";
 function App() {
   return (
     <>
-      {/* Render Auth Layout and Auth Routes */}
       <Routes>
         <Route element={<Layout />}>
           <Route index path="/sign-in" element={<SignIn />} />

@@ -19,7 +19,7 @@ func (e *ValidationError) Error() string {
 	return e.err.Error()
 }
 
-// Unwrap implements the errors.Wrapper interface
+// Unwrap implements the anonymous errors.Unwrap interface
 func (e *ValidationError) Unwrap() error {
 	return e.err
 }
