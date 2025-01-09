@@ -5,7 +5,7 @@ import (
 	"skyvault/internal/domain/profile"
 )
 
-func NewAuthSvc(authRepo auth.Repo, profileRepo profile.Repo) IAuthSvc {
-	svc := newAuthSvc(authRepo, profileRepo)
+func NewAuthSvc(authRepo auth.Repo, profileRepo profile.Repo, jwt *auth.JWT) IAuthSvc {
+	svc := newAuthSvc(authRepo, profileRepo, jwt)
 	return newAuthSvcValidator(svc)
 }

@@ -14,3 +14,8 @@ func NewApp(config *Config) *App {
 		Config: config,
 	}
 }
+
+type CtxKey string
+const (
+	CtxKeyAuthClaims CtxKey = "auth_claims"
+)

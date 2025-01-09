@@ -9,7 +9,8 @@ import (
 )
 
 type IAuthSvc interface {
-	SignUp(ctx context.Context, req *SignUpReq) (*SignUpResp, error)
+	SignUp(ctx context.Context, req *SignUpReq) (*AuthSuccessResp, error)
+	SignIn(ctx context.Context, req *SignInReq) (*AuthSuccessResp, error)
 }
 
 const (
@@ -26,37 +27,60 @@ var (
 	errPasswordMaxLen   = common.NewValidationError(fmt.Errorf("password can be max. %d characters long", passwordMaxLen))
 )
 
+var _ IAuthSvc = (*AuthSvcValidator)(nil)
+
 type AuthSvcValidator struct {
-	svc IAuthSvc
+	IAuthSvc
 }
 
 func newAuthSvcValidator(svc IAuthSvc) IAuthSvc {
 	return &AuthSvcValidator{
-		svc: svc,
+		IAuthSvc: svc,
 	}
 }
 
-func (v *AuthSvcValidator) SignUp(ctx context.Context, req *SignUpReq) (*SignUpResp, error) {
+func (v *AuthSvcValidator) SignUp(ctx context.Context, req *SignUpReq) (*AuthSuccessResp, error) {
 	if req.FullName == "" {
-		return nil, errFullNameRequired
+		return nil, common.NewAppErr(errFullNameRequired, "SignUp")
 	}
 
 	if req.Email == "" {
-		return nil, errEmailRequired
+		return nil, common.NewAppErr(errEmailRequired, "SignUp")
 	}
 	if _, err := mail.ParseAddress(req.Email); err != nil {
-		return nil, errEmailInvalid
+		return nil, common.NewAppErr(errEmailInvalid, "SignUp")
 	}
 
 	if req.Password == "" {
-		return nil, errPasswordRequired
+		return nil, common.NewAppErr(errPasswordRequired, "SignUp")
 	}
 	if len(req.Password) < passwordMinLen {
-		return nil, errPasswordMinLen
+		return nil, common.NewAppErr(errPasswordMinLen, "SignUp")
 	}
 	if len(req.Password) > passwordMaxLen {
-		return nil, errPasswordMaxLen
+		return nil, common.NewAppErr(errPasswordMaxLen, "SignUp")
 	}
 
-	return v.svc.SignUp(ctx, req)
+	return v.IAuthSvc.SignUp(ctx, req)
+}
+
+func (v *AuthSvcValidator) SignIn(ctx context.Context, req *SignInReq) (*AuthSuccessResp, error) {
+	if req.Email == "" {
+		return nil, common.NewAppErr(errEmailRequired, "SignIn")
+	}
+	if _, err := mail.ParseAddress(req.Email); err != nil {
+		return nil, common.NewAppErr(errEmailInvalid, "SignIn")
+	}
+
+	if req.Password == "" {
+		return nil, common.NewAppErr(errPasswordRequired, "SignIn")
+	}
+	if len(req.Password) < passwordMinLen {
+		return nil, common.NewAppErr(errPasswordMinLen, "SignIn")
+	}
+	if len(req.Password) > passwordMaxLen {
+		return nil, common.NewAppErr(errPasswordMaxLen, "SignIn")
+	}
+
+	return v.IAuthSvc.SignIn(ctx, req)
 }
