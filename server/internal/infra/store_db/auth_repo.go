@@ -51,3 +51,11 @@ func (r *AuthRepo) Get(ctx context.Context, id int64) (*auth.Auth, error) {
 
 	return get[model.Auths, auth.Auth](ctx, stmt, r.store.exec)
 }
+
+func (r *AuthRepo) GetByProfileID(ctx context.Context, id int64) (*auth.Auth, error) {
+	stmt := SELECT(Auths.AllColumns).
+		FROM(Auths).
+		WHERE(Auths.ProfileID.EQ(Int(id)))
+
+	return get[model.Auths, auth.Auth](ctx, stmt, r.store.exec)
+}

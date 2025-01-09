@@ -19,9 +19,6 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-var ErrNoRows = errors.New("failed to find any row")
-var ErrUniqueConstraint = errors.New("unique constraint")
-
 type store struct {
 	app *common.App
 
@@ -122,10 +119,10 @@ func get[TDBModel any, TRes any](ctx context.Context, stmt jetpg.Statement, exec
 	err := stmt.QueryContext(ctx, exec, dbModel)
 	if err != nil {
 		if errors.Is(err, qrm.ErrNoRows) {
-			return nil, ErrNoRows
+			return nil, common.ErrDBNoRows
 		}
-		if common.ErrContains(err, ErrUniqueConstraint.Error()) {
-			return nil, fmt.Errorf("%w: %w", ErrUniqueConstraint, err)
+		if common.ErrContains(err, common.ErrDBUniqueConstraint.Error()) {
+			return nil, fmt.Errorf("%w: %w", common.ErrDBUniqueConstraint, err)
 		}
 
 		return nil, err

@@ -1,5 +1,6 @@
 const configs = {
-  baseAPI: "/api/v1",
+  baseAPIPvt: "/api/v1",
+  baseAPIPub: "/api/v1/pub",
 } as const;
 
 const storageKeys = {

@@ -4,37 +4,52 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
+	"skyvault/internal/api/middlewares"
 	"skyvault/pkg/common"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/log"
 )
 
 type API struct {
 	app    *common.App
 	Router chi.Router
-	v1     chi.Router
+	v1Pub  chi.Router
+	v1Pvt  chi.Router
 }
 
 func NewAPI(app *common.App) *API {
 	return &API{app: app}
 }
 
-func (a *API) InitRoutes() {
+func (a *API) InitRoutes(authMiddleware *middlewares.Auth) {
 	router := chi.NewRouter()
-	// router.Use(cors.Default().Handler)
+	router.Use(middleware.RequestID)
+	router.Use(middleware.Logger)
 	router.Use(middleware.Recoverer)
-	// router.Use(middleware.Logger)
 	router.Use(middleware.Heartbeat("/api/v1/ping"))
 	router.Use(middleware.CleanPath)
-	router.Use(middleware.RequestID)
 
-	v1 := chi.NewRouter()
-	router.Mount("/api/v1", v1)
+	v1Pub := chi.NewRouter()
+	router.Mount("/api/v1/pub", v1Pub)
+	v1Pvt := chi.NewRouter().With(authMiddleware.JWT)
+	router.Mount("/api/v1", v1Pvt)
 
-	a.v1 = v1
+	a.v1Pub = v1Pub
+	a.v1Pvt = v1Pvt
 	a.Router = router
+}
+
+func (a *API) LogRoutes() {
+	err := chi.Walk(a.Router, func(method, route string, handler http.Handler, middlewares ...func(http.Handler) http.Handler) error {
+		log.Debug().Str("method", method).Str("route", route).Int("middlewares", len(middlewares)).Msg("route registered")
+		return nil
+	})
+	if err != nil {
+		log.Fatal().Err(err).Msg("failed to walk routes")
+	}
 }
 
 // ResponseJSON writes the response as JSON
@@ -51,7 +66,7 @@ func (a *API) ResponseErrorAndLog(w http.ResponseWriter, code int, resMsg string
 	if errors.As(err, &ae) {
 		logEvent = logEvent.Str("funcName", ae.FuncName)
 	}
-	
+
 	logEvent.Err(err).Msg(logMsg)
 
 	ve := new(common.ValidationError)

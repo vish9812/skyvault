@@ -19,14 +19,19 @@ func NewAuthAPI(a *API, authSvc services.IAuthSvc) *AuthAPI {
 }
 
 func (a *AuthAPI) InitRoutes() {
-	router := chi.NewRouter()
-	a.api.v1.Mount("/auth", router)
+	pubRouter := chi.NewRouter()
+	a.api.v1Pub.Mount("/auth", pubRouter)
 
-	router.Post("/sign-up", a.signUp)
+	pubRouter.Post("/sign-up", a.signUp)
+	pubRouter.Post("/sign-in", a.signIn)
+
+	pvtRouter := chi.NewRouter()
+	a.api.v1Pvt.Mount("/auth", pvtRouter)
+	pvtRouter.Patch("/password", a.updatePassword)
 }
 
 func (a *AuthAPI) signUp(w http.ResponseWriter, r *http.Request) {
-	req := new(services.SignUpReq)
+	req := &services.SignUpReq{}
 	err := json.NewDecoder(r.Body).Decode(req)
 	if err != nil {
 		errMsg := "invalid request body"
@@ -34,12 +39,56 @@ func (a *AuthAPI) signUp(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	pro, err := a.authSvc.SignUp(r.Context(), req)
+	res, err := a.authSvc.SignUp(r.Context(), req)
 	if err != nil {
 		errMsg := "failed to sign up"
 		a.api.ResponseErrorAndLog(w, http.StatusInternalServerError, errMsg, log.Error().Str("email", req.Email), errMsg, err)
 		return
 	}
 
-	a.api.ResponseJSON(w, http.StatusCreated, pro)
+	a.api.ResponseJSON(w, http.StatusCreated, res)
+}
+
+func (a *AuthAPI) signIn(w http.ResponseWriter, r *http.Request) {
+	req := &services.SignInReq{}
+	err := json.NewDecoder(r.Body).Decode(req)
+	if err != nil {
+		errMsg := "invalid request body"
+		a.api.ResponseErrorAndLog(w, http.StatusBadRequest, errMsg, log.Error(), errMsg, err)
+		return
+	}
+
+	res, err := a.authSvc.SignIn(r.Context(), req)
+	if err != nil {
+		errMsg := "failed to sign in"
+		a.api.ResponseErrorAndLog(w, http.StatusInternalServerError, errMsg, log.Error().Str("email", req.Email), errMsg, err)
+		return
+	}
+
+	a.api.ResponseJSON(w, http.StatusOK, res)
+}
+
+func (a *AuthAPI) updatePassword(w http.ResponseWriter, r *http.Request) {
+	// req := &services.UpdatePasswordReq{}
+	// err := json.NewDecoder(r.Body).Decode(req)
+	// if err != nil {
+	// 	errMsg := "invalid request body"
+	// 	a.api.ResponseErrorAndLog(w, http.StatusBadRequest, errMsg, log.Error(), errMsg, err)
+	// 	return
+	// }
+
+	// res, err := a.authSvc.UpdatePassword(r.Context(), req)
+	// if err != nil {
+	// 	errMsg := "failed to update password"
+	// 	a.api.ResponseErrorAndLog(w, http.StatusInternalServerError, errMsg, log.Error().Str("email", req.Email), errMsg, err)
+	// 	return
+	// }
+
+	// a.api.ResponseJSON(w, http.StatusOK, res)
+
+	a.api.ResponseJSON(w, http.StatusOK, struct {
+		Message string `json:"message"`
+	}{
+		Message: "update password called",
+	})
 }

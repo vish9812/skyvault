@@ -1,7 +1,7 @@
 import consts from "@/lib/consts";
 import Profile from "@/profile/profile";
 
-const authURL = consts.configs.baseAPI + "/auth";
+const authURLPub = consts.configs.baseAPIPub + "/auth";
 
 function isAuthenticated() {
   return !!localStorage.getItem(consts.storageKeys.auth_token);
@@ -34,7 +34,7 @@ async function handleAuthResponse(res: Response): Promise<Profile> {
 }
 
 async function signUp(req: SignUpReq): Promise<Profile> {
-  const res = await fetch(authURL + "/sign-up", {
+  const res = await fetch(authURLPub + "/sign-up", {
     method: "POST",
     headers: consts.headers.json,
     body: JSON.stringify(req),
@@ -48,7 +48,7 @@ interface SignInReq {
 }
 
 async function signIn(req: SignInReq): Promise<Profile> {
-  const res = await fetch(authURL + "/sign-in", {
+  const res = await fetch(authURLPub + "/sign-in", {
     method: "POST",
     headers: consts.headers.json,
     body: JSON.stringify(req),
