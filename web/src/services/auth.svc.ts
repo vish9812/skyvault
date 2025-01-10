@@ -3,8 +3,13 @@ import Profile from "@/profile/profile";
 
 const authURLPub = consts.configs.baseAPIPub + "/auth";
 
-function isAuthenticated() {
-  return !!localStorage.getItem(consts.storageKeys.auth_token);
+function profile(): Profile | null {
+  const profileStr = localStorage.getItem(consts.storageKeys.profile);
+  if (!profileStr) {
+    return null;
+  }
+
+  return JSON.parse(profileStr);
 }
 
 interface SignUpReq {
@@ -58,10 +63,13 @@ async function signIn(req: SignInReq): Promise<Profile> {
 
 function signOut() {
   localStorage.removeItem(consts.storageKeys.profile);
+  localStorage.removeItem(consts.storageKeys.auth_token);
+  // Redirect to sign-in page
+  window.location.href = consts.pageRoutes.signIn;
 }
 
 const authSvc = {
-  isAuthenticated,
+  profile,
   signUp,
   signIn,
   signOut,

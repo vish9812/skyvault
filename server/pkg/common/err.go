@@ -79,3 +79,7 @@ func ErrContains(err error, msg string) bool {
 
 	return hasErr
 }
+
+func IsErrNotFound(err error) bool {
+	return errors.Is(err, ErrDBNoRows)
+}

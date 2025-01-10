@@ -1,12 +1,8 @@
 package auth
 
-import "errors"
-
-var ErrAuthAlreadyExists = errors.New("auth method already exists")
-
 type Auth struct {
 	ID             int64
-	ProfileID         int64
+	ProfileID      int64
 	Provider       Provider // E.g., "email", "oidc", "ldap"
 	ProviderUserID string   // External user ID for provider
 	PasswordHash   *string  // Optional if using external providers

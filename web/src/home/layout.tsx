@@ -1,23 +1,41 @@
+import Header from "@/components/Header";
+import MobileNavigation from "@/components/MobileNavigation";
+import Sidebar from "@/components/Sidebar";
+import { Toaster } from "@/components/ui/toaster";
 import consts from "@/lib/consts";
 import authSvc from "@/services/auth.svc";
-import React, { useEffect } from "react";
-import { useNavigate } from "react-router";
+import { useEffect } from "react";
+import { Outlet, useNavigate } from "react-router";
 
 const HomeLayout = () => {
-  // If already authenticated, redirect to home
   const navigate = useNavigate();
+  const profile = authSvc.profile();
 
   useEffect(() => {
-    if (!authSvc.isAuthenticated()) {
+    if (!profile) {
       navigate(consts.pageRoutes.signIn);
     }
-  }, [navigate]);
+  }, [navigate, profile]);
 
-  if (!authSvc.isAuthenticated()) {
+  if (!profile) {
     return null;
   }
 
-  return <div>Home Layout</div>;
+  return (
+    <main className="flex h-screen">
+      <Sidebar {...profile} />
+
+      <section className="flex h-full flex-1 flex-col">
+        <MobileNavigation {...profile} />
+        <Header userId={profile.id} />
+        <div className="main-content">
+          <Outlet />
+        </div>
+      </section>
+
+      <Toaster />
+    </main>
+  );
 };
 
 export default HomeLayout;
