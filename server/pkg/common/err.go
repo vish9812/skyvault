@@ -6,7 +6,7 @@ import (
 )
 
 type ErrMetaInfo struct {
-	FuncName string
+	Where string
 }
 
 var _ error = &AppErr{}
@@ -16,11 +16,11 @@ type AppErr struct {
 	*ErrMetaInfo
 }
 
-func NewAppErr(err error, funcName string) *AppErr {
+func NewAppErr(err error, where string) *AppErr {
 	return &AppErr{
 		err: err,
 		ErrMetaInfo: &ErrMetaInfo{
-			FuncName: funcName,
+			Where: where,
 		},
 	}
 }

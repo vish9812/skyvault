@@ -36,8 +36,8 @@ func (a *JWT) Generate(userID int64, email string) (string, error) {
 		RegisteredClaims: jwt.RegisteredClaims{
 			Issuer:    "skyvault",
 			Audience:  []string{"skyvault"},
-			IssuedAt:  jwt.NewNumericDate(utils.TimeNowUTC()),
-			ExpiresAt: jwt.NewNumericDate(utils.TimeNowUTC().Add(a.expirationTime)),
+			IssuedAt:  jwt.NewNumericDate(time.Now().UTC()),
+			ExpiresAt: jwt.NewNumericDate(time.Now().UTC().Add(a.expirationTime)),
 			Subject:   email,
 			ID:        utils.UUID(),
 		},

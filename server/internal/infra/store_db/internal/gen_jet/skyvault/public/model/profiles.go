@@ -15,6 +15,7 @@ type Profiles struct {
 	ID        int64 `sql:"primary_key"`
 	Email     string
 	FullName  string
+	Avatar    *[]byte
 	CreatedAt time.Time
 	UpdatedAt time.Time
 }

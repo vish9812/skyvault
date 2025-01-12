@@ -115,24 +115,33 @@ func (s *store) migrateUp(app *common.App) {
 }
 
 func get[TDBModel any, TRes any](ctx context.Context, stmt jetpg.Statement, exec qrm.DB) (*TRes, error) {
-	dbModel := new(TDBModel)
-	err := stmt.QueryContext(ctx, exec, dbModel)
+	var dbModel TDBModel
+	err := stmt.QueryContext(ctx, exec, &dbModel)
 	if err != nil {
 		if errors.Is(err, qrm.ErrNoRows) {
-			return nil, common.ErrDBNoRows
+			return nil, common.NewAppErr(common.ErrDBNoRows, "get")
 		}
 		if common.ErrContains(err, common.ErrDBUniqueConstraint.Error()) {
-			return nil, fmt.Errorf("%w: %w", common.ErrDBUniqueConstraint, err)
+			return nil, common.NewAppErr(fmt.Errorf("%w: %w", common.ErrDBUniqueConstraint, err), "get")
 		}
 
-		return nil, err
+		return nil, common.NewAppErr(fmt.Errorf("failed to query the db: %w", err), "get")
 	}
 
-	resModel := new(TRes)
-	err = copier.Copy(resModel, dbModel)
+	var resModel TRes
+	err = copier.Copy(&resModel, &dbModel)
 	if err != nil {
-		return nil, err
+		return nil, common.NewAppErr(fmt.Errorf("failed to copy the db model to the res model: %w", err), "get")
 	}
 
-	return resModel, nil
+	return &resModel, nil
+}
+
+func getSlice[TDBModel any, TRes any](ctx context.Context, stmt jetpg.Statement, exec qrm.DB) ([]*TRes, error) {
+	res, err := get[TDBModel, []*TRes](ctx, stmt, exec)
+	if err != nil {
+		return nil, common.NewAppErr(err, "getSlice")
+	}
+
+	return *res, nil
 }
