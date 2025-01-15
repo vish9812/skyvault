@@ -37,7 +37,7 @@ const FileUploader = ({ className }: Props) => {
           });
         }
 
-        return filesSvc.uploadFile(file).then((uploadedFile) => {
+        return filesSvc.uploadFile(file, null).then((uploadedFile) => {
           if (uploadedFile) {
             setFiles((prevFiles) =>
               prevFiles.filter((f) => f.name !== file.name)
@@ -78,7 +78,7 @@ const FileUploader = ({ className }: Props) => {
           <h4 className="h4 text-light-100">Uploading</h4>
 
           {files.map((file, index) => {
-            const { type, extension } = utils.getFileType(file.name);
+            const { type, extension } = utils.getFileTypeAndExtension(file.name);
 
             return (
               <li

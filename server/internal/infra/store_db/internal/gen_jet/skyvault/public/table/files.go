@@ -17,16 +17,16 @@ type filesTable struct {
 	postgres.Table
 
 	// Columns
-	ID            postgres.ColumnInteger
-	OwnerID       postgres.ColumnInteger
-	FolderID      postgres.ColumnInteger
-	Name          postgres.ColumnString
-	GeneratedName postgres.ColumnString
-	SizeBytes     postgres.ColumnInteger
-	MimeType      postgres.ColumnString
-	TrashedAt     postgres.ColumnTimestamp
-	CreatedAt     postgres.ColumnTimestamp
-	UpdatedAt     postgres.ColumnTimestamp
+	ID        postgres.ColumnInteger
+	OwnerID   postgres.ColumnInteger
+	FolderID  postgres.ColumnInteger
+	Name      postgres.ColumnString
+	SizeBytes postgres.ColumnInteger
+	Extension postgres.ColumnString
+	MimeType  postgres.ColumnString
+	TrashedAt postgres.ColumnTimestamp
+	CreatedAt postgres.ColumnTimestamp
+	UpdatedAt postgres.ColumnTimestamp
 
 	AllColumns     postgres.ColumnList
 	MutableColumns postgres.ColumnList
@@ -67,34 +67,34 @@ func newFilesTable(schemaName, tableName, alias string) *FilesTable {
 
 func newFilesTableImpl(schemaName, tableName, alias string) filesTable {
 	var (
-		IDColumn            = postgres.IntegerColumn("id")
-		OwnerIDColumn       = postgres.IntegerColumn("owner_id")
-		FolderIDColumn      = postgres.IntegerColumn("folder_id")
-		NameColumn          = postgres.StringColumn("name")
-		GeneratedNameColumn = postgres.StringColumn("generated_name")
-		SizeBytesColumn     = postgres.IntegerColumn("size_bytes")
-		MimeTypeColumn      = postgres.StringColumn("mime_type")
-		TrashedAtColumn     = postgres.TimestampColumn("trashed_at")
-		CreatedAtColumn     = postgres.TimestampColumn("created_at")
-		UpdatedAtColumn     = postgres.TimestampColumn("updated_at")
-		allColumns          = postgres.ColumnList{IDColumn, OwnerIDColumn, FolderIDColumn, NameColumn, GeneratedNameColumn, SizeBytesColumn, MimeTypeColumn, TrashedAtColumn, CreatedAtColumn, UpdatedAtColumn}
-		mutableColumns      = postgres.ColumnList{OwnerIDColumn, FolderIDColumn, NameColumn, GeneratedNameColumn, SizeBytesColumn, MimeTypeColumn, TrashedAtColumn, CreatedAtColumn, UpdatedAtColumn}
+		IDColumn        = postgres.IntegerColumn("id")
+		OwnerIDColumn   = postgres.IntegerColumn("owner_id")
+		FolderIDColumn  = postgres.IntegerColumn("folder_id")
+		NameColumn      = postgres.StringColumn("name")
+		SizeBytesColumn = postgres.IntegerColumn("size_bytes")
+		ExtensionColumn = postgres.StringColumn("extension")
+		MimeTypeColumn  = postgres.StringColumn("mime_type")
+		TrashedAtColumn = postgres.TimestampColumn("trashed_at")
+		CreatedAtColumn = postgres.TimestampColumn("created_at")
+		UpdatedAtColumn = postgres.TimestampColumn("updated_at")
+		allColumns      = postgres.ColumnList{IDColumn, OwnerIDColumn, FolderIDColumn, NameColumn, SizeBytesColumn, ExtensionColumn, MimeTypeColumn, TrashedAtColumn, CreatedAtColumn, UpdatedAtColumn}
+		mutableColumns  = postgres.ColumnList{OwnerIDColumn, FolderIDColumn, NameColumn, SizeBytesColumn, ExtensionColumn, MimeTypeColumn, TrashedAtColumn, CreatedAtColumn, UpdatedAtColumn}
 	)
 
 	return filesTable{
 		Table: postgres.NewTable(schemaName, tableName, alias, allColumns...),
 
 		//Columns
-		ID:            IDColumn,
-		OwnerID:       OwnerIDColumn,
-		FolderID:      FolderIDColumn,
-		Name:          NameColumn,
-		GeneratedName: GeneratedNameColumn,
-		SizeBytes:     SizeBytesColumn,
-		MimeType:      MimeTypeColumn,
-		TrashedAt:     TrashedAtColumn,
-		CreatedAt:     CreatedAtColumn,
-		UpdatedAt:     UpdatedAtColumn,
+		ID:        IDColumn,
+		OwnerID:   OwnerIDColumn,
+		FolderID:  FolderIDColumn,
+		Name:      NameColumn,
+		SizeBytes: SizeBytesColumn,
+		Extension: ExtensionColumn,
+		MimeType:  MimeTypeColumn,
+		TrashedAt: TrashedAtColumn,
+		CreatedAt: CreatedAtColumn,
+		UpdatedAt: UpdatedAtColumn,
 
 		AllColumns:     allColumns,
 		MutableColumns: mutableColumns,

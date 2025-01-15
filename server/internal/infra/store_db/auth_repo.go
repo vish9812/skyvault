@@ -41,7 +41,7 @@ func (r *AuthRepo) Create(ctx context.Context, au *auth.Auth) (*auth.Auth, error
 		Auths.MutableColumns.Except(Auths.CreatedAt, Auths.UpdatedAt),
 	).MODEL(dbAuth).RETURNING(Auths.AllColumns)
 
-	return get[model.Auths, auth.Auth](ctx, stmt, r.store.exec)
+	return query[model.Auths, auth.Auth](ctx, stmt, r.store.dbTx)
 }
 
 func (r *AuthRepo) Get(ctx context.Context, id int64) (*auth.Auth, error) {
@@ -49,7 +49,7 @@ func (r *AuthRepo) Get(ctx context.Context, id int64) (*auth.Auth, error) {
 		FROM(Auths).
 		WHERE(Auths.ID.EQ(Int(id)))
 
-	return get[model.Auths, auth.Auth](ctx, stmt, r.store.exec)
+	return query[model.Auths, auth.Auth](ctx, stmt, r.store.dbTx)
 }
 
 func (r *AuthRepo) GetByProfileID(ctx context.Context, id int64) (*auth.Auth, error) {
@@ -57,5 +57,5 @@ func (r *AuthRepo) GetByProfileID(ctx context.Context, id int64) (*auth.Auth, er
 		FROM(Auths).
 		WHERE(Auths.ProfileID.EQ(Int(id)))
 
-	return get[model.Auths, auth.Auth](ctx, stmt, r.store.exec)
+	return query[model.Auths, auth.Auth](ctx, stmt, r.store.dbTx)
 }

@@ -6,7 +6,7 @@ import (
 )
 
 type Storage interface {
-	CreateFile(ctx context.Context, name string, reader io.Reader, ownerID int64) error
-	GetFile(ctx context.Context, name string, ownerID int64) (io.ReadCloser, error)
+	SaveFile(ctx context.Context, file io.Reader, name string, ownerID int64) error
+	OpenFile(ctx context.Context, name string, ownerID int64) (io.ReadSeekCloser, error)
 	DeleteFile(ctx context.Context, name string, ownerID int64) error
 }

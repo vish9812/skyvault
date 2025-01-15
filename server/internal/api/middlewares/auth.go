@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"skyvault/internal/domain/auth"
 	"skyvault/pkg/common"
+	"strings"
 
 	"github.com/rs/zerolog/log"
 )
@@ -24,13 +25,27 @@ func (m *Auth) JWT(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		tokenStr := r.Header.Get("Authorization")
 		if tokenStr == "" {
-			log.Error().Msg("missing Authorization header, redirecting to /sign-in")
+			log.Error().Msg("missing Authorization header. Redirecting to /sign-in")
 			http.Redirect(w, r, "/sign-in", http.StatusSeeOther)
 			return
 		}
 
+		if !strings.HasPrefix(tokenStr, "Bearer ") {
+			log.Error().Msg("invalid Authorization header, need Bearer token. Redirecting to /sign-in")
+			http.Redirect(w, r, "/sign-in", http.StatusSeeOther)
+			return
+		}
+
+		tokenStr = strings.TrimPrefix(tokenStr, "Bearer ")
+
 		claims, err := m.jwt.Claims(tokenStr)
 		if err != nil {
+			if errors.Is(err, auth.ErrTokenExpired) {
+				log.Error().Msg("token expired, redirecting to /sign-in")
+				http.Redirect(w, r, "/sign-in", http.StatusSeeOther)
+				return
+			}
+
 			if errors.Is(err, auth.ErrInvalidToken) {
 				log.Error().Err(err).Msg("invalid token, redirecting to /sign-in")
 				http.Redirect(w, r, "/sign-in", http.StatusSeeOther)

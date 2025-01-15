@@ -17,6 +17,16 @@ func ResponseJSON(w http.ResponseWriter, status int, data interface{}) {
 	}
 }
 
+func ResponseEmpty(w http.ResponseWriter, status int) {
+	w.WriteHeader(status)
+}
+
+func ResponseText(w http.ResponseWriter, status int, text string) {
+	w.Header().Set("Content-Type", "text/plain")
+	w.WriteHeader(status)
+	w.Write([]byte(text))
+}
+
 func ResponseError(w http.ResponseWriter, code int, resMsg string, logEvent *zerolog.Event, logMsg string, err error) {
 	ae := new(common.AppErr)
 	if errors.As(err, &ae) {
@@ -25,5 +35,5 @@ func ResponseError(w http.ResponseWriter, code int, resMsg string, logEvent *zer
 
 	logEvent.Err(err).Msg(logMsg)
 
-	http.Error(w, resMsg, code)
+	ResponseText(w, code, resMsg)
 }

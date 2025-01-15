@@ -1,5 +1,6 @@
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
+import consts from "./consts";
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -9,9 +10,68 @@ function convertFileToUrl(file: File) {
   return URL.createObjectURL(file);
 }
 
-function getFileIcon(extension: string | undefined, type: FileType | string) {
+function prettySize(sizeBytes: number) {
+  if (sizeBytes < 1024) {
+    return sizeBytes + " Bytes"; // Less than 1 KB, show in Bytes
+  } else if (sizeBytes < 1024 * 1024) {
+    const sizeInKB = sizeBytes / 1024;
+    return sizeInKB.toFixed(1) + " KB"; // Less than 1 MB, show in KB
+  } else if (sizeBytes < 1024 * 1024 * 1024) {
+    const sizeInMB = sizeBytes / (1024 * 1024);
+    return sizeInMB.toFixed(1) + " MB"; // Less than 1 GB, show in MB
+  } else {
+    const sizeInGB = sizeBytes / (1024 * 1024 * 1024);
+    return sizeInGB.toFixed(1) + " GB"; // 1 GB or more, show in GB
+  }
+}
+
+function formattedDateTime(isoString: string | null | undefined) {
+  if (!isoString) return "-";
+
+  const date = new Date(isoString);
+
+  // Get hours and adjust for 12-hour format
+  let hours = date.getHours();
+  const minutes = date.getMinutes();
+  const period = hours >= 12 ? "pm" : "am";
+
+  // Convert hours to 12-hour format
+  hours = hours % 12 || 12;
+
+  // Format the time and date parts
+  const time = `${hours}:${minutes.toString().padStart(2, "0")}${period}`;
+  const day = date.getDate();
+  const monthNames = [
+    "Jan",
+    "Feb",
+    "Mar",
+    "Apr",
+    "May",
+    "Jun",
+    "Jul",
+    "Aug",
+    "Sep",
+    "Oct",
+    "Nov",
+    "Dec",
+  ];
+  const month = monthNames[date.getMonth()];
+  const year = date.getFullYear();
+  const nowYear = new Date().getFullYear();
+  const yearStr = year !== nowYear ? ` ${year}` : "";
+
+  return `${time}, ${day} ${month}${yearStr}`;
+}
+
+// function prettyTimeAgo(date: Date) {
+//   const userLocale = Intl.DateTimeFormat().resolvedOptions().locale;
+//   const timeAgo = new TimeAgo(userLocale || "en-IN");
+//   return timeAgo.format(date);
+// }
+
+function getFileIcon(extension: string | undefined, type: MediaType | string) {
   switch (extension) {
-    // Document
+    // Text
     case "pdf":
       return "/assets/icons/file-pdf.svg";
     case "doc":
@@ -54,13 +114,13 @@ function getFileIcon(extension: string | undefined, type: FileType | string) {
 
     default:
       switch (type) {
-        case "image":
+        case consts.fileType.image:
           return "/assets/icons/file-image.svg";
-        case "document":
+        case consts.fileType.document:
           return "/assets/icons/file-document.svg";
-        case "video":
+        case consts.fileType.video:
           return "/assets/icons/file-video.svg";
-        case "audio":
+        case consts.fileType.audio:
           return "/assets/icons/file-audio.svg";
         default:
           return "/assets/icons/file-other.svg";
@@ -68,7 +128,23 @@ function getFileIcon(extension: string | undefined, type: FileType | string) {
   }
 }
 
-function getFileType(fileName: string) {
+function getFileTypeFromMimeType(mimeType: string) {
+  const baseMime = mimeType.split("/")[0];
+  switch (baseMime) {
+    case "image":
+      return consts.fileType.image;
+    case "text":
+      return consts.fileType.document;
+    case "video":
+      return consts.fileType.video;
+    case "audio":
+      return consts.fileType.audio;
+    default:
+      return "other";
+  }
+}
+
+function getFileTypeAndExtension(fileName: string) {
   const extension = fileName.split(".").pop()?.toLowerCase();
 
   if (!extension) return { type: "other", extension: "" };
@@ -115,8 +191,11 @@ function getFileType(fileName: string) {
 
 const utils = {
   getFileIcon,
-  getFileType,
+  getFileTypeAndExtension,
+  getFileTypeFromMimeType,
   convertFileToUrl,
+  prettySize,
+  formattedDateTime,
 };
 
 export default utils;

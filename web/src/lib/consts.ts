@@ -1,7 +1,15 @@
 const configs = {
   baseAPIPvt: "/api/v1",
   baseAPIPub: "/api/v1/pub",
-  maxFileSizeBytes: 5 * 1024 * 1024, // 5MB
+  maxFileSizeBytes: 100 * 1024 * 1024, // 100MB
+} as const;
+
+const fileType = {
+  document: "document",
+  image: "image",
+  audio: "audio",
+  video: "video",
+  others: "others",
 } as const;
 
 const storageKeys = {
@@ -24,7 +32,7 @@ const pageRoutes = {
   signUp: "/sign-up",
 } as const;
 
-export const navItems = [
+const navItems = [
   {
     name: "Home",
     icon: "/assets/icons/dashboard.svg",
@@ -33,22 +41,50 @@ export const navItems = [
   {
     name: "Documents",
     icon: "/assets/icons/documents.svg",
-    url: "/documents",
+    url: "/media/documents",
   },
   {
     name: "Images",
     icon: "/assets/icons/images.svg",
-    url: "/images",
+    url: "/media/images",
   },
   {
     name: "Media",
     icon: "/assets/icons/video.svg",
-    url: "/media",
+    url: "/media/videos",
   },
   {
     name: "Others",
     icon: "/assets/icons/others.svg",
-    url: "/others",
+    url: "/media/others",
+  },
+];
+
+const actionsDropdownItems = [
+  {
+    label: "Rename",
+    icon: "/assets/icons/edit.svg",
+    value: "rename",
+  },
+  {
+    label: "Details",
+    icon: "/assets/icons/info.svg",
+    value: "details",
+  },
+  {
+    label: "Share",
+    icon: "/assets/icons/share.svg",
+    value: "share",
+  },
+  {
+    label: "Download",
+    icon: "/assets/icons/download.svg",
+    value: "download",
+  },
+  {
+    label: "Delete",
+    icon: "/assets/icons/delete.svg",
+    value: "delete",
   },
 ];
 
@@ -58,6 +94,8 @@ const consts = {
   headers,
   pageRoutes,
   navItems,
+  actionsDropdownItems,
+  fileType,
 };
 
 export default consts;

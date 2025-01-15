@@ -41,7 +41,7 @@ func (r *ProfileRepo) Create(ctx context.Context, pro *profile.Profile) (*profil
 		Profiles.MutableColumns.Except(Profiles.CreatedAt, Profiles.UpdatedAt),
 	).MODEL(dbProfile).RETURNING(Profiles.AllColumns)
 
-	return get[model.Profiles, profile.Profile](ctx, stmt, r.store.exec)
+	return query[model.Profiles, profile.Profile](ctx, stmt, r.store.dbTx)
 }
 
 func (r *ProfileRepo) Get(ctx context.Context, id int64) (*profile.Profile, error) {
@@ -49,7 +49,7 @@ func (r *ProfileRepo) Get(ctx context.Context, id int64) (*profile.Profile, erro
 		FROM(Profiles).
 		WHERE(Profiles.ID.EQ(Int64(id)))
 
-	return get[model.Profiles, profile.Profile](ctx, stmt, r.store.exec)
+	return query[model.Profiles, profile.Profile](ctx, stmt, r.store.dbTx)
 }
 
 func (r *ProfileRepo) GetByEmail(ctx context.Context, email string) (*profile.Profile, error) {
@@ -57,5 +57,5 @@ func (r *ProfileRepo) GetByEmail(ctx context.Context, email string) (*profile.Pr
 		FROM(Profiles).
 		WHERE(Profiles.Email.EQ(String(email)))
 
-	return get[model.Profiles, profile.Profile](ctx, stmt, r.store.exec)
+	return query[model.Profiles, profile.Profile](ctx, stmt, r.store.dbTx)
 }

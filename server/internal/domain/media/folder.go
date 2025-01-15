@@ -2,7 +2,7 @@ package media
 
 import "time"
 
-type Folder struct {
+type FolderInfo struct {
 	ID             int64
 	Name           string
 	CreatedAt      time.Time

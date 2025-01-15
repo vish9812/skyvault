@@ -27,7 +27,7 @@ const HomeLayout = () => {
 
       <section className="flex h-full flex-1 flex-col">
         <MobileNavigation {...profile} />
-        <Header userId={profile.id} />
+        <Header />
         <div className="main-content">
           <Outlet />
         </div>

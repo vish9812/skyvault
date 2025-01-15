@@ -30,7 +30,7 @@ func (r *MediaRepo) WithTx(ctx context.Context, tx *sql.Tx) media.Repo {
 	return &MediaRepo{store: r.store.WithTx(ctx, tx)}
 }
 
-func (r *MediaRepo) CreateFile(ctx context.Context, f *media.File) (*media.File, error) {
+func (r *MediaRepo) CreateFile(ctx context.Context, f *media.FileInfo) (*media.FileInfo, error) {
 	dbFile := new(model.Files)
 	err := copier.Copy(dbFile, f)
 	if err != nil {
@@ -41,10 +41,10 @@ func (r *MediaRepo) CreateFile(ctx context.Context, f *media.File) (*media.File,
 		Files.MutableColumns.Except(Files.CreatedAt, Files.UpdatedAt),
 	).MODEL(dbFile).RETURNING(Files.AllColumns)
 
-	return get[model.Files, media.File](ctx, stmt, r.store.exec)
+	return query[model.Files, media.FileInfo](ctx, stmt, r.store.dbTx)
 }
 
-func (r *MediaRepo) CreateFolder(ctx context.Context, folder *media.Folder) (*media.Folder, error) {
+func (r *MediaRepo) CreateFolder(ctx context.Context, folder *media.FolderInfo) (*media.FolderInfo, error) {
 	dbFolder := new(model.Folders)
 	err := copier.Copy(dbFolder, folder)
 	if err != nil {
@@ -55,15 +55,26 @@ func (r *MediaRepo) CreateFolder(ctx context.Context, folder *media.Folder) (*me
 		Folders.MutableColumns.Except(Folders.CreatedAt, Folders.UpdatedAt),
 	).MODEL(dbFolder).RETURNING(Folders.AllColumns)
 
-	return get[model.Folders, media.Folder](ctx, stmt, r.store.exec)
+	return query[model.Folders, media.FolderInfo](ctx, stmt, r.store.dbTx)
 }
 
-func (r *MediaRepo) GetFiles(ctx context.Context, ownerID int64, folderID *int64) ([]*media.File, error) {
+func (r *MediaRepo) GetFile(ctx context.Context, fileID, ownerID int64) (*media.FileInfo, error) {
+	stmt := SELECT(Files.AllColumns).
+		FROM(Files).
+		WHERE(Files.ID.EQ(Int64(fileID)).
+			AND(Files.OwnerID.EQ(Int64(ownerID))).
+			AND(Files.TrashedAt.IS_NULL()),
+		)
+
+	return query[model.Files, media.FileInfo](ctx, stmt, r.store.dbTx)
+}
+
+func (r *MediaRepo) GetFiles(ctx context.Context, ownerID int64, folderID *int64) ([]*media.FileInfo, error) {
 	var folderCond BoolExpression
-	if folderID != nil {
-		folderCond = Files.FolderID.EQ(Int64(*folderID))
-	} else {
+	if folderID == nil {
 		folderCond = Files.FolderID.IS_NULL()
+	} else {
+		folderCond = Files.FolderID.EQ(Int64(*folderID))
 	}
 
 	stmt := SELECT(Files.AllColumns).
@@ -74,15 +85,15 @@ func (r *MediaRepo) GetFiles(ctx context.Context, ownerID int64, folderID *int64
 				AND(Files.TrashedAt.IS_NULL()),
 		)
 
-	return getSlice[model.Files, media.File](ctx, stmt, r.store.exec)
+	return querySlice[model.Files, media.FileInfo](ctx, stmt, r.store.dbTx)
 }
 
-func (r *MediaRepo) GetFolders(ctx context.Context, ownerID int64, folderID *int64) ([]*media.Folder, error) {
+func (r *MediaRepo) GetFolders(ctx context.Context, ownerID int64, folderID *int64) ([]*media.FolderInfo, error) {
 	var folderCond BoolExpression
-	if folderID != nil {
-		folderCond = Folders.ParentFolderID.EQ(Int64(*folderID))
-	} else {
+	if folderID == nil {
 		folderCond = Folders.ParentFolderID.IS_NULL()
+	} else {
+		folderCond = Folders.ParentFolderID.EQ(Int64(*folderID))
 	}
 
 	stmt := SELECT(Folders.AllColumns).
@@ -93,5 +104,12 @@ func (r *MediaRepo) GetFolders(ctx context.Context, ownerID int64, folderID *int
 				AND(Folders.TrashedAt.IS_NULL()),
 		)
 
-	return getSlice[model.Folders, media.Folder](ctx, stmt, r.store.exec)
+	return querySlice[model.Folders, media.FolderInfo](ctx, stmt, r.store.dbTx)
+}
+
+func (r *MediaRepo) DeleteFile(ctx context.Context, fileID, ownerID int64) error {
+	stmt := Files.DELETE().
+		WHERE(Files.ID.EQ(Int64(fileID)).AND(Files.OwnerID.EQ(Int64(ownerID))))
+
+	return exec(ctx, stmt, r.store.dbTx)
 }
