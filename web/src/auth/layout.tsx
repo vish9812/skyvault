@@ -6,14 +6,15 @@ import { Outlet, useNavigate } from "react-router";
 const AuthLayout = () => {
   // If already authenticated, redirect to home
   const navigate = useNavigate();
+  const profile = authSvc.profile();
 
   useEffect(() => {
-    if (authSvc.isAuthenticated()) {
+    if (profile) {
       navigate(consts.pageRoutes.home);
     }
-  }, [navigate]);
+  }, [navigate, profile]);
 
-  if (authSvc.isAuthenticated()) {
+  if (profile) {
     return null;
   }
 

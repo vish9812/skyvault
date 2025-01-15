@@ -52,34 +52,33 @@ func (s *AuthSvc) SignUp(ctx context.Context, req *SignUpReq) (*AuthSuccessResp,
 	if err == nil {
 		return nil, common.NewAppErr(common.NewValidationError(profile.ErrProfileAlreadyExists), "SignUp")
 	}
-
-	passwordHash, err := auth.HashPassword(req.Password)
-	if err != nil {
-		return nil, common.NewAppErr(err, "SignUp")
-	}
-
+	
 	// Create profile
 	pro := profile.NewProfile()
 	err = copier.Copy(pro, req)
 	if err != nil {
 		return nil, common.NewAppErr(err, "SignUp")
 	}
-
+	
 	tx, err := s.profileRepo.BeginTx(ctx)
 	if err != nil {
 		return nil, common.NewAppErr(err, "SignUp")
 	}
 	defer tx.Rollback()
-
+	
 	profileRepoTx := s.profileRepo.WithTx(ctx, tx)
 	authRepoTx := s.authRepo.WithTx(ctx, tx)
-
+	
 	pro, err = profileRepoTx.Create(ctx, pro)
 	if err != nil {
 		return nil, common.NewAppErr(err, "SignUp")
 	}
-
+	
 	// Create auth
+	passwordHash, err := auth.HashPassword(req.Password)
+	if err != nil {
+		return nil, common.NewAppErr(err, "SignUp")
+	}
 	au := auth.NewAuth(pro.ID)
 	au.ProviderUserID = pro.Email
 	au.PasswordHash = &passwordHash

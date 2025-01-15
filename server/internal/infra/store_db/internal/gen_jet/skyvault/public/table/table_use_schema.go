@@ -11,6 +11,8 @@ package table
 // this method only once at the beginning of the program.
 func UseSchema(schema string) {
 	Auths = Auths.FromSchema(schema)
+	Files = Files.FromSchema(schema)
+	Folders = Folders.FromSchema(schema)
 	Profiles = Profiles.FromSchema(schema)
 	SchemaMigrations = SchemaMigrations.FromSchema(schema)
 }

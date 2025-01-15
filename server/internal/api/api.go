@@ -64,7 +64,7 @@ func (a *API) ResponseJSON(w http.ResponseWriter, status int, data interface{}) 
 func (a *API) ResponseErrorAndLog(w http.ResponseWriter, code int, resMsg string, logEvent *zerolog.Event, logMsg string, err error) {
 	ae := new(common.AppErr)
 	if errors.As(err, &ae) {
-		logEvent = logEvent.Str("funcName", ae.FuncName)
+		logEvent = logEvent.Str("funcName", ae.Where)
 	}
 
 	logEvent.Err(err).Msg(logMsg)

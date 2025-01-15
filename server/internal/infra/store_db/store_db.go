@@ -27,9 +27,9 @@ type store struct {
 	// Use exec instead which can use both sql.DB and sql.Tx interchangeably
 	db *sql.DB
 
-	// exec can use both sql.DB and sql.Tx interchangeably
+	// dbTx can use both sql.DB and sql.Tx interchangeably
 	// It is to be used with the go-jet library queries
-	exec qrm.DB
+	dbTx qrm.DB
 }
 
 func NewStore(app *common.App, dsn string) *store {
@@ -45,7 +45,7 @@ func NewStore(app *common.App, dsn string) *store {
 
 	logger.Info().Msg("connected to the db")
 
-	dbStore := &store{app: app, db: db, exec: db}
+	dbStore := &store{app: app, db: db, dbTx: db}
 
 	dbStore.migrateUp(app)
 
@@ -73,7 +73,7 @@ func (s *store) CloseDB() {
 }
 
 func (s *store) WithTx(ctx context.Context, tx *sql.Tx) *store {
-	return &store{app: s.app, db: s.db, exec: tx}
+	return &store{app: s.app, db: s.db, dbTx: tx}
 }
 
 func (s *store) migrateUp(app *common.App) {
@@ -114,25 +114,43 @@ func (s *store) migrateUp(app *common.App) {
 	logger.Info().Msg("migrated db up")
 }
 
-func get[TDBModel any, TRes any](ctx context.Context, stmt jetpg.Statement, exec qrm.DB) (*TRes, error) {
-	dbModel := new(TDBModel)
-	err := stmt.QueryContext(ctx, exec, dbModel)
+func query[TDBModel any, TRes any](ctx context.Context, stmt jetpg.Statement, exec qrm.DB) (*TRes, error) {
+	var dbModel TDBModel
+	err := stmt.QueryContext(ctx, exec, &dbModel)
 	if err != nil {
 		if errors.Is(err, qrm.ErrNoRows) {
-			return nil, common.ErrDBNoRows
+			return nil, common.NewAppErr(common.ErrDBNoRows, "query")
 		}
 		if common.ErrContains(err, common.ErrDBUniqueConstraint.Error()) {
-			return nil, fmt.Errorf("%w: %w", common.ErrDBUniqueConstraint, err)
+			return nil, common.NewAppErr(fmt.Errorf("%w: %w", common.ErrDBUniqueConstraint, err), "query")
 		}
 
-		return nil, err
+		return nil, common.NewAppErr(fmt.Errorf("failed to query the db: %w", err), "query")
 	}
 
-	resModel := new(TRes)
-	err = copier.Copy(resModel, dbModel)
+	var resModel TRes
+	err = copier.Copy(&resModel, &dbModel)
 	if err != nil {
-		return nil, err
+		return nil, common.NewAppErr(fmt.Errorf("failed to copy the db model to the res model: %w", err), "query")
 	}
 
-	return resModel, nil
+	return &resModel, nil
+}
+
+func querySlice[TDBModel any, TRes any](ctx context.Context, stmt jetpg.Statement, exec qrm.DB) ([]*TRes, error) {
+	res, err := query[[]*TDBModel, []*TRes](ctx, stmt, exec)
+	if err != nil {
+		return nil, common.NewAppErr(err, "querySlice")
+	}
+
+	return *res, nil
+}
+
+func exec(ctx context.Context, stmt jetpg.Statement, exec qrm.DB) error {
+	_, err := stmt.ExecContext(ctx, exec)
+	if err != nil {
+		return common.NewAppErr(fmt.Errorf("failed to exec the stmt: %w", err), "exec")
+	}
+
+	return nil
 }

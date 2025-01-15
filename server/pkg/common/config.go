@@ -29,6 +29,7 @@ type Config struct {
 	LOG_LEVEL                  string
 	AUTH_JWT_KEY               string
 	AUTH_JWT_TOKEN_TIMEOUT_MIN int
+	MEDIA_MAX_SIZE_MB          int64
 }
 
 func LoadConfig(path, nameWithoutExt, extWithoutDot string) *Config {

@@ -8,7 +8,9 @@ import (
 	"skyvault/internal/api"
 	"skyvault/internal/api/middlewares"
 	"skyvault/internal/domain/auth"
+	"skyvault/internal/domain/media"
 	"skyvault/internal/infra/store_db"
+	"skyvault/internal/infra/store_file"
 	"skyvault/internal/services"
 	"skyvault/pkg/common"
 	"strings"
@@ -48,10 +50,15 @@ func initDependencies(app *common.App) *api.API {
 	store := store_db.NewStore(app, app.Config.DB_DSN)
 	authRepo := store_db.NewAuthRepo(store)
 	profileRepo := store_db.NewProfileRepo(store)
+	mediaRepo := store_db.NewMediaRepo(store)
+
+	// Init storage
+	mediaStorage := store_file.NewLocal(app)
 
 	// Init services
 	authJWT := auth.NewAuthJWT(app)
 	authSvc := services.NewAuthSvc(authRepo, profileRepo, authJWT)
+	mediaService := media.NewService(mediaRepo, mediaStorage)
 
 	// Init Middlewares
 	authMiddleware := middlewares.NewAuth(authJWT)
@@ -59,10 +66,12 @@ func initDependencies(app *common.App) *api.API {
 	// Init API
 	apiServer := api.NewAPI(app)
 	authAPI := api.NewAuthAPI(apiServer, authSvc)
+	mediaAPI := api.NewMedia(apiServer, app, mediaService)
 
 	// Init routes
 	apiServer.InitRoutes(authMiddleware)
 	authAPI.InitRoutes()
+	mediaAPI.InitRoutes()
 
 	// Log all routes
 	apiServer.LogRoutes()

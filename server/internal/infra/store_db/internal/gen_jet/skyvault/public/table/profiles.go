@@ -20,6 +20,7 @@ type profilesTable struct {
 	ID        postgres.ColumnInteger
 	Email     postgres.ColumnString
 	FullName  postgres.ColumnString
+	Avatar    postgres.ColumnString
 	CreatedAt postgres.ColumnTimestamp
 	UpdatedAt postgres.ColumnTimestamp
 
@@ -65,10 +66,11 @@ func newProfilesTableImpl(schemaName, tableName, alias string) profilesTable {
 		IDColumn        = postgres.IntegerColumn("id")
 		EmailColumn     = postgres.StringColumn("email")
 		FullNameColumn  = postgres.StringColumn("full_name")
+		AvatarColumn    = postgres.StringColumn("avatar")
 		CreatedAtColumn = postgres.TimestampColumn("created_at")
 		UpdatedAtColumn = postgres.TimestampColumn("updated_at")
-		allColumns      = postgres.ColumnList{IDColumn, EmailColumn, FullNameColumn, CreatedAtColumn, UpdatedAtColumn}
-		mutableColumns  = postgres.ColumnList{EmailColumn, FullNameColumn, CreatedAtColumn, UpdatedAtColumn}
+		allColumns      = postgres.ColumnList{IDColumn, EmailColumn, FullNameColumn, AvatarColumn, CreatedAtColumn, UpdatedAtColumn}
+		mutableColumns  = postgres.ColumnList{EmailColumn, FullNameColumn, AvatarColumn, CreatedAtColumn, UpdatedAtColumn}
 	)
 
 	return profilesTable{
@@ -78,6 +80,7 @@ func newProfilesTableImpl(schemaName, tableName, alias string) profilesTable {
 		ID:        IDColumn,
 		Email:     EmailColumn,
 		FullName:  FullNameColumn,
+		Avatar:    AvatarColumn,
 		CreatedAt: CreatedAtColumn,
 		UpdatedAt: UpdatedAtColumn,
 
