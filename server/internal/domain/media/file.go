@@ -6,9 +6,14 @@ import (
 	"time"
 )
 
+const (
+	BytesPerKB = 1 << 10
+	BytesPerMB = 1 << 20
+	BytesPerGB = 1 << 30
+)
+
 var (
 	ErrFileSizeLimitExceeded = errors.New("file size exceeds the limit")
-	ErrFileNotFound          = errors.New("file not found")
 )
 
 type FileInfo struct {

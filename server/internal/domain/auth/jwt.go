@@ -57,13 +57,13 @@ func (a *JWT) Claims(tokenStr string) (*Claims, error) {
 	}, jwt.WithAudience("skyvault"), jwt.WithIssuer("skyvault"), jwt.WithExpirationRequired(), jwt.WithIssuedAt(), jwt.WithJSONNumber(), jwt.WithLeeway(2*time.Minute), jwt.WithValidMethods([]string{jwt.SigningMethodHS256.Name}))
 	if err != nil {
 		if errors.Is(err, jwt.ErrTokenExpired) {
-			return nil, common.NewAppErr(ErrTokenExpired, "Claims")
+			return nil, common.NewAppError(ErrTokenExpired, "Claims")
 		}
 
-		return nil, common.NewAppErr(fmt.Errorf("failed to parse with claims: %w", err), "Claims")
+		return nil, common.NewAppError(fmt.Errorf("failed to parse with claims: %w", err), "Claims")
 	}
 	if !token.Valid {
-		return nil, common.NewAppErr(ErrInvalidToken, "Claims")
+		return nil, common.NewAppError(ErrInvalidToken, "Claims")
 	}
 	return claims, nil
 }

@@ -41,7 +41,7 @@ func (r *MediaRepo) CreateFile(ctx context.Context, f *media.FileInfo) (*media.F
 		Files.MutableColumns.Except(Files.CreatedAt, Files.UpdatedAt),
 	).MODEL(dbFile).RETURNING(Files.AllColumns)
 
-	return query[model.Files, media.FileInfo](ctx, stmt, r.store.dbTx)
+	return runInsert[model.Files, media.FileInfo](ctx, stmt, r.store.dbTx)
 }
 
 func (r *MediaRepo) CreateFolder(ctx context.Context, folder *media.FolderInfo) (*media.FolderInfo, error) {
@@ -55,7 +55,7 @@ func (r *MediaRepo) CreateFolder(ctx context.Context, folder *media.FolderInfo) 
 		Folders.MutableColumns.Except(Folders.CreatedAt, Folders.UpdatedAt),
 	).MODEL(dbFolder).RETURNING(Folders.AllColumns)
 
-	return query[model.Folders, media.FolderInfo](ctx, stmt, r.store.dbTx)
+	return runInsert[model.Folders, media.FolderInfo](ctx, stmt, r.store.dbTx)
 }
 
 func (r *MediaRepo) GetFile(ctx context.Context, fileID, ownerID int64) (*media.FileInfo, error) {
@@ -66,7 +66,7 @@ func (r *MediaRepo) GetFile(ctx context.Context, fileID, ownerID int64) (*media.
 			AND(Files.TrashedAt.IS_NULL()),
 		)
 
-	return query[model.Files, media.FileInfo](ctx, stmt, r.store.dbTx)
+	return runSelect[model.Files, media.FileInfo](ctx, stmt, r.store.dbTx)
 }
 
 func (r *MediaRepo) GetFiles(ctx context.Context, ownerID int64, folderID *int64) ([]*media.FileInfo, error) {
@@ -85,7 +85,7 @@ func (r *MediaRepo) GetFiles(ctx context.Context, ownerID int64, folderID *int64
 				AND(Files.TrashedAt.IS_NULL()),
 		)
 
-	return querySlice[model.Files, media.FileInfo](ctx, stmt, r.store.dbTx)
+	return runSelectSlice[model.Files, media.FileInfo](ctx, stmt, r.store.dbTx)
 }
 
 func (r *MediaRepo) GetFolders(ctx context.Context, ownerID int64, folderID *int64) ([]*media.FolderInfo, error) {
@@ -104,12 +104,12 @@ func (r *MediaRepo) GetFolders(ctx context.Context, ownerID int64, folderID *int
 				AND(Folders.TrashedAt.IS_NULL()),
 		)
 
-	return querySlice[model.Folders, media.FolderInfo](ctx, stmt, r.store.dbTx)
+	return runSelectSlice[model.Folders, media.FolderInfo](ctx, stmt, r.store.dbTx)
 }
 
 func (r *MediaRepo) DeleteFile(ctx context.Context, fileID, ownerID int64) error {
 	stmt := Files.DELETE().
 		WHERE(Files.ID.EQ(Int64(fileID)).AND(Files.OwnerID.EQ(Int64(ownerID))))
 
-	return exec(ctx, stmt, r.store.dbTx)
+	return runUpdateOrDelete(ctx, stmt, r.store.dbTx)
 }

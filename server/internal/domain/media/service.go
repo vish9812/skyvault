@@ -2,17 +2,41 @@ package media
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"io"
 	"skyvault/pkg/common"
 )
 
 type Service interface {
+	// CreateFile creates a new file in the storage and DB
+	//
+	// Main Errors:
+	// - common.ErrDuplicateData
+	// - media.ErrFileSizeLimitExceeded
 	CreateFile(ctx context.Context, info *FileInfo, blob io.Reader) (*FileInfo, error)
+
+	// GetFileInfo gets file info by its ID and owner ID
+	//
+	// Main Errors:
+	// - common.ErrNoData
 	GetFileInfo(ctx context.Context, fileID int64, ownerID int64) (*FileInfo, error)
+
+	// GetFilesInfo gets all files info by owner ID and folder ID
+	//
+	// Main Errors:
+	// - common.ErrNoData
 	GetFilesInfo(ctx context.Context, ownerID int64, folderID *int64) ([]*FileInfo, error)
+
+	// GetFileBlob gets a file blob by its ID and owner ID
+	//
+	// Main Errors:
+	// - common.ErrNoData
 	GetFileBlob(ctx context.Context, fileID int64, ownerID int64) (io.ReadSeekCloser, error)
+
+	// DeleteFile deletes a file by its ID and owner ID
+	//
+	// Main Errors:
+	// - common.ErrNoData
 	DeleteFile(ctx context.Context, fileID int64, ownerID int64) error
 }
 
@@ -28,7 +52,7 @@ func NewService(repo Repo, storage Storage) Service {
 func (s *service) CreateFile(ctx context.Context, info *FileInfo, blob io.Reader) (*FileInfo, error) {
 	tx, err := s.repo.BeginTx(ctx)
 	if err != nil {
-		return nil, common.NewAppErr(fmt.Errorf("failed to begin transaction: %w", err), "service.CreateFile")
+		return nil, common.NewAppError(err, "service.CreateFile:BeginTx")
 	}
 	defer tx.Rollback()
 
@@ -36,17 +60,17 @@ func (s *service) CreateFile(ctx context.Context, info *FileInfo, blob io.Reader
 
 	info, err = repoTx.CreateFile(ctx, info)
 	if err != nil {
-		return nil, common.NewAppErr(fmt.Errorf("failed to create file info: %w", err), "service.CreateFile")
+		return nil, common.NewAppError(err, "service.CreateFile:CreateFile")
 	}
 
 	err = s.storage.SaveFile(ctx, blob, fmt.Sprintf("%d", info.ID), info.OwnerID)
 	if err != nil {
-		return nil, common.NewAppErr(fmt.Errorf("failed to save blob: %w", err), "service.CreateFile")
+		return nil, common.NewAppError(err, "service.CreateFile:SaveFile").WithMetadata("file_id", info.ID)
 	}
 
 	err = tx.Commit()
 	if err != nil {
-		return nil, common.NewAppErr(fmt.Errorf("failed to commit transaction: %w", err), "service.CreateFile")
+		return nil, common.NewAppError(err, "service.CreateFile:Commit").WithMetadata("file_id", info.ID)
 	}
 
 	return info, nil
@@ -55,11 +79,7 @@ func (s *service) CreateFile(ctx context.Context, info *FileInfo, blob io.Reader
 func (s *service) GetFileInfo(ctx context.Context, fileID int64, ownerID int64) (*FileInfo, error) {
 	info, err := s.repo.GetFile(ctx, fileID, ownerID)
 	if err != nil {
-		if errors.Is(err, common.ErrDBNoRows) {
-			return nil, common.NewAppErr(fmt.Errorf("%w: %w", ErrFileNotFound, err), "GetFileInfo")
-		}
-
-		return nil, common.NewAppErr(fmt.Errorf("failed to get file info: %w", err), "GetFileInfo")
+		return nil, common.NewAppError(err, "service.GetFileInfo:GetFile")
 	}
 	return info, nil
 }
@@ -67,7 +87,7 @@ func (s *service) GetFileInfo(ctx context.Context, fileID int64, ownerID int64) 
 func (s *service) GetFilesInfo(ctx context.Context, ownerID int64, folderID *int64) ([]*FileInfo, error) {
 	files, err := s.repo.GetFiles(ctx, ownerID, folderID)
 	if err != nil {
-		return nil, common.NewAppErr(fmt.Errorf("failed to get files: %w", err), "GetFilesInfo")
+		return nil, common.NewAppError(err, "service.GetFilesInfo:GetFiles")
 	}
 
 	return files, nil
@@ -76,7 +96,7 @@ func (s *service) GetFilesInfo(ctx context.Context, ownerID int64, folderID *int
 func (s *service) GetFileBlob(ctx context.Context, fileID int64, ownerID int64) (io.ReadSeekCloser, error) {
 	blob, err := s.storage.OpenFile(ctx, fmt.Sprintf("%d", fileID), ownerID)
 	if err != nil {
-		return nil, common.NewAppErr(fmt.Errorf("failed to open file: %w", err), "GetFileBlob")
+		return nil, common.NewAppError(err, "service.GetFileBlob:OpenFile")
 	}
 
 	return blob, nil
@@ -85,7 +105,7 @@ func (s *service) GetFileBlob(ctx context.Context, fileID int64, ownerID int64) 
 func (s *service) DeleteFile(ctx context.Context, fileID int64, ownerID int64) error {
 	tx, err := s.repo.BeginTx(ctx)
 	if err != nil {
-		return common.NewAppErr(fmt.Errorf("failed to begin transaction: %w", err), "service.DeleteFile")
+		return common.NewAppError(err, "service.DeleteFile:BeginTx")
 	}
 	defer tx.Rollback()
 
@@ -93,17 +113,17 @@ func (s *service) DeleteFile(ctx context.Context, fileID int64, ownerID int64) e
 
 	err = repoTx.DeleteFile(ctx, fileID, ownerID)
 	if err != nil {
-		return common.NewAppErr(fmt.Errorf("failed to delete file: %w", err), "service.DeleteFile")
+		return common.NewAppError(err, "service.DeleteFile:DeleteFile")
 	}
 
 	err = s.storage.DeleteFile(ctx, fmt.Sprintf("%d", fileID), ownerID)
 	if err != nil {
-		return common.NewAppErr(fmt.Errorf("failed to delete file: %w", err), "service.DeleteFile")
+		return common.NewAppError(err, "service.DeleteFile:DeleteFile")
 	}
 
 	err = tx.Commit()
 	if err != nil {
-		return common.NewAppErr(fmt.Errorf("failed to commit transaction: %w", err), "service.DeleteFile")
+		return common.NewAppError(err, "service.DeleteFile:Commit")
 	}
 
 	return nil

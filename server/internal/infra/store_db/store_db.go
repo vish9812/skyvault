@@ -114,42 +114,88 @@ func (s *store) migrateUp(app *common.App) {
 	logger.Info().Msg("migrated db up")
 }
 
-func query[TDBModel any, TRes any](ctx context.Context, stmt jetpg.Statement, exec qrm.DB) (*TRes, error) {
+// runSelect is a generic function that queries the database and returns a TRes model.
+// It is to be used with Select statements
+//
+// Main Errors:
+// - common.ErrNoData
+func runSelect[TDBModel any, TRes any](ctx context.Context, stmt jetpg.Statement, exec qrm.DB) (*TRes, error) {
 	var dbModel TDBModel
 	err := stmt.QueryContext(ctx, exec, &dbModel)
 	if err != nil {
 		if errors.Is(err, qrm.ErrNoRows) {
-			return nil, common.NewAppErr(common.ErrDBNoRows, "query")
-		}
-		if common.ErrContains(err, common.ErrDBUniqueConstraint.Error()) {
-			return nil, common.NewAppErr(fmt.Errorf("%w: %w", common.ErrDBUniqueConstraint, err), "query")
+			return nil, common.NewAppError(fmt.Errorf("%w: %w", common.ErrNoData, err), "store_db.runSelect:QueryContext")
 		}
 
-		return nil, common.NewAppErr(fmt.Errorf("failed to query the db: %w", err), "query")
+		return nil, common.NewAppError(err, "store_db.runSelect:QueryContext")
 	}
 
 	var resModel TRes
 	err = copier.Copy(&resModel, &dbModel)
 	if err != nil {
-		return nil, common.NewAppErr(fmt.Errorf("failed to copy the db model to the res model: %w", err), "query")
+		return nil, common.NewAppError(fmt.Errorf("failed to copy the db model to the res model: %w", err), "store_db.runSelect:Copy")
 	}
 
 	return &resModel, nil
 }
 
-func querySlice[TDBModel any, TRes any](ctx context.Context, stmt jetpg.Statement, exec qrm.DB) ([]*TRes, error) {
-	res, err := query[[]*TDBModel, []*TRes](ctx, stmt, exec)
+// runSelectSlice is a generic function that queries the database and returns a slice of TRes models.
+// It is to be used with Select statements
+//
+// Main Errors:
+// - common.ErrNoData
+func runSelectSlice[TDBModel any, TRes any](ctx context.Context, stmt jetpg.Statement, exec qrm.DB) ([]*TRes, error) {
+	res, err := runSelect[[]*TDBModel, []*TRes](ctx, stmt, exec)
 	if err != nil {
-		return nil, common.NewAppErr(err, "querySlice")
+		return nil, common.NewAppError(err, "store_db.runSelectSlice:query")
 	}
 
 	return *res, nil
 }
 
-func exec(ctx context.Context, stmt jetpg.Statement, exec qrm.DB) error {
-	_, err := stmt.ExecContext(ctx, exec)
+// runInsert is a generic function that queries the database and returns a TRes model.
+// It is to be used with Insert statements
+//
+// Main Errors:
+// - common.ErrDuplicateData
+func runInsert[TDBModel any, TRes any](ctx context.Context, stmt jetpg.Statement, exec qrm.DB) (*TRes, error) {
+	var dbModel TDBModel
+	err := stmt.QueryContext(ctx, exec, &dbModel)
 	if err != nil {
-		return common.NewAppErr(fmt.Errorf("failed to exec the stmt: %w", err), "exec")
+		if common.ErrContains(err, "unique constraint") {
+			return nil, common.NewAppError(fmt.Errorf("%w: %w", common.ErrDuplicateData, err), "store_db.runInsert:QueryContext")
+		}
+
+		return nil, common.NewAppError(err, "store_db.runInsert:QueryContext")
+	}
+
+	var resModel TRes
+	err = copier.Copy(&resModel, &dbModel)
+	if err != nil {
+		return nil, common.NewAppError(fmt.Errorf("failed to copy the db model to the res model: %w", err), "store_db.runInsert:Copy")
+	}
+
+	return &resModel, nil
+}
+
+// runUpdateOrDelete is a generic function that executes a statement.
+// It is to be used with Update and Delete statements
+//
+// Main Errors:
+// - common.ErrNoData
+func runUpdateOrDelete(ctx context.Context, stmt jetpg.Statement, exec qrm.DB) error {
+	res, err := stmt.ExecContext(ctx, exec)
+	if err != nil {
+		return common.NewAppError(err, "store_db.runUpdateOrDelete:ExecContext")
+	}
+
+	rowsAffected, err := res.RowsAffected()
+	if err != nil {
+		return common.NewAppError(err, "store_db.runUpdateOrDelete:RowsAffected")
+	}
+
+	if rowsAffected == 0 {
+		return common.NewAppError(common.ErrNoData, "store_db.runUpdateOrDelete:RowsAffected")
 	}
 
 	return nil

@@ -10,7 +10,6 @@ import (
 	"path/filepath"
 	"testing"
 
-	"skyvault/internal/domain/media"
 	"skyvault/pkg/common"
 	"skyvault/pkg/utils"
 
@@ -72,6 +71,10 @@ func TestSaveFile(t *testing.T) {
 	content, err := os.ReadFile(savePath)
 	require.NoError(t, err, "Should be able to read saved file")
 	require.Equal(t, fileContent, content, "Saved file content should match")
+
+	// Save the same file again
+	err = local.SaveFile(ctx, fileReader, fileName, ownerID)
+	require.ErrorIs(t, err, common.ErrDuplicateData, "SaveFile should return ErrDuplicateData when file already exists")
 }
 
 func TestDeleteFile(t *testing.T) {
@@ -91,9 +94,9 @@ func TestDeleteFile(t *testing.T) {
 	_, err = os.Stat(savePath)
 	require.ErrorIs(t, err, fs.ErrNotExist, "Deleted file should not exist")
 
-	// Deleting a non-existent file should not return an error
+	// Deleting a non-existent file should return an error
 	err = local.DeleteFile(ctx, fileName, ownerID)
-	require.NoError(t, err, "DeleteFile should not return an error when deleting a non-existent file")
+	require.ErrorIs(t, err, common.ErrNoData, "DeleteFile should return ErrNoData when deleting a non-existent file")
 }
 
 func TestOpenFile(t *testing.T) {
@@ -107,7 +110,7 @@ func TestOpenFile(t *testing.T) {
 	fileContent := []byte("testing open file")
 
 	_, err := local.OpenFile(ctx, fileName, ownerID)
-	require.ErrorIs(t, err, media.ErrFileNotFound, "OpenFile should return ErrFileNotFound when file does not exist")
+	require.ErrorIs(t, err, common.ErrNoData, "OpenFile should return ErrNoData when file does not exist")
 
 	createTestFile(t, local.baseDir, ownerID, fileName, fileContent)
 

@@ -37,51 +37,65 @@ func (ls *Local) SaveFile(ctx context.Context, file io.Reader, name string, owne
 	ownerDir := filepath.Join(ls.baseDir, fmt.Sprintf("%d", ownerID))
 	err := os.MkdirAll(ownerDir, os.ModePerm)
 	if err != nil {
-		return common.NewAppErr(fmt.Errorf("failed to create owner directory: %w", err), "SaveFile")
+		return common.NewAppError(err, "store_file.SaveFile:MkdirAll").WithMetadata("owner_dir", ownerDir)
+	}
+
+	savePath := filepath.Join(ownerDir, name)
+
+	// Check if the file already exists
+	if _, err := os.Stat(savePath); err == nil {
+		return common.NewAppError(common.ErrDuplicateData, "store_file.SaveFile:Stat").WithMetadata("save_path", savePath)
+	} else if !errors.Is(err, fs.ErrNotExist) {
+		return common.NewAppError(err, "store_file.SaveFile:Stat").WithMetadata("save_path", savePath)
 	}
 
 	// Create the destination file
-	savePath := filepath.Join(ownerDir, name)
 	f, err := os.Create(savePath)
 	if err != nil {
-		return common.NewAppErr(fmt.Errorf("failed to create file: %w", err), "SaveFile")
+		return common.NewAppError(err, "store_file.SaveFile:Create").WithMetadata("save_path", savePath)
 	}
 	defer f.Close()
 
 	// Write the file
-	_, err = io.Copy(f, file)
+	written, err := io.Copy(f, file)
 	if err != nil {
 		// Delete the file if writing fails
 		if e := ls.DeleteFile(ctx, name, ownerID); e != nil {
-			return common.NewAppErr(fmt.Errorf("%w: %w", e, err), "SaveFile")
+			if !errors.Is(e, common.ErrNoData) {
+				return common.NewAppError(fmt.Errorf("%w: %w", e, err), "store_file.SaveFile:DeleteFile")
+			}
 		}
-		return common.NewAppErr(fmt.Errorf("failed to write to file: %w", err), "SaveFile")
+		return common.NewAppError(err, "store_file.SaveFile:Copy").WithMetadata("save_path", savePath)
+	}
+
+	if written > ls.app.Config.MEDIA_MAX_SIZE_MB*media.BytesPerMB {
+		return common.NewAppError(media.ErrFileSizeLimitExceeded, "store_file.SaveFile").WithMetadata("save_path", savePath)
 	}
 
 	return nil
 }
 
 func (ls *Local) DeleteFile(ctx context.Context, name string, ownerID int64) error {
-	savePath := filepath.Join(ls.baseDir, fmt.Sprintf("%d", ownerID), name)
-	if err := os.Remove(savePath); err != nil {
+	deletePath := filepath.Join(ls.baseDir, fmt.Sprintf("%d", ownerID), name)
+	if err := os.Remove(deletePath); err != nil {
 		if errors.Is(err, fs.ErrNotExist) {
-			return nil
+			return common.NewAppError(fmt.Errorf("%w: %w", common.ErrNoData, err), "store_file.DeleteFile:Remove").WithMetadata("delete_path", deletePath)
 		}
 
-		return common.NewAppErr(fmt.Errorf("failed to delete file: %w", err), "DeleteFile")
+		return common.NewAppError(err, "store_file.DeleteFile:Remove").WithMetadata("delete_path", deletePath)
 	}
 	return nil
 }
 
 func (ls *Local) OpenFile(ctx context.Context, name string, ownerID int64) (io.ReadSeekCloser, error) {
-	savePath := filepath.Join(ls.baseDir, fmt.Sprintf("%d", ownerID), name)
-	f, err := os.Open(savePath)
+	openPath := filepath.Join(ls.baseDir, fmt.Sprintf("%d", ownerID), name)
+	f, err := os.Open(openPath)
 	if err != nil {
 		if errors.Is(err, fs.ErrNotExist) {
-			return nil, common.NewAppErr(media.ErrFileNotFound, "OpenFile")
+			return nil, common.NewAppError(fmt.Errorf("%w: %w", common.ErrNoData, err), "store_file.OpenFile:Open").WithMetadata("open_path", openPath)
 		}
 
-		return nil, common.NewAppErr(fmt.Errorf("failed to open file: %w", err), "OpenFile")
+		return nil, common.NewAppError(err, "store_file.OpenFile:Open").WithMetadata("open_path", openPath)
 	}
 	return f, nil
 }

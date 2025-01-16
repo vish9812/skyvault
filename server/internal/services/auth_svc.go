@@ -50,34 +50,34 @@ func (s *AuthSvc) SignUp(ctx context.Context, req *SignUpReq) (*AuthSuccessResp,
 	// Check if profile already exists
 	_, err := s.profileRepo.GetByEmail(ctx, req.Email)
 	if err == nil {
-		return nil, common.NewAppErr(common.NewValidationError(profile.ErrProfileAlreadyExists), "SignUp")
+		return nil, common.NewAppError(common.NewValidationError(profile.ErrProfileAlreadyExists), "SignUp")
 	}
-	
+
 	// Create profile
 	pro := profile.NewProfile()
 	err = copier.Copy(pro, req)
 	if err != nil {
-		return nil, common.NewAppErr(err, "SignUp")
+		return nil, common.NewAppError(err, "SignUp")
 	}
-	
+
 	tx, err := s.profileRepo.BeginTx(ctx)
 	if err != nil {
-		return nil, common.NewAppErr(err, "SignUp")
+		return nil, common.NewAppError(err, "SignUp")
 	}
 	defer tx.Rollback()
-	
+
 	profileRepoTx := s.profileRepo.WithTx(ctx, tx)
 	authRepoTx := s.authRepo.WithTx(ctx, tx)
-	
+
 	pro, err = profileRepoTx.Create(ctx, pro)
 	if err != nil {
-		return nil, common.NewAppErr(err, "SignUp")
+		return nil, common.NewAppError(err, "SignUp")
 	}
-	
+
 	// Create auth
 	passwordHash, err := auth.HashPassword(req.Password)
 	if err != nil {
-		return nil, common.NewAppErr(err, "SignUp")
+		return nil, common.NewAppError(err, "SignUp")
 	}
 	au := auth.NewAuth(pro.ID)
 	au.ProviderUserID = pro.Email
@@ -85,13 +85,13 @@ func (s *AuthSvc) SignUp(ctx context.Context, req *SignUpReq) (*AuthSuccessResp,
 
 	_, err = authRepoTx.Create(ctx, au)
 	if err != nil {
-		return nil, common.NewAppErr(fmt.Errorf("failed to create auth: %w", err), "SignUp")
+		return nil, common.NewAppError(fmt.Errorf("failed to create auth: %w", err), "SignUp")
 	}
 
 	resp := &AuthSuccessResp{Profile: &SignUpRespProfile{}}
 	err = copier.Copy(resp.Profile, pro)
 	if err != nil {
-		return nil, common.NewAppErr(fmt.Errorf("failed to copy the struct profile: %w", err), "SignUp")
+		return nil, common.NewAppError(fmt.Errorf("failed to copy the struct profile: %w", err), "SignUp")
 	}
 
 	tx.Commit()
@@ -99,7 +99,7 @@ func (s *AuthSvc) SignUp(ctx context.Context, req *SignUpReq) (*AuthSuccessResp,
 	// Generate JWT
 	token, err := s.jwt.Generate(pro.ID, pro.Email)
 	if err != nil {
-		return nil, common.NewAppErr(err, "SignUp")
+		return nil, common.NewAppError(err, "SignUp")
 	}
 	resp.Token = token
 
@@ -114,34 +114,34 @@ type SignInReq struct {
 func (s *AuthSvc) SignIn(ctx context.Context, req *SignInReq) (*AuthSuccessResp, error) {
 	pro, err := s.profileRepo.GetByEmail(ctx, req.Email)
 	if err != nil {
-		if errors.Is(err, common.ErrDBNoRows) {
-			return nil, common.NewAppErr(fmt.Errorf("%w: %w", ErrEmailOrPasswordIncorrect, err), "SignIn")
+		if errors.Is(err, common.ErrNoData) {
+			return nil, common.NewAppError(fmt.Errorf("%w: %w", ErrEmailOrPasswordIncorrect, err), "SignIn")
 		}
-		return nil, common.NewAppErr(fmt.Errorf("failed to get profile by email: %w", err), "SignIn")
+		return nil, common.NewAppError(fmt.Errorf("failed to get profile by email: %w", err), "SignIn")
 	}
 
 	au, err := s.authRepo.GetByProfileID(ctx, pro.ID)
 	if err != nil {
-		return nil, common.NewAppErr(fmt.Errorf("failed to get auth by profile id: %w", err), "SignIn")
+		return nil, common.NewAppError(fmt.Errorf("failed to get auth by profile id: %w", err), "SignIn")
 	}
 
 	if ok, err := auth.IsValidPassword(*au.PasswordHash, req.Password); err != nil || !ok {
 		if err != nil {
-			return nil, common.NewAppErr(fmt.Errorf("failed to validate password: %w", err), "SignIn")
+			return nil, common.NewAppError(fmt.Errorf("failed to validate password: %w", err), "SignIn")
 		}
-		return nil, common.NewAppErr(ErrEmailOrPasswordIncorrect, "SignIn")
+		return nil, common.NewAppError(ErrEmailOrPasswordIncorrect, "SignIn")
 	}
 
 	resp := &AuthSuccessResp{Profile: &SignUpRespProfile{}}
 	err = copier.Copy(resp.Profile, pro)
 	if err != nil {
-		return nil, common.NewAppErr(fmt.Errorf("failed to copy the struct profile: %w", err), "SignIn")
+		return nil, common.NewAppError(fmt.Errorf("failed to copy the struct profile: %w", err), "SignIn")
 	}
 
 	// Generate JWT
 	token, err := s.jwt.Generate(pro.ID, pro.Email)
 	if err != nil {
-		return nil, common.NewAppErr(err, "SignIn")
+		return nil, common.NewAppError(err, "SignIn")
 	}
 	resp.Token = token
 

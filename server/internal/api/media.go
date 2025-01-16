@@ -2,7 +2,6 @@ package api
 
 import (
 	"errors"
-	"fmt"
 	"net/http"
 	"skyvault/internal/api/internal"
 	"skyvault/internal/api/internal/dtos"
@@ -13,20 +12,19 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/jinzhu/copier"
-	"github.com/rs/zerolog/log"
 )
 
-type Media struct {
+type mediaAPI struct {
 	api     *API
 	app     *common.App
 	service media.Service
 }
 
-func NewMedia(a *API, app *common.App, service media.Service) *Media {
-	return &Media{api: a, app: app, service: service}
+func NewMedia(a *API, app *common.App, service media.Service) *mediaAPI {
+	return &mediaAPI{api: a, app: app, service: service}
 }
 
-func (a *Media) InitRoutes() {
+func (a *mediaAPI) InitRoutes() {
 	pvtRouter := a.api.v1Pvt
 	pvtRouter.Route("/media", func(r chi.Router) {
 		r.Post("/", a.UploadFile)
@@ -36,37 +34,38 @@ func (a *Media) InitRoutes() {
 	})
 }
 
-func (a *Media) UploadFile(w http.ResponseWriter, r *http.Request) {
-	err := r.ParseMultipartForm(30 << 20) // 30 MB
+func (a *mediaAPI) UploadFile(w http.ResponseWriter, r *http.Request) {
+	userID := r.Context().Value(common.CtxKeyAuthClaims).(*auth.Claims).UserID
+
+	err := r.ParseMultipartForm(15 * media.BytesPerMB)
 	if err != nil {
-		errMsg := "failed to parse form"
-		internal.ResponseError(w, http.StatusBadRequest, errMsg, log.Error(), errMsg, err)
+		internal.RespondError(w, r, http.StatusBadRequest, internal.ErrInvalidReqData, common.NewAppError(err, "mediaAPI.UploadFile:ParseMultipartForm"))
 		return
 	}
 
 	file, handler, err := r.FormFile("file")
 	if err != nil {
-		errMsg := "failed to get file from form"
-		internal.ResponseError(w, http.StatusBadRequest, errMsg, log.Error(), errMsg, err)
+		internal.RespondError(w, r, http.StatusBadRequest, internal.ErrInvalidReqData, common.NewAppError(err, "mediaAPI.UploadFile:FormFile"))
 		return
 	}
 	defer file.Close()
 
+	errMetadata := common.NewErrorMetadata().Add("file_name", handler.Filename)
+
 	fileSize := handler.Size
-	if fileSize > (a.app.Config.MEDIA_MAX_SIZE_MB << 20) {
-		internal.ResponseError(w, http.StatusBadRequest, media.ErrFileSizeLimitExceeded.Error(), log.Error(), media.ErrFileSizeLimitExceeded.Error(), media.ErrFileSizeLimitExceeded)
+	if fileSize > (a.app.Config.MEDIA_MAX_SIZE_MB * media.BytesPerMB) {
+		internal.RespondError(w, r, http.StatusBadRequest, internal.ErrFileSizeLimitExceeded, common.NewAppError(media.ErrFileSizeLimitExceeded, "mediaAPI.UploadFile").WithErrorMetadata(errMetadata).WithMetadata("file_size", handler.Size).WithMetadata("max_size_mb", a.app.Config.MEDIA_MAX_SIZE_MB))
 		return
 	}
 
-	ownerID := r.Context().Value(common.CtxKeyAuthClaims).(*auth.Claims).UserID
-	folderID, err := extractFolderID(r)
+	folderID, err := folderIDFromParams(r)
 	if err != nil {
-		internal.ResponseError(w, http.StatusBadRequest, "invalid folder ID", log.Error(), "invalid folder ID", err)
+		internal.RespondError(w, r, http.StatusBadRequest, internal.ErrInvalidReqData, common.NewAppError(err, "mediaAPI.UploadFile:folderIDFromParams").WithErrorMetadata(errMetadata))
 		return
 	}
 
 	newFile := media.NewFileInfo(folderID)
-	newFile.OwnerID = ownerID
+	newFile.OwnerID = userID
 	newFile.Name = handler.Filename
 	newFile.SizeBytes = fileSize
 	newFile.Extension = media.GetFileExtension(newFile.Name)
@@ -77,97 +76,122 @@ func (a *Media) UploadFile(w http.ResponseWriter, r *http.Request) {
 
 	createdFile, err := a.service.CreateFile(r.Context(), newFile, file)
 	if err != nil {
-		internal.ResponseError(w, http.StatusInternalServerError, "failed to create file", log.Error().Str("file_name", newFile.Name).Any("folder_id", folderID), "failed to create file", err)
+		if errors.Is(err, media.ErrFileSizeLimitExceeded) {
+			internal.RespondError(w, r, http.StatusBadRequest, internal.ErrFileSizeLimitExceeded, common.NewAppError(err, "mediaAPI.UploadFile:CreateFile").WithErrorMetadata(errMetadata).WithMetadata("max_size_mb", a.app.Config.MEDIA_MAX_SIZE_MB))
+			return
+		}
+
+		if errors.Is(err, common.ErrDuplicateData) {
+			internal.RespondError(w, r, http.StatusBadRequest, internal.ErrDuplicateData, common.NewAppError(err, "mediaAPI.UploadFile:CreateFile").WithErrorMetadata(errMetadata))
+			return
+		}
+
+		internal.RespondError(w, r, http.StatusInternalServerError, internal.ErrGeneric, common.NewAppError(err, "mediaAPI.UploadFile:CreateFile").WithErrorMetadata(errMetadata))
 		return
 	}
 
-	internal.ResponseJSON(w, http.StatusCreated, createdFile)
+	internal.RespondJSON(w, http.StatusCreated, createdFile)
 }
 
-func (a *Media) GetFilesInfo(w http.ResponseWriter, r *http.Request) {
-	ownerID := r.Context().Value(common.CtxKeyAuthClaims).(*auth.Claims).UserID
+func (a *mediaAPI) GetFilesInfo(w http.ResponseWriter, r *http.Request) {
+	userID := r.Context().Value(common.CtxKeyAuthClaims).(*auth.Claims).UserID
 
-	folderID, err := extractFolderID(r)
+	folderID, err := folderIDFromParams(r)
 	if err != nil {
-		internal.ResponseError(w, http.StatusBadRequest, "invalid folder ID", log.Error(), "invalid folder ID", err)
+		internal.RespondError(w, r, http.StatusBadRequest, internal.ErrInvalidReqData, common.NewAppError(err, "mediaAPI.GetFilesInfo:folderIDFromParams"))
 		return
 	}
-	files, err := a.service.GetFilesInfo(r.Context(), ownerID, folderID)
+
+	files, err := a.service.GetFilesInfo(r.Context(), userID, folderID)
 	if err != nil {
-		internal.ResponseError(w, http.StatusInternalServerError, "failed to get files", log.Error().Int64("owner_id", ownerID).Any("folder_id", folderID), "failed to get files", err)
+		if errors.Is(err, common.ErrNoData) {
+			internal.RespondError(w, r, http.StatusNotFound, internal.ErrNoData, common.NewAppError(err, "mediaAPI.GetFilesInfo:GetFilesInfo"))
+			return
+		}
+
+		internal.RespondError(w, r, http.StatusInternalServerError, internal.ErrGeneric, common.NewAppError(err, "mediaAPI.GetFilesInfo:GetFilesInfo"))
 		return
 	}
 
 	var dto []dtos.GetFilesInfoRes
 	err = copier.Copy(&dto, &files)
 	if err != nil || len(dto) != len(files) {
-		internal.ResponseError(w, http.StatusInternalServerError, "failed to copy files to DTO", log.Error().Int64("owner_id", ownerID).Any("folder_id", folderID), "failed to copy files to DTO", err)
+		if err == nil {
+			err = errors.New("failed to copy to dto")
+		}
+		internal.RespondError(w, r, http.StatusInternalServerError, internal.ErrGeneric, common.NewAppError(err, "mediaAPI.GetFilesInfo:Copy"))
 		return
 	}
 
-	internal.ResponseJSON(w, http.StatusOK, dto)
+	internal.RespondJSON(w, http.StatusOK, dto)
 }
 
-func extractFolderID(r *http.Request) (*int64, error) {
+// folderIDFromParams returns int when folder-id is found otherwise nil
+func folderIDFromParams(r *http.Request) (*int64, error) {
 	folderIDStr := r.URL.Query().Get("folder-id")
 	if folderIDStr == "" {
 		return nil, nil
 	}
 
-	folderIDInt, err := strconv.ParseInt(folderIDStr, 10, 64)
+	idInt, err := strconv.ParseInt(folderIDStr, 10, 64)
 	if err != nil {
-		return nil, common.NewAppErr(fmt.Errorf("failed to parse folder ID: %w", err), "extractFolderID")
+		return nil, common.NewAppError(err, "api.folderIDFromParams:ParseInt").WithMetadata("folder_id_str", folderIDStr)
 	}
 
-	return &folderIDInt, nil
+	return &idInt, nil
 }
 
-func (a *Media) GetBlob(w http.ResponseWriter, r *http.Request) {
+func (a *mediaAPI) GetBlob(w http.ResponseWriter, r *http.Request) {
 	fileID, err := strconv.ParseInt(chi.URLParam(r, "fileID"), 10, 64)
 	if err != nil {
-		internal.ResponseError(w, http.StatusBadRequest, "invalid file ID", log.Error(), "invalid file ID", err)
+		internal.RespondError(w, r, http.StatusBadRequest, internal.ErrInvalidReqData, common.NewAppError(err, "mediaAPI.GetBlob:ParseInt"))
 		return
 	}
 
-	ownerID := r.Context().Value(common.CtxKeyAuthClaims).(*auth.Claims).UserID
-	info, err := a.service.GetFileInfo(r.Context(), fileID, ownerID)
+	userID := r.Context().Value(common.CtxKeyAuthClaims).(*auth.Claims).UserID
+	info, err := a.service.GetFileInfo(r.Context(), fileID, userID)
 	if err != nil {
-		if errors.Is(err, media.ErrFileNotFound) {
-			internal.ResponseError(w, http.StatusNotFound, "file not found", log.Error().Int64("file_id", fileID).Int64("owner_id", ownerID), "file not found", err)
+		if errors.Is(err, common.ErrNoData) {
+			internal.RespondError(w, r, http.StatusNotFound, internal.ErrNoData, common.NewAppError(err, "mediaAPI.GetBlob:GetFileInfo"))
 			return
 		}
 
-		internal.ResponseError(w, http.StatusInternalServerError, "failed to get file info", log.Error().Int64("file_id", fileID).Int64("owner_id", ownerID), "failed to get file info", err)
+		internal.RespondError(w, r, http.StatusInternalServerError, internal.ErrGeneric, common.NewAppError(err, "mediaAPI.GetBlob:GetFileInfo"))
 		return
 	}
 
-	blob, err := a.service.GetFileBlob(r.Context(), fileID, ownerID)
+	blob, err := a.service.GetFileBlob(r.Context(), fileID, userID)
 	if err != nil {
-		if errors.Is(err, media.ErrFileNotFound) {
-			internal.ResponseError(w, http.StatusNotFound, "file not found", log.Error().Int64("file_id", fileID).Int64("owner_id", ownerID), "file not found", err)
+		if errors.Is(err, common.ErrNoData) {
+			internal.RespondError(w, r, http.StatusNotFound, internal.ErrNoData, common.NewAppError(err, "mediaAPI.GetBlob:GetFileBlob"))
 			return
 		}
 
-		internal.ResponseError(w, http.StatusInternalServerError, "failed to get file blob", log.Error().Int64("file_id", fileID).Int64("owner_id", ownerID), "failed to get file blob", err)
+		internal.RespondError(w, r, http.StatusInternalServerError, internal.ErrGeneric, common.NewAppError(err, "mediaAPI.GetBlob:GetFileBlob"))
 		return
 	}
 
 	http.ServeContent(w, r, info.Name, info.UpdatedAt, blob)
 }
 
-func (a *Media) DeleteFile(w http.ResponseWriter, r *http.Request) {
+func (a *mediaAPI) DeleteFile(w http.ResponseWriter, r *http.Request) {
 	fileID, err := strconv.ParseInt(chi.URLParam(r, "fileID"), 10, 64)
 	if err != nil {
-		internal.ResponseError(w, http.StatusBadRequest, "invalid file ID", log.Error(), "invalid file ID", err)
+		internal.RespondError(w, r, http.StatusBadRequest, internal.ErrInvalidReqData, common.NewAppError(err, "mediaAPI.DeleteFile:ParseInt"))
 		return
 	}
 
 	ownerID := r.Context().Value(common.CtxKeyAuthClaims).(*auth.Claims).UserID
 	err = a.service.DeleteFile(r.Context(), fileID, ownerID)
 	if err != nil {
-		internal.ResponseError(w, http.StatusInternalServerError, "failed to delete file", log.Error().Int64("file_id", fileID).Int64("owner_id", ownerID), "failed to delete file", err)
+		if errors.Is(err, common.ErrNoData) {
+			internal.RespondError(w, r, http.StatusNotFound, internal.ErrNoData, common.NewAppError(err, "mediaAPI.DeleteFile:DeleteFile"))
+			return
+		}
+
+		internal.RespondError(w, r, http.StatusInternalServerError, internal.ErrGeneric, common.NewAppError(err, "mediaAPI.DeleteFile:DeleteFile"))
 		return
 	}
 
-	internal.ResponseEmpty(w, http.StatusOK)
+	internal.RespondEmpty(w, http.StatusOK)
 }

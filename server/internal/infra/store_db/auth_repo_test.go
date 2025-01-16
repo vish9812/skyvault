@@ -30,7 +30,7 @@ func TestCreate(t *testing.T) {
 		authB.Provider = authA.Provider
 		authB.ProviderUserID = authA.ProviderUserID
 		_, err := authRepo.Create(context.Background(), authB)
-		require.ErrorIs(t, err, common.ErrDBUniqueConstraint, "expected error for duplicate provider details of userB")
+		require.ErrorIs(t, err, common.ErrDuplicateData, "expected error for duplicate provider details of userB")
 
 		// Create another Auth with the same provider and different providerUserID
 		userC := authRandom(pro.ID, pro.Email)

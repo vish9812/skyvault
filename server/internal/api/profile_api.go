@@ -1,6 +1,7 @@
 package api
 
 import (
+	"errors"
 	"net/http"
 	"skyvault/internal/services"
 	"skyvault/pkg/common"
@@ -34,7 +35,7 @@ func (a *ProfileAPI) get(w http.ResponseWriter, r *http.Request) {
 
 	profile, err := a.profileSvc.Get(r.Context(), id)
 	if err != nil {
-		if common.IsErrNotFound(err) {
+		if errors.Is(err, common.ErrNoData) {
 			errMsg := "profile not found"
 			a.api.ResponseErrorAndLog(w, http.StatusNotFound, errMsg, log.Error().Int64("id", id), errMsg, err)
 			return

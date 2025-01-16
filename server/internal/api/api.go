@@ -5,6 +5,7 @@ import (
 	"errors"
 	"net/http"
 	"skyvault/internal/api/middlewares"
+	"skyvault/internal/domain/auth"
 	"skyvault/pkg/common"
 
 	"github.com/go-chi/chi/v5"
@@ -24,7 +25,7 @@ func NewAPI(app *common.App) *API {
 	return &API{app: app}
 }
 
-func (a *API) InitRoutes(authMiddleware *middlewares.Auth) {
+func (a *API) InitRoutes(jwt *auth.JWT) {
 	router := chi.NewRouter()
 	router.Use(middleware.RequestID)
 	router.Use(middleware.Logger)
@@ -34,7 +35,7 @@ func (a *API) InitRoutes(authMiddleware *middlewares.Auth) {
 
 	v1Pub := chi.NewRouter()
 	router.Mount("/api/v1/pub", v1Pub)
-	v1Pvt := chi.NewRouter().With(authMiddleware.JWT)
+	v1Pvt := chi.NewRouter().With(middlewares.JWT(jwt))
 	router.Mount("/api/v1", v1Pvt)
 
 	a.v1Pub = v1Pub
@@ -62,9 +63,9 @@ func (a *API) ResponseJSON(w http.ResponseWriter, status int, data interface{}) 
 }
 
 func (a *API) ResponseErrorAndLog(w http.ResponseWriter, code int, resMsg string, logEvent *zerolog.Event, logMsg string, err error) {
-	ae := new(common.AppErr)
+	ae := new(common.AppError)
 	if errors.As(err, &ae) {
-		logEvent = logEvent.Str("funcName", ae.Where)
+		logEvent = logEvent.Str("funcName", ae.Where())
 	}
 
 	logEvent.Err(err).Msg(logMsg)

@@ -6,7 +6,6 @@ import (
 	"os"
 	"os/signal"
 	"skyvault/internal/api"
-	"skyvault/internal/api/middlewares"
 	"skyvault/internal/domain/auth"
 	"skyvault/internal/domain/media"
 	"skyvault/internal/infra/store_db"
@@ -59,19 +58,18 @@ func initDependencies(app *common.App) *api.API {
 	authJWT := auth.NewAuthJWT(app)
 	authSvc := services.NewAuthSvc(authRepo, profileRepo, authJWT)
 	mediaService := media.NewService(mediaRepo, mediaStorage)
-
-	// Init Middlewares
-	authMiddleware := middlewares.NewAuth(authJWT)
-
+	profileSvc := services.NewProfileSvc(profileRepo)
 	// Init API
 	apiServer := api.NewAPI(app)
 	authAPI := api.NewAuthAPI(apiServer, authSvc)
 	mediaAPI := api.NewMedia(apiServer, app, mediaService)
+	profileAPI := api.NewProfileAPI(apiServer, profileSvc)
 
 	// Init routes
-	apiServer.InitRoutes(authMiddleware)
+	apiServer.InitRoutes(authJWT)
 	authAPI.InitRoutes()
 	mediaAPI.InitRoutes()
+	profileAPI.InitRoutes()
 
 	// Log all routes
 	apiServer.LogRoutes()
