@@ -10,17 +10,20 @@ import (
 	"path/filepath"
 	"testing"
 
-	"skyvault/pkg/common"
+	"skyvault/pkg/appconfig"
+	"skyvault/pkg/apperror"
 	"skyvault/pkg/utils"
 
 	"github.com/stretchr/testify/require"
 )
 
-func setupTestApp() *common.App {
+func setupTestApp() *appconfig.App {
 	testBasePath := filepath.Join(os.TempDir(), utils.RandomName())
-	return &common.App{
-		Config: &common.Config{
-			APP_DATA_FOLDER: testBasePath,
+	return &appconfig.App{
+		Config: &appconfig.Config{
+			Server: appconfig.ServerConfig{
+				DataDir: testBasePath,
+			},
 		},
 	}
 }
@@ -42,7 +45,7 @@ func createTestFile(t *testing.T, baseDir string, ownerID int64, fileName string
 func TestNewLocal(t *testing.T) {
 	t.Parallel()
 	app := setupTestApp()
-	expectedBaseDir := filepath.Join(app.Config.APP_DATA_FOLDER, "uploads")
+	expectedBaseDir := filepath.Join(app.Config.Server.DataDir, "uploads")
 
 	local := NewLocal(app)
 	require.Equal(t, expectedBaseDir, local.baseDir, "baseDir should be set correctly")
@@ -74,7 +77,7 @@ func TestSaveFile(t *testing.T) {
 
 	// Save the same file again
 	err = local.SaveFile(ctx, fileReader, fileName, ownerID)
-	require.ErrorIs(t, err, common.ErrDuplicateData, "SaveFile should return ErrDuplicateData when file already exists")
+	require.ErrorIs(t, err, apperror.ErrDuplicateData, "SaveFile should return ErrDuplicateData when file already exists")
 }
 
 func TestDeleteFile(t *testing.T) {
@@ -96,7 +99,7 @@ func TestDeleteFile(t *testing.T) {
 
 	// Deleting a non-existent file should return an error
 	err = local.DeleteFile(ctx, fileName, ownerID)
-	require.ErrorIs(t, err, common.ErrNoData, "DeleteFile should return ErrNoData when deleting a non-existent file")
+	require.ErrorIs(t, err, apperror.ErrNoData, "DeleteFile should return ErrNoData when deleting a non-existent file")
 }
 
 func TestOpenFile(t *testing.T) {
@@ -110,7 +113,7 @@ func TestOpenFile(t *testing.T) {
 	fileContent := []byte("testing open file")
 
 	_, err := local.OpenFile(ctx, fileName, ownerID)
-	require.ErrorIs(t, err, common.ErrNoData, "OpenFile should return ErrNoData when file does not exist")
+	require.ErrorIs(t, err, apperror.ErrNoData, "OpenFile should return ErrNoData when file does not exist")
 
 	createTestFile(t, local.baseDir, ownerID, fileName, fileContent)
 

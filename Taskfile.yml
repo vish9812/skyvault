@@ -1,0 +1,142 @@
+version: "3"
+
+dotenv:
+  - ./server/dev.env
+
+vars:
+  DB_MIGRATION_PATH: server/internal/infra/store_db/internal/migrations
+  DB_GEN_MODELS_PATH: server/internal/infra/store_db/internal/gen_jet
+  SERVER_BUILD_OUTPUT: ./server/bin/server
+  STATIC_DIR: server/static
+
+tasks:
+  # Server tasks
+  postgres-up:
+    dir: server
+    desc: Start a postgres container and create the DB.
+    cmds:
+      - mkdir -p ${SERVER__DATA_DIR}
+      - docker compose --env-file dev.env up -d
+
+  postgres-down:
+    dir: server
+    desc: Stop and remove the postgres container.
+    cmds:
+      - docker compose --env-file dev.env down
+
+  create-db:
+    dir: server
+    desc: Create a new DB.
+    cmd: >
+      docker exec -it ${DB__CONTAINER__NAME} 
+      createdb --username=${DB__USER} ${DB__NAME}
+
+  drop-db:
+    dir: server
+    desc: Drop the DB.
+    cmd: >
+      docker exec -it ${DB__CONTAINER__NAME} 
+      dropdb --username=${DB__USER} ${DB__NAME}
+
+  migrate-up:
+    dir: server
+    desc: Migrate DB to the latest SQL file.
+    cmd: migrate -path $DB_MIGRATION_PATH -database ${DB__DSN} -verbose up
+
+  migrate-down:
+    dir: server
+    desc: Migrate DB down to 1 previous version.
+    cmd: migrate -path $DB_MIGRATION_PATH -database ${DB__DSN} -verbose down 1
+
+  migrate-create:
+    dir: server
+    desc: Create the next up and down sql files.
+    cmd: migrate create -ext sql -dir $DB_MIGRATION_PATH -seq $MIGRATION_FILE_NAME
+
+  gen-db-models:
+    dir: server
+    desc: Generate DB models.
+    cmd: jet -dsn="${DB__DSN}" -schema=public -path=$DB_GEN_MODELS_PATH
+
+  server:build:
+    dir: server
+    desc: Build the server application
+    cmds:
+      - mkdir -p bin
+      - go build -o {{.SERVER_BUILD_OUTPUT}} ./cmd/main.go -dev -env ./dev.env
+    sources:
+      - ./**/*.go
+    generates:
+      - "{{.SERVER_BUILD_OUTPUT}}"
+
+  server:run:
+    dir: server
+    desc: Build and run the server application
+    deps: [server:build]
+    cmds:
+      - "{{.SERVER_BUILD_OUTPUT}}"
+
+  server:nuke:
+    dir: server
+    desc: Remove the containers and generated data
+    cmds:
+      - task: postgres-down
+      - sudo rm -rf ${SERVER__DATA_DIR}
+      - rm -rf bin
+      - rm -rf {{.STATIC_DIR}}
+
+  # Web tasks
+  web:install:
+    dir: web
+    desc: Install web dependencies
+    cmds:
+      - pnpm install
+
+  web:build:
+    dir: web
+    desc: Build the web application
+    deps: [web:install]
+    cmds:
+      - pnpm run build
+
+  web:dev:
+    dir: web
+    desc: Start web development server
+    deps: [web:install]
+    cmds:
+      - pnpm run dev
+
+  web:lint:
+    dir: web
+    desc: Run web linter
+    deps: [web:install]
+    cmds:
+      - pnpm run lint
+
+  web:nuke:
+    dir: web
+    desc: Remove web generated files and dependencies
+    cmds:
+      - rm -rf node_modules
+      - rm -rf dist
+
+  # Combined tasks
+  build:
+    desc: Build both server and web applications
+    deps:
+      - web:build
+      - server:build
+
+  run:
+    desc: Build and run the server (which serves the web app)
+    deps: [build]
+    cmds:
+      - rm -rf server/static
+      - ln -s web/dist server/static
+      - task: server:run
+
+  nuke:
+    desc: Clean all generated files
+    deps:
+      - web:nuke
+      - server:nuke

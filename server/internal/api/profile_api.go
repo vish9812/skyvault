@@ -4,7 +4,7 @@ import (
 	"errors"
 	"net/http"
 	"skyvault/internal/services"
-	"skyvault/pkg/common"
+	"skyvault/pkg/apperror"
 	"strconv"
 
 	"github.com/go-chi/chi/v5"
@@ -35,7 +35,7 @@ func (a *ProfileAPI) get(w http.ResponseWriter, r *http.Request) {
 
 	profile, err := a.profileSvc.Get(r.Context(), id)
 	if err != nil {
-		if errors.Is(err, common.ErrNoData) {
+		if errors.Is(err, apperror.ErrNoData) {
 			errMsg := "profile not found"
 			a.api.ResponseErrorAndLog(w, http.StatusNotFound, errMsg, log.Error().Int64("id", id), errMsg, err)
 			return

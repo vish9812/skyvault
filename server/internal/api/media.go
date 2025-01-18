@@ -7,7 +7,8 @@ import (
 	"skyvault/internal/api/internal/dtos"
 	"skyvault/internal/domain/auth"
 	"skyvault/internal/domain/media"
-	"skyvault/pkg/common"
+	"skyvault/pkg/appconfig"
+	"skyvault/pkg/apperror"
 	"strconv"
 
 	"github.com/go-chi/chi/v5"
@@ -16,11 +17,11 @@ import (
 
 type mediaAPI struct {
 	api     *API
-	app     *common.App
+	app     *appconfig.App
 	service media.Service
 }
 
-func NewMedia(a *API, app *common.App, service media.Service) *mediaAPI {
+func NewMedia(a *API, app *appconfig.App, service media.Service) *mediaAPI {
 	return &mediaAPI{api: a, app: app, service: service}
 }
 
@@ -35,32 +36,32 @@ func (a *mediaAPI) InitRoutes() {
 }
 
 func (a *mediaAPI) UploadFile(w http.ResponseWriter, r *http.Request) {
-	userID := r.Context().Value(common.CtxKeyAuthClaims).(*auth.Claims).UserID
+	userID := auth.GetUserIDFromContext(r.Context())
 
 	err := r.ParseMultipartForm(15 * media.BytesPerMB)
 	if err != nil {
-		internal.RespondError(w, r, http.StatusBadRequest, internal.ErrInvalidReqData, common.NewAppError(err, "mediaAPI.UploadFile:ParseMultipartForm"))
+		internal.RespondError(w, r, http.StatusBadRequest, internal.ErrInvalidReqData, apperror.NewAppError(err, "mediaAPI.UploadFile:ParseMultipartForm"))
 		return
 	}
 
 	file, handler, err := r.FormFile("file")
 	if err != nil {
-		internal.RespondError(w, r, http.StatusBadRequest, internal.ErrInvalidReqData, common.NewAppError(err, "mediaAPI.UploadFile:FormFile"))
+		internal.RespondError(w, r, http.StatusBadRequest, internal.ErrInvalidReqData, apperror.NewAppError(err, "mediaAPI.UploadFile:FormFile"))
 		return
 	}
 	defer file.Close()
 
-	errMetadata := common.NewErrorMetadata().Add("file_name", handler.Filename)
+	errMetadata := apperror.NewErrorMetadata().Add("file_name", handler.Filename)
 
 	fileSize := handler.Size
-	if fileSize > (a.app.Config.MEDIA_MAX_SIZE_MB * media.BytesPerMB) {
-		internal.RespondError(w, r, http.StatusBadRequest, internal.ErrFileSizeLimitExceeded, common.NewAppError(media.ErrFileSizeLimitExceeded, "mediaAPI.UploadFile").WithErrorMetadata(errMetadata).WithMetadata("file_size", handler.Size).WithMetadata("max_size_mb", a.app.Config.MEDIA_MAX_SIZE_MB))
+	if fileSize > (a.app.Config.Media.MaxSizeMB * media.BytesPerMB) {
+		internal.RespondError(w, r, http.StatusBadRequest, internal.ErrFileSizeLimitExceeded, apperror.NewAppError(media.ErrFileSizeLimitExceeded, "mediaAPI.UploadFile").WithErrorMetadata(errMetadata).WithMetadata("file_size", handler.Size).WithMetadata("max_size_mb", a.app.Config.Media.MaxSizeMB))
 		return
 	}
 
 	folderID, err := folderIDFromParams(r)
 	if err != nil {
-		internal.RespondError(w, r, http.StatusBadRequest, internal.ErrInvalidReqData, common.NewAppError(err, "mediaAPI.UploadFile:folderIDFromParams").WithErrorMetadata(errMetadata))
+		internal.RespondError(w, r, http.StatusBadRequest, internal.ErrInvalidReqData, apperror.NewAppError(err, "mediaAPI.UploadFile:folderIDFromParams").WithErrorMetadata(errMetadata))
 		return
 	}
 
@@ -77,16 +78,16 @@ func (a *mediaAPI) UploadFile(w http.ResponseWriter, r *http.Request) {
 	createdFile, err := a.service.CreateFile(r.Context(), newFile, file)
 	if err != nil {
 		if errors.Is(err, media.ErrFileSizeLimitExceeded) {
-			internal.RespondError(w, r, http.StatusBadRequest, internal.ErrFileSizeLimitExceeded, common.NewAppError(err, "mediaAPI.UploadFile:CreateFile").WithErrorMetadata(errMetadata).WithMetadata("max_size_mb", a.app.Config.MEDIA_MAX_SIZE_MB))
+			internal.RespondError(w, r, http.StatusBadRequest, internal.ErrFileSizeLimitExceeded, apperror.NewAppError(err, "mediaAPI.UploadFile:CreateFile").WithErrorMetadata(errMetadata).WithMetadata("max_size_mb", a.app.Config.Media.MaxSizeMB))
 			return
 		}
 
-		if errors.Is(err, common.ErrDuplicateData) {
-			internal.RespondError(w, r, http.StatusBadRequest, internal.ErrDuplicateData, common.NewAppError(err, "mediaAPI.UploadFile:CreateFile").WithErrorMetadata(errMetadata))
+		if errors.Is(err, apperror.ErrDuplicateData) {
+			internal.RespondError(w, r, http.StatusBadRequest, internal.ErrDuplicateData, apperror.NewAppError(err, "mediaAPI.UploadFile:CreateFile").WithErrorMetadata(errMetadata))
 			return
 		}
 
-		internal.RespondError(w, r, http.StatusInternalServerError, internal.ErrGeneric, common.NewAppError(err, "mediaAPI.UploadFile:CreateFile").WithErrorMetadata(errMetadata))
+		internal.RespondError(w, r, http.StatusInternalServerError, internal.ErrGeneric, apperror.NewAppError(err, "mediaAPI.UploadFile:CreateFile").WithErrorMetadata(errMetadata))
 		return
 	}
 
@@ -94,22 +95,22 @@ func (a *mediaAPI) UploadFile(w http.ResponseWriter, r *http.Request) {
 }
 
 func (a *mediaAPI) GetFilesInfo(w http.ResponseWriter, r *http.Request) {
-	userID := r.Context().Value(common.CtxKeyAuthClaims).(*auth.Claims).UserID
+	userID := auth.GetUserIDFromContext(r.Context())
 
 	folderID, err := folderIDFromParams(r)
 	if err != nil {
-		internal.RespondError(w, r, http.StatusBadRequest, internal.ErrInvalidReqData, common.NewAppError(err, "mediaAPI.GetFilesInfo:folderIDFromParams"))
+		internal.RespondError(w, r, http.StatusBadRequest, internal.ErrInvalidReqData, apperror.NewAppError(err, "mediaAPI.GetFilesInfo:folderIDFromParams"))
 		return
 	}
 
 	files, err := a.service.GetFilesInfo(r.Context(), userID, folderID)
 	if err != nil {
-		if errors.Is(err, common.ErrNoData) {
-			internal.RespondError(w, r, http.StatusNotFound, internal.ErrNoData, common.NewAppError(err, "mediaAPI.GetFilesInfo:GetFilesInfo"))
+		if errors.Is(err, apperror.ErrNoData) {
+			internal.RespondError(w, r, http.StatusNotFound, internal.ErrNoData, apperror.NewAppError(err, "mediaAPI.GetFilesInfo:GetFilesInfo"))
 			return
 		}
 
-		internal.RespondError(w, r, http.StatusInternalServerError, internal.ErrGeneric, common.NewAppError(err, "mediaAPI.GetFilesInfo:GetFilesInfo"))
+		internal.RespondError(w, r, http.StatusInternalServerError, internal.ErrGeneric, apperror.NewAppError(err, "mediaAPI.GetFilesInfo:GetFilesInfo"))
 		return
 	}
 
@@ -119,7 +120,7 @@ func (a *mediaAPI) GetFilesInfo(w http.ResponseWriter, r *http.Request) {
 		if err == nil {
 			err = errors.New("failed to copy to dto")
 		}
-		internal.RespondError(w, r, http.StatusInternalServerError, internal.ErrGeneric, common.NewAppError(err, "mediaAPI.GetFilesInfo:Copy"))
+		internal.RespondError(w, r, http.StatusInternalServerError, internal.ErrGeneric, apperror.NewAppError(err, "mediaAPI.GetFilesInfo:Copy"))
 		return
 	}
 
@@ -135,7 +136,7 @@ func folderIDFromParams(r *http.Request) (*int64, error) {
 
 	idInt, err := strconv.ParseInt(folderIDStr, 10, 64)
 	if err != nil {
-		return nil, common.NewAppError(err, "api.folderIDFromParams:ParseInt").WithMetadata("folder_id_str", folderIDStr)
+		return nil, apperror.NewAppError(err, "api.folderIDFromParams:ParseInt").WithMetadata("folder_id_str", folderIDStr)
 	}
 
 	return &idInt, nil
@@ -144,30 +145,30 @@ func folderIDFromParams(r *http.Request) (*int64, error) {
 func (a *mediaAPI) GetBlob(w http.ResponseWriter, r *http.Request) {
 	fileID, err := strconv.ParseInt(chi.URLParam(r, "fileID"), 10, 64)
 	if err != nil {
-		internal.RespondError(w, r, http.StatusBadRequest, internal.ErrInvalidReqData, common.NewAppError(err, "mediaAPI.GetBlob:ParseInt"))
+		internal.RespondError(w, r, http.StatusBadRequest, internal.ErrInvalidReqData, apperror.NewAppError(err, "mediaAPI.GetBlob:ParseInt"))
 		return
 	}
 
-	userID := r.Context().Value(common.CtxKeyAuthClaims).(*auth.Claims).UserID
+	userID := auth.GetUserIDFromContext(r.Context())
 	info, err := a.service.GetFileInfo(r.Context(), fileID, userID)
 	if err != nil {
-		if errors.Is(err, common.ErrNoData) {
-			internal.RespondError(w, r, http.StatusNotFound, internal.ErrNoData, common.NewAppError(err, "mediaAPI.GetBlob:GetFileInfo"))
+		if errors.Is(err, apperror.ErrNoData) {
+			internal.RespondError(w, r, http.StatusNotFound, internal.ErrNoData, apperror.NewAppError(err, "mediaAPI.GetBlob:GetFileInfo"))
 			return
 		}
 
-		internal.RespondError(w, r, http.StatusInternalServerError, internal.ErrGeneric, common.NewAppError(err, "mediaAPI.GetBlob:GetFileInfo"))
+		internal.RespondError(w, r, http.StatusInternalServerError, internal.ErrGeneric, apperror.NewAppError(err, "mediaAPI.GetBlob:GetFileInfo"))
 		return
 	}
 
 	blob, err := a.service.GetFileBlob(r.Context(), fileID, userID)
 	if err != nil {
-		if errors.Is(err, common.ErrNoData) {
-			internal.RespondError(w, r, http.StatusNotFound, internal.ErrNoData, common.NewAppError(err, "mediaAPI.GetBlob:GetFileBlob"))
+		if errors.Is(err, apperror.ErrNoData) {
+			internal.RespondError(w, r, http.StatusNotFound, internal.ErrNoData, apperror.NewAppError(err, "mediaAPI.GetBlob:GetFileBlob"))
 			return
 		}
 
-		internal.RespondError(w, r, http.StatusInternalServerError, internal.ErrGeneric, common.NewAppError(err, "mediaAPI.GetBlob:GetFileBlob"))
+		internal.RespondError(w, r, http.StatusInternalServerError, internal.ErrGeneric, apperror.NewAppError(err, "mediaAPI.GetBlob:GetFileBlob"))
 		return
 	}
 
@@ -177,19 +178,19 @@ func (a *mediaAPI) GetBlob(w http.ResponseWriter, r *http.Request) {
 func (a *mediaAPI) DeleteFile(w http.ResponseWriter, r *http.Request) {
 	fileID, err := strconv.ParseInt(chi.URLParam(r, "fileID"), 10, 64)
 	if err != nil {
-		internal.RespondError(w, r, http.StatusBadRequest, internal.ErrInvalidReqData, common.NewAppError(err, "mediaAPI.DeleteFile:ParseInt"))
+		internal.RespondError(w, r, http.StatusBadRequest, internal.ErrInvalidReqData, apperror.NewAppError(err, "mediaAPI.DeleteFile:ParseInt"))
 		return
 	}
 
-	ownerID := r.Context().Value(common.CtxKeyAuthClaims).(*auth.Claims).UserID
-	err = a.service.DeleteFile(r.Context(), fileID, ownerID)
+	userID := auth.GetUserIDFromContext(r.Context())
+	err = a.service.DeleteFile(r.Context(), fileID, userID)
 	if err != nil {
-		if errors.Is(err, common.ErrNoData) {
-			internal.RespondError(w, r, http.StatusNotFound, internal.ErrNoData, common.NewAppError(err, "mediaAPI.DeleteFile:DeleteFile"))
+		if errors.Is(err, apperror.ErrNoData) {
+			internal.RespondError(w, r, http.StatusNotFound, internal.ErrNoData, apperror.NewAppError(err, "mediaAPI.DeleteFile:DeleteFile"))
 			return
 		}
 
-		internal.RespondError(w, r, http.StatusInternalServerError, internal.ErrGeneric, common.NewAppError(err, "mediaAPI.DeleteFile:DeleteFile"))
+		internal.RespondError(w, r, http.StatusInternalServerError, internal.ErrGeneric, apperror.NewAppError(err, "mediaAPI.DeleteFile:DeleteFile"))
 		return
 	}
 

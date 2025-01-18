@@ -5,7 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"net/mail"
-	"skyvault/pkg/common"
+	"skyvault/pkg/apperror"
 )
 
 type IAuthSvc interface {
@@ -19,12 +19,12 @@ const (
 )
 
 var (
-	errFullNameRequired = common.NewValidationError(errors.New("full name is required"))
-	errEmailRequired    = common.NewValidationError(errors.New("email is required"))
-	errEmailInvalid     = common.NewValidationError(errors.New("email is invalid"))
-	errPasswordRequired = common.NewValidationError(errors.New("password is required"))
-	errPasswordMinLen   = common.NewValidationError(fmt.Errorf("password must be at least %d characters long", passwordMinLen))
-	errPasswordMaxLen   = common.NewValidationError(fmt.Errorf("password can be max. %d characters long", passwordMaxLen))
+	errFullNameRequired = apperror.NewValidationError(errors.New("full name is required"))
+	errEmailRequired    = apperror.NewValidationError(errors.New("email is required"))
+	errEmailInvalid     = apperror.NewValidationError(errors.New("email is invalid"))
+	errPasswordRequired = apperror.NewValidationError(errors.New("password is required"))
+	errPasswordMinLen   = apperror.NewValidationError(fmt.Errorf("password must be at least %d characters long", passwordMinLen))
+	errPasswordMaxLen   = apperror.NewValidationError(fmt.Errorf("password can be max. %d characters long", passwordMaxLen))
 )
 
 var _ IAuthSvc = (*AuthSvcValidator)(nil)
@@ -41,24 +41,24 @@ func newAuthSvcValidator(svc IAuthSvc) IAuthSvc {
 
 func (v *AuthSvcValidator) SignUp(ctx context.Context, req *SignUpReq) (*AuthSuccessResp, error) {
 	if req.FullName == "" {
-		return nil, common.NewAppError(errFullNameRequired, "SignUp")
+		return nil, apperror.NewAppError(errFullNameRequired, "SignUp")
 	}
 
 	if req.Email == "" {
-		return nil, common.NewAppError(errEmailRequired, "SignUp")
+		return nil, apperror.NewAppError(errEmailRequired, "SignUp")
 	}
 	if _, err := mail.ParseAddress(req.Email); err != nil {
-		return nil, common.NewAppError(errEmailInvalid, "SignUp")
+		return nil, apperror.NewAppError(errEmailInvalid, "SignUp")
 	}
 
 	if req.Password == "" {
-		return nil, common.NewAppError(errPasswordRequired, "SignUp")
+		return nil, apperror.NewAppError(errPasswordRequired, "SignUp")
 	}
 	if len(req.Password) < passwordMinLen {
-		return nil, common.NewAppError(errPasswordMinLen, "SignUp")
+		return nil, apperror.NewAppError(errPasswordMinLen, "SignUp")
 	}
 	if len(req.Password) > passwordMaxLen {
-		return nil, common.NewAppError(errPasswordMaxLen, "SignUp")
+		return nil, apperror.NewAppError(errPasswordMaxLen, "SignUp")
 	}
 
 	return v.IAuthSvc.SignUp(ctx, req)
@@ -66,20 +66,20 @@ func (v *AuthSvcValidator) SignUp(ctx context.Context, req *SignUpReq) (*AuthSuc
 
 func (v *AuthSvcValidator) SignIn(ctx context.Context, req *SignInReq) (*AuthSuccessResp, error) {
 	if req.Email == "" {
-		return nil, common.NewAppError(errEmailRequired, "SignIn")
+		return nil, apperror.NewAppError(errEmailRequired, "SignIn")
 	}
 	if _, err := mail.ParseAddress(req.Email); err != nil {
-		return nil, common.NewAppError(errEmailInvalid, "SignIn")
+		return nil, apperror.NewAppError(errEmailInvalid, "SignIn")
 	}
 
 	if req.Password == "" {
-		return nil, common.NewAppError(errPasswordRequired, "SignIn")
+		return nil, apperror.NewAppError(errPasswordRequired, "SignIn")
 	}
 	if len(req.Password) < passwordMinLen {
-		return nil, common.NewAppError(errPasswordMinLen, "SignIn")
+		return nil, apperror.NewAppError(errPasswordMinLen, "SignIn")
 	}
 	if len(req.Password) > passwordMaxLen {
-		return nil, common.NewAppError(errPasswordMaxLen, "SignIn")
+		return nil, apperror.NewAppError(errPasswordMaxLen, "SignIn")
 	}
 
 	return v.IAuthSvc.SignIn(ctx, req)

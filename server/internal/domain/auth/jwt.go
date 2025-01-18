@@ -1,8 +1,11 @@
 package auth
 
 import (
+	"context"
 	"errors"
 	"fmt"
+	"skyvault/pkg/appconfig"
+	"skyvault/pkg/apperror"
 	"skyvault/pkg/common"
 	"skyvault/pkg/utils"
 	"time"
@@ -14,16 +17,16 @@ var ErrInvalidToken = errors.New("invalid jwt token")
 var ErrTokenExpired = errors.New("jwt token expired")
 
 type JWT struct {
-	app            *common.App
+	app            *appconfig.App
 	jwtKey         []byte
 	expirationTime time.Duration
 }
 
-func NewAuthJWT(app *common.App) *JWT {
+func NewAuthJWT(app *appconfig.App) *JWT {
 	return &JWT{
 		app:            app,
-		jwtKey:         []byte(app.Config.AUTH_JWT_KEY),
-		expirationTime: time.Duration(app.Config.AUTH_JWT_TOKEN_TIMEOUT_MIN) * time.Minute,
+		jwtKey:         []byte(app.Config.Auth.JWT.Key),
+		expirationTime: time.Duration(app.Config.Auth.JWT.TokenTimeoutMin) * time.Minute,
 	}
 }
 
@@ -57,13 +60,21 @@ func (a *JWT) Claims(tokenStr string) (*Claims, error) {
 	}, jwt.WithAudience("skyvault"), jwt.WithIssuer("skyvault"), jwt.WithExpirationRequired(), jwt.WithIssuedAt(), jwt.WithJSONNumber(), jwt.WithLeeway(2*time.Minute), jwt.WithValidMethods([]string{jwt.SigningMethodHS256.Name}))
 	if err != nil {
 		if errors.Is(err, jwt.ErrTokenExpired) {
-			return nil, common.NewAppError(ErrTokenExpired, "Claims")
+			return nil, apperror.NewAppError(ErrTokenExpired, "Claims")
 		}
 
-		return nil, common.NewAppError(fmt.Errorf("failed to parse with claims: %w", err), "Claims")
+		return nil, apperror.NewAppError(fmt.Errorf("failed to parse with claims: %w", err), "Claims")
 	}
 	if !token.Valid {
-		return nil, common.NewAppError(ErrInvalidToken, "Claims")
+		return nil, apperror.NewAppError(ErrInvalidToken, "Claims")
 	}
 	return claims, nil
+}
+
+func GetClaimsFromContext(ctx context.Context) *Claims {
+	return ctx.Value(common.CtxKeyClaims).(*Claims)
+}
+
+func GetUserIDFromContext(ctx context.Context) int64 {
+	return GetClaimsFromContext(ctx).UserID
 }

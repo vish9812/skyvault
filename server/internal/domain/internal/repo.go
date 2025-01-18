@@ -1,13 +1,9 @@
-package common
+package internal
 
 import (
 	"context"
 	"database/sql"
-	"errors"
 )
-
-var ErrNoData = errors.New("no data found")
-var ErrDuplicateData = errors.New("found duplicate data")
 
 // RepoTx is an interface that represents a repository that supports transactions
 //

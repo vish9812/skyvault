@@ -5,7 +5,9 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	"skyvault/pkg/common"
+	"path/filepath"
+	"skyvault/pkg/appconfig"
+	"skyvault/pkg/apperror"
 	"time"
 
 	"github.com/go-jet/jet/v2/qrm"
@@ -20,7 +22,7 @@ import (
 )
 
 type store struct {
-	app *common.App
+	app *appconfig.App
 
 	// db is to be used with the standard library queries
 	// Do NOT use it with the go-jet library queries
@@ -32,7 +34,7 @@ type store struct {
 	dbTx qrm.DB
 }
 
-func NewStore(app *common.App, dsn string) *store {
+func NewStore(app *appconfig.App, dsn string) *store {
 	logger := log.With().Str("dsn", dsn).Logger()
 
 	db := connectDatabase(dsn)
@@ -76,8 +78,8 @@ func (s *store) WithTx(ctx context.Context, tx *sql.Tx) *store {
 	return &store{app: s.app, db: s.db, dbTx: tx}
 }
 
-func (s *store) migrateUp(app *common.App) {
-	migrationPath := fmt.Sprintf("file://%s", app.Config.DB_MIGRATION_PATH)
+func (s *store) migrateUp(app *appconfig.App) {
+	migrationPath := fmt.Sprintf("file://%s", filepath.Join(app.Config.Server.Path, "internal/infra/store_db/internal/migrations"))
 	logger := log.With().Str("migration_path", migrationPath).Logger()
 
 	ctx, cancel := newCtx()
@@ -118,22 +120,22 @@ func (s *store) migrateUp(app *common.App) {
 // It is to be used with Select statements
 //
 // Main Errors:
-// - common.ErrNoData
+// - apperror.ErrNoData
 func runSelect[TDBModel any, TRes any](ctx context.Context, stmt jetpg.Statement, exec qrm.DB) (*TRes, error) {
 	var dbModel TDBModel
 	err := stmt.QueryContext(ctx, exec, &dbModel)
 	if err != nil {
 		if errors.Is(err, qrm.ErrNoRows) {
-			return nil, common.NewAppError(fmt.Errorf("%w: %w", common.ErrNoData, err), "store_db.runSelect:QueryContext")
+			return nil, apperror.NewAppError(fmt.Errorf("%w: %w", apperror.ErrNoData, err), "store_db.runSelect:QueryContext")
 		}
 
-		return nil, common.NewAppError(err, "store_db.runSelect:QueryContext")
+		return nil, apperror.NewAppError(err, "store_db.runSelect:QueryContext")
 	}
 
 	var resModel TRes
 	err = copier.Copy(&resModel, &dbModel)
 	if err != nil {
-		return nil, common.NewAppError(fmt.Errorf("failed to copy the db model to the res model: %w", err), "store_db.runSelect:Copy")
+		return nil, apperror.NewAppError(fmt.Errorf("failed to copy the db model to the res model: %w", err), "store_db.runSelect:Copy")
 	}
 
 	return &resModel, nil
@@ -143,11 +145,11 @@ func runSelect[TDBModel any, TRes any](ctx context.Context, stmt jetpg.Statement
 // It is to be used with Select statements
 //
 // Main Errors:
-// - common.ErrNoData
+// - apperror.ErrNoData
 func runSelectSlice[TDBModel any, TRes any](ctx context.Context, stmt jetpg.Statement, exec qrm.DB) ([]*TRes, error) {
 	res, err := runSelect[[]*TDBModel, []*TRes](ctx, stmt, exec)
 	if err != nil {
-		return nil, common.NewAppError(err, "store_db.runSelectSlice:query")
+		return nil, apperror.NewAppError(err, "store_db.runSelectSlice:query")
 	}
 
 	return *res, nil
@@ -157,22 +159,22 @@ func runSelectSlice[TDBModel any, TRes any](ctx context.Context, stmt jetpg.Stat
 // It is to be used with Insert statements
 //
 // Main Errors:
-// - common.ErrDuplicateData
+// - apperror.ErrDuplicateData
 func runInsert[TDBModel any, TRes any](ctx context.Context, stmt jetpg.Statement, exec qrm.DB) (*TRes, error) {
 	var dbModel TDBModel
 	err := stmt.QueryContext(ctx, exec, &dbModel)
 	if err != nil {
-		if common.ErrContains(err, "unique constraint") {
-			return nil, common.NewAppError(fmt.Errorf("%w: %w", common.ErrDuplicateData, err), "store_db.runInsert:QueryContext")
+		if apperror.Contains(err, "unique constraint") {
+			return nil, apperror.NewAppError(fmt.Errorf("%w: %w", apperror.ErrDuplicateData, err), "store_db.runInsert:QueryContext")
 		}
 
-		return nil, common.NewAppError(err, "store_db.runInsert:QueryContext")
+		return nil, apperror.NewAppError(err, "store_db.runInsert:QueryContext")
 	}
 
 	var resModel TRes
 	err = copier.Copy(&resModel, &dbModel)
 	if err != nil {
-		return nil, common.NewAppError(fmt.Errorf("failed to copy the db model to the res model: %w", err), "store_db.runInsert:Copy")
+		return nil, apperror.NewAppError(fmt.Errorf("failed to copy the db model to the res model: %w", err), "store_db.runInsert:Copy")
 	}
 
 	return &resModel, nil
@@ -182,20 +184,20 @@ func runInsert[TDBModel any, TRes any](ctx context.Context, stmt jetpg.Statement
 // It is to be used with Update and Delete statements
 //
 // Main Errors:
-// - common.ErrNoData
+// - apperror.ErrNoData
 func runUpdateOrDelete(ctx context.Context, stmt jetpg.Statement, exec qrm.DB) error {
 	res, err := stmt.ExecContext(ctx, exec)
 	if err != nil {
-		return common.NewAppError(err, "store_db.runUpdateOrDelete:ExecContext")
+		return apperror.NewAppError(err, "store_db.runUpdateOrDelete:ExecContext")
 	}
 
 	rowsAffected, err := res.RowsAffected()
 	if err != nil {
-		return common.NewAppError(err, "store_db.runUpdateOrDelete:RowsAffected")
+		return apperror.NewAppError(err, "store_db.runUpdateOrDelete:RowsAffected")
 	}
 
 	if rowsAffected == 0 {
-		return common.NewAppError(common.ErrNoData, "store_db.runUpdateOrDelete:RowsAffected")
+		return apperror.NewAppError(apperror.ErrNoData, "store_db.runUpdateOrDelete:RowsAffected")
 	}
 
 	return nil

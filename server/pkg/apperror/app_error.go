@@ -1,21 +1,10 @@
-package common
+package apperror
 
 import (
 	"errors"
 	"maps"
 	"strings"
 )
-
-type errorMetadata map[string]any
-
-func NewErrorMetadata() errorMetadata {
-	return make(errorMetadata)
-}
-
-func (em errorMetadata) Add(key string, value any) errorMetadata {
-	em[key] = value
-	return em
-}
 
 // AppError represents an application error with context
 type AppError struct {
@@ -92,34 +81,19 @@ func AsAppError(err error) (*AppError, bool) {
 	return nil, false
 }
 
-// ValidationError represents a validation error.
-// It is to be used to return http status code 400
-type ValidationError struct {
-	err error
+type errorMetadata map[string]any
+
+func NewErrorMetadata() errorMetadata {
+	return make(errorMetadata)
 }
 
-func NewValidationError(err error) *ValidationError {
-	return &ValidationError{err: err}
+func (em errorMetadata) Add(key string, value any) errorMetadata {
+	em[key] = value
+	return em
 }
 
-// Error implements the error interface
-func (e *ValidationError) Error() string {
-	return e.err.Error()
-}
-
-// Unwrap implements the errors.Unwrapper interface
-func (e *ValidationError) Unwrap() error {
-	return e.err
-}
-
-// IsValidationError checks if the error is a ValidationError
-func IsValidationError(err error) bool {
-	var validationErr *ValidationError
-	return errors.As(err, &validationErr)
-}
-
-// ErrContains checks recursively if the error contains the given message
-func ErrContains(err error, msg string) bool {
+// Contains checks recursively if the error contains the given message
+func Contains(err error, msg string) bool {
 	hasErr := false
 	for {
 		if err == nil {

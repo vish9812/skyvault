@@ -2,7 +2,7 @@ package media
 
 import (
 	"errors"
-	"strings"
+	"skyvault/pkg/utils"
 	"time"
 )
 
@@ -35,14 +35,11 @@ func NewFileInfo(folderID *int64) *FileInfo {
 	}
 }
 
+// GetFileExtension returns the extension of a file with dot
 func GetFileExtension(fileName string) *string {
-	if fileName == "" {
+	_, extensionWithDot := utils.GetFileNameAndExtension(fileName)
+	if extensionWithDot == "" {
 		return nil
 	}
-	parts := strings.Split(fileName, ".")
-	if len(parts) < 2 {
-		return nil
-	}
-	extension := parts[len(parts)-1]
-	return &extension
+	return &extensionWithDot
 }

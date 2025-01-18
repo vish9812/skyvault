@@ -6,7 +6,8 @@ import (
 	"os"
 	"skyvault/internal/domain/auth"
 	"skyvault/internal/domain/profile"
-	"skyvault/pkg/common"
+	"skyvault/pkg/appconfig"
+	"skyvault/pkg/applog"
 	"skyvault/pkg/utils"
 	"strings"
 	"testing"
@@ -20,13 +21,14 @@ import (
 //
 // store.db is the actual DB to be used in the tests
 var testDB *sql.DB
-var testApp *common.App
+var testApp *appconfig.App
 
 func TestMain(m *testing.M) {
 	// Initialize the application
-	config := common.LoadConfig("../../../", "dev", "env")
-	testApp = common.NewApp(config)
-	testDB = connectDatabase(config.DB_DSN)
+	config := appconfig.LoadConfig("../../../dev.env", true)
+	testLogger := applog.NewLogger(nil)
+	testApp = appconfig.NewApp(config, testLogger)
+	testDB = connectDatabase(config.DB.DSN)
 
 	code := m.Run()
 
@@ -47,7 +49,7 @@ func newTestStore(t *testing.T) *store {
 	}
 
 	// Create new test store
-	testDSN := strings.Replace(testApp.Config.DB_DSN, fmt.Sprintf("/%s?", testApp.Config.DB_NAME), fmt.Sprintf("/%s?", dbName), 1)
+	testDSN := strings.Replace(testApp.Config.DB.DSN, fmt.Sprintf("/%s?", testApp.Config.DB.Name), fmt.Sprintf("/%s?", dbName), 1)
 
 	testStore := NewStore(testApp, testDSN)
 

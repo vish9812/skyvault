@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"flag"
 	"net/http"
 	"os"
 	"os/signal"
@@ -11,42 +12,52 @@ import (
 	"skyvault/internal/infra/store_db"
 	"skyvault/internal/infra/store_file"
 	"skyvault/internal/services"
-	"skyvault/pkg/common"
-	"strings"
+	"skyvault/pkg/appconfig"
+	"skyvault/pkg/applog"
 	"syscall"
 	"time"
-
-	"github.com/rs/zerolog"
-	"github.com/rs/zerolog/log"
-	"github.com/rs/zerolog/pkgerrors"
 )
 
+// Flags
+var (
+	isDev       bool
+	envFilePath string
+)
+
+var app *appconfig.App
+
 func main() {
-	initLogger()
-	app := initApp()
-	setLogLevel(app.Config.LOG_LEVEL)
+	flag.BoolVar(&isDev, "dev", false, "Run in development mode")
+	flag.StringVar(&envFilePath, "env", ".env", "Environment file name")
+	flag.Parse()
 
-	apiServer := initDependencies(app)
+	app = initApp()
 
-	startServer(app, apiServer)
+	apiServer := initDependencies()
 
-	waitForShutdown(app)
+	startServer(apiServer)
+
+	waitForShutdown()
 }
 
-func initLogger() {
-	zerolog.ErrorStackMarshaler = pkgerrors.MarshalStack
-	zerolog.SetGlobalLevel(zerolog.InfoLevel)
-	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr, TimeFormat: time.RFC3339})
+func initLogger(config *appconfig.Config) applog.Logger {
+	logConfig := &applog.Config{
+		Level:      config.Log.Level,
+		TimeFormat: time.RFC3339,
+		Console:    true,
+	}
+	return applog.NewLogger(logConfig)
 }
 
-func initApp() *common.App {
-	config := common.LoadConfig("../", "dev", "env")
-	return common.NewApp(config)
+func initApp() *appconfig.App {
+	config := appconfig.LoadConfig(envFilePath, isDev)
+	logger := initLogger(config)
+	return appconfig.NewApp(config, logger)
 }
 
-func initDependencies(app *common.App) *api.API {
+func initDependencies() *api.API {
 	// Init store
-	store := store_db.NewStore(app, app.Config.DB_DSN)
+	store := store_db.NewStore(app, app.Config.DB.DSN)
 	authRepo := store_db.NewAuthRepo(store)
 	profileRepo := store_db.NewProfileRepo(store)
 	mediaRepo := store_db.NewMediaRepo(store)
@@ -77,52 +88,35 @@ func initDependencies(app *common.App) *api.API {
 	return apiServer
 }
 
-func startServer(app *common.App, apiServer *api.API) {
+func startServer(apiServer *api.API) {
 	app.Server = &http.Server{
-		Addr:    app.Config.APP_ADDR,
+		Addr:    app.Config.Server.Addr,
 		Handler: apiServer.Router,
 	}
 
 	go func() {
 		if err := app.Server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			log.Fatal().Err(err).Msg("failed to start server")
+			app.Logger.Fatal().Err(err).Write("failed to start server")
 		}
 	}()
 
-	log.Info().Str("addr", app.Config.APP_ADDR).Msg("server started")
+	app.Logger.Info().Str("addr", app.Config.Server.Addr).Write("server started")
 }
 
-func waitForShutdown(app *common.App) {
+func waitForShutdown() {
 	sig := make(chan os.Signal, 1)
 	signal.Notify(sig, syscall.SIGHUP, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
 
 	<-sig
 
-	log.Info().Msg("shutting down server...")
+	app.Logger.Info().Write("shutting down server...")
 
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
 	if err := app.Server.Shutdown(ctx); err != nil {
-		log.Fatal().Err(err).Msg("failed to shutdown server gracefully")
+		app.Logger.Fatal().Err(err).Write("failed to shutdown server gracefully")
 	}
 
-	log.Info().Msg("server exited gracefully")
-}
-
-// setLogLevel adjusts the zerolog global log level based on a string
-func setLogLevel(level string) {
-	switch strings.ToLower(level) {
-	case "debug":
-		zerolog.SetGlobalLevel(zerolog.DebugLevel)
-	case "info":
-		zerolog.SetGlobalLevel(zerolog.InfoLevel)
-	case "warn":
-		zerolog.SetGlobalLevel(zerolog.WarnLevel)
-	case "error":
-		zerolog.SetGlobalLevel(zerolog.ErrorLevel)
-	default:
-		log.Info().Str("log_level", level).Msg("Unknown log level, defaulting to 'info'")
-		zerolog.SetGlobalLevel(zerolog.InfoLevel)
-	}
+	app.Logger.Info().Write("server exited gracefully")
 }

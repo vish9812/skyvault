@@ -6,7 +6,8 @@ import (
 	"net/http"
 	"skyvault/internal/api/middlewares"
 	"skyvault/internal/domain/auth"
-	"skyvault/pkg/common"
+	"skyvault/pkg/appconfig"
+	"skyvault/pkg/apperror"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
@@ -15,13 +16,13 @@ import (
 )
 
 type API struct {
-	app    *common.App
+	app    *appconfig.App
 	Router chi.Router
 	v1Pub  chi.Router
 	v1Pvt  chi.Router
 }
 
-func NewAPI(app *common.App) *API {
+func NewAPI(app *appconfig.App) *API {
 	return &API{app: app}
 }
 
@@ -32,7 +33,13 @@ func (a *API) InitRoutes(jwt *auth.JWT) {
 	router.Use(middleware.Recoverer)
 	router.Use(middleware.Heartbeat("/api/v1/ping"))
 	router.Use(middleware.CleanPath)
+	router.Use(middlewares.LoggerContext(a.app))
+	
+	// Serve static files
+	fs := http.FileServer(http.Dir("static"))
+	router.Handle("/*", fs)
 
+	// API routes
 	v1Pub := chi.NewRouter()
 	router.Mount("/api/v1/pub", v1Pub)
 	v1Pvt := chi.NewRouter().With(middlewares.JWT(jwt))
@@ -63,14 +70,14 @@ func (a *API) ResponseJSON(w http.ResponseWriter, status int, data interface{}) 
 }
 
 func (a *API) ResponseErrorAndLog(w http.ResponseWriter, code int, resMsg string, logEvent *zerolog.Event, logMsg string, err error) {
-	ae := new(common.AppError)
+	var ae *apperror.AppError
 	if errors.As(err, &ae) {
 		logEvent = logEvent.Str("funcName", ae.Where())
 	}
 
 	logEvent.Err(err).Msg(logMsg)
 
-	ve := new(common.ValidationError)
+	var ve *apperror.ValidationError
 	if errors.As(err, &ve) {
 		resMsg = resMsg + ": " + ve.Error()
 	}

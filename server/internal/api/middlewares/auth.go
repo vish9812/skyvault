@@ -5,6 +5,7 @@ import (
 	"errors"
 	"net/http"
 	"skyvault/internal/domain/auth"
+	"skyvault/pkg/applog"
 	"skyvault/pkg/common"
 	"strings"
 
@@ -50,7 +51,13 @@ func JWT(jwt *auth.JWT) func(http.Handler) http.Handler {
 				return
 			}
 
-			ctx := context.WithValue(r.Context(), common.CtxKeyAuthClaims, claims)
+			ctxLogger := applog.GetLoggerFromContext(r.Context()).
+				With().
+				Int64("user_id", claims.UserID).
+				Logger()
+
+			ctx := context.WithValue(r.Context(), common.CtxKeyClaims, claims)
+			ctx = context.WithValue(ctx, common.CtxKeyLogger, ctxLogger)
 			next.ServeHTTP(w, r.WithContext(ctx))
 		})
 	}

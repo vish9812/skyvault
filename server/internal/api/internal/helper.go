@@ -3,12 +3,9 @@ package internal
 import (
 	"encoding/json"
 	"net/http"
-	"skyvault/internal/domain/auth"
-	"skyvault/pkg/common"
+	"skyvault/pkg/apperror"
+	"skyvault/pkg/applog"
 	"strings"
-
-	"github.com/go-chi/chi/v5/middleware"
-	"github.com/rs/zerolog/log"
 )
 
 func RespondJSON(w http.ResponseWriter, status int, data interface{}) {
@@ -31,34 +28,25 @@ func RespondText(w http.ResponseWriter, status int, text string) {
 
 // RespondError handles error responses and logging
 func RespondError(w http.ResponseWriter, r *http.Request, status int, publicErr PublicError, logErr error) {
-	if publicErr.Code == "" {
-		publicErr = ErrGeneric
-	}
-
 	// Start building the log event
-	logEvent := log.Error().Str("http_method", r.Method).Str("url", r.URL.String()).Str("request_id", middleware.GetReqID(r.Context()))
-
-	// Add user ID if available
-	if claims := r.Context().Value(common.CtxKeyAuthClaims); claims != nil {
-		if authClaims, ok := claims.(*auth.Claims); ok {
-			logEvent = logEvent.Int64("user_id", authClaims.UserID)
-		}
-	}
+	logCtx := applog.GetLoggerFromContext(r.Context()).With()
 
 	// If it's an AppError, include its metadata and location chain
-	if appErr, ok := common.AsAppError(logErr); ok {
-		logEvent = logEvent.Str("error_chain", strings.Join(appErr.WhereChain(), " -> "))
+	if appErr, ok := apperror.AsAppError(logErr); ok {
+		logCtx = logCtx.Str("error_chain", strings.Join(appErr.WhereChain(), " -> "))
 
 		for key, value := range appErr.Metadata() {
-			logEvent = logEvent.Interface(key, value)
+			logCtx = logCtx.Any(key, value)
 		}
 	}
 
 	// Log the full error with context
-	logEvent.Err(logErr).
-		Int("status_code", status).
+	logCtx.Int("status_code", status).
 		Str("public_error", publicErr.Error()).
-		Msg(logErr.Error())
+		Logger().
+		Error().
+		Err(logErr).
+		Write(logErr.Error())
 
 	// Send the public error to the client
 	RespondJSON(w, status, publicErr)
