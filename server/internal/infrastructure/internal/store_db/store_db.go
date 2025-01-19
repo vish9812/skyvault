@@ -21,20 +21,20 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-type store struct {
-	app *appconfig.App
+type Store struct {
+	App *appconfig.App
 
-	// db is to be used with the standard library queries
+	// DB is to be used with the standard library queries
 	// Do NOT use it with the go-jet library queries
 	// Use exec instead which can use both sql.DB and sql.Tx interchangeably
-	db *sql.DB
+	DB *sql.DB
 
-	// dbTx can use both sql.DB and sql.Tx interchangeably
+	// DBTX can use both sql.DB and sql.Tx interchangeably
 	// It is to be used with the go-jet library queries
-	dbTx qrm.DB
+	DBTX qrm.DB
 }
 
-func NewStore(app *appconfig.App, dsn string) *store {
+func NewStore(app *appconfig.App, dsn string) *Store {
 	logger := log.With().Str("dsn", dsn).Logger()
 
 	db := connectDatabase(dsn)
@@ -47,7 +47,7 @@ func NewStore(app *appconfig.App, dsn string) *store {
 
 	logger.Info().Msg("connected to the db")
 
-	dbStore := &store{app: app, db: db, dbTx: db}
+	dbStore := &Store{App: app, DB: db, DBTX: db}
 
 	dbStore.migrateUp(app)
 
@@ -68,23 +68,33 @@ func connectDatabase(dsn string) *sql.DB {
 	return db
 }
 
-func (s *store) CloseDB() {
-	if err := s.db.Close(); err != nil {
-		log.Fatal().Err(err).Msg("failed to close the db")
+func (s *Store) Cleanup() error {
+	return s.closeDB()
+}
+
+// Health checks the health of the database
+func (s *Store) Health(ctx context.Context) error {
+	return s.DB.PingContext(ctx)
+}
+
+func (s *Store) closeDB() error {
+	if err := s.DB.Close(); err != nil {
+		return fmt.Errorf("failed to close the db: %w", err)
 	}
+	return nil
 }
 
-func (s *store) WithTx(ctx context.Context, tx *sql.Tx) *store {
-	return &store{app: s.app, db: s.db, dbTx: tx}
+func (s *Store) WithTx(ctx context.Context, tx *sql.Tx) *Store {
+	return &Store{App: s.App, DB: s.DB, DBTX: tx}
 }
 
-func (s *store) migrateUp(app *appconfig.App) {
+func (s *Store) migrateUp(app *appconfig.App) {
 	migrationPath := fmt.Sprintf("file://%s", filepath.Join(app.Config.Server.Path, "internal/infra/store_db/internal/migrations"))
 	logger := log.With().Str("migration_path", migrationPath).Logger()
 
 	ctx, cancel := newCtx()
 	defer cancel()
-	conn, err := s.db.Conn(ctx)
+	conn, err := s.DB.Conn(ctx)
 	if err != nil {
 		logger.Fatal().Err(err).Msg("failed to get the connection")
 	}

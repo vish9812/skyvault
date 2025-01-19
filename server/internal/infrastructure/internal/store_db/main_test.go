@@ -38,7 +38,7 @@ func TestMain(m *testing.M) {
 	os.Exit(code)
 }
 
-func newTestStore(t *testing.T) *store {
+func newTestStore(t *testing.T) *Store {
 	// Create new test DB
 	ctx, cancel := newCtx()
 	defer cancel()
@@ -55,7 +55,7 @@ func newTestStore(t *testing.T) *store {
 
 	// Clean up the test DB after each test
 	t.Cleanup(func() {
-		testStore.db.Close()
+		testStore.DB.Close()
 		t.Log("dropping test db")
 		ctx, cancel := newCtx()
 		defer cancel()

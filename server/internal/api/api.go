@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"skyvault/internal/api/middlewares"
 	"skyvault/internal/domain/auth"
+	"skyvault/internal/infrastructure"
 	"skyvault/pkg/appconfig"
 	"skyvault/pkg/apperror"
 
@@ -26,7 +27,7 @@ func NewAPI(app *appconfig.App) *API {
 	return &API{app: app}
 }
 
-func (a *API) InitRoutes(jwt *auth.JWT) {
+func (a *API) InitRoutes(jwt *auth.JWT, infra *infrastructure.Infrastructure) {
 	router := chi.NewRouter()
 	router.Use(middleware.RequestID)
 	router.Use(middleware.Logger)
@@ -34,7 +35,7 @@ func (a *API) InitRoutes(jwt *auth.JWT) {
 	router.Use(middleware.Heartbeat("/api/v1/ping"))
 	router.Use(middleware.CleanPath)
 	router.Use(middlewares.LoggerContext(a.app))
-	
+
 	// Serve static files
 	fs := http.FileServer(http.Dir("static"))
 	router.Handle("/*", fs)
@@ -44,6 +45,22 @@ func (a *API) InitRoutes(jwt *auth.JWT) {
 	router.Mount("/api/v1/pub", v1Pub)
 	v1Pvt := chi.NewRouter().With(middlewares.JWT(jwt))
 	router.Mount("/api/v1", v1Pvt)
+
+	// Health check endpoint
+	v1Pub.Get("/health", func(w http.ResponseWriter, r *http.Request) {
+		err := infra.Health(r.Context())
+		if err != nil {
+			a.ResponseErrorAndLog(w,
+				http.StatusServiceUnavailable,
+				"Service unhealthy",
+				log.Error(),
+				"Health check failed",
+				err,
+			)
+			return
+		}
+		a.ResponseJSON(w, http.StatusOK, map[string]string{"status": "healthy"})
+	})
 
 	a.v1Pub = v1Pub
 	a.v1Pvt = v1Pvt

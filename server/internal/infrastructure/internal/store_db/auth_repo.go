@@ -5,8 +5,8 @@ import (
 	"database/sql"
 
 	"skyvault/internal/domain/auth"
-	"skyvault/internal/infra/store_db/internal/gen_jet/skyvault/public/model"
-	. "skyvault/internal/infra/store_db/internal/gen_jet/skyvault/public/table"
+	"skyvault/internal/infrastructure/internal/store_db/internal/gen_jet/skyvault/public/model"
+	. "skyvault/internal/infrastructure/internal/store_db/internal/gen_jet/skyvault/public/table"
 
 	. "github.com/go-jet/jet/v2/postgres"
 	"github.com/jinzhu/copier"
@@ -15,15 +15,15 @@ import (
 var _ auth.Repo = (*AuthRepo)(nil)
 
 type AuthRepo struct {
-	store *store
+	store *Store
 }
 
-func NewAuthRepo(store *store) *AuthRepo {
+func NewAuthRepo(store *Store) *AuthRepo {
 	return &AuthRepo{store: store}
 }
 
 func (r *AuthRepo) BeginTx(ctx context.Context) (*sql.Tx, error) {
-	return r.store.db.BeginTx(ctx, nil)
+	return r.store.DB.BeginTx(ctx, nil)
 }
 
 func (r *AuthRepo) WithTx(ctx context.Context, tx *sql.Tx) auth.Repo {
@@ -41,7 +41,7 @@ func (r *AuthRepo) Create(ctx context.Context, au *auth.Auth) (*auth.Auth, error
 		Auths.MutableColumns.Except(Auths.CreatedAt, Auths.UpdatedAt),
 	).MODEL(dbAuth).RETURNING(Auths.AllColumns)
 
-	return runSelect[model.Auths, auth.Auth](ctx, stmt, r.store.dbTx)
+	return runSelect[model.Auths, auth.Auth](ctx, stmt, r.store.DBTX)
 }
 
 func (r *AuthRepo) Get(ctx context.Context, id int64) (*auth.Auth, error) {
@@ -49,7 +49,7 @@ func (r *AuthRepo) Get(ctx context.Context, id int64) (*auth.Auth, error) {
 		FROM(Auths).
 		WHERE(Auths.ID.EQ(Int(id)))
 
-	return runSelect[model.Auths, auth.Auth](ctx, stmt, r.store.dbTx)
+	return runSelect[model.Auths, auth.Auth](ctx, stmt, r.store.DBTX)
 }
 
 func (r *AuthRepo) GetByProfileID(ctx context.Context, id int64) (*auth.Auth, error) {
@@ -57,5 +57,5 @@ func (r *AuthRepo) GetByProfileID(ctx context.Context, id int64) (*auth.Auth, er
 		FROM(Auths).
 		WHERE(Auths.ProfileID.EQ(Int(id)))
 
-	return runSelect[model.Auths, auth.Auth](ctx, stmt, r.store.dbTx)
+	return runSelect[model.Auths, auth.Auth](ctx, stmt, r.store.DBTX)
 }

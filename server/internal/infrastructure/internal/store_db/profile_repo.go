@@ -5,8 +5,8 @@ import (
 	"database/sql"
 
 	"skyvault/internal/domain/profile"
-	"skyvault/internal/infra/store_db/internal/gen_jet/skyvault/public/model"
-	. "skyvault/internal/infra/store_db/internal/gen_jet/skyvault/public/table"
+	"skyvault/internal/infrastructure/internal/store_db/internal/gen_jet/skyvault/public/model"
+	. "skyvault/internal/infrastructure/internal/store_db/internal/gen_jet/skyvault/public/table"
 
 	. "github.com/go-jet/jet/v2/postgres"
 	"github.com/jinzhu/copier"
@@ -15,15 +15,15 @@ import (
 var _ profile.Repo = (*ProfileRepo)(nil)
 
 type ProfileRepo struct {
-	store *store
+	store *Store
 }
 
-func NewProfileRepo(db *store) *ProfileRepo {
+func NewProfileRepo(db *Store) *ProfileRepo {
 	return &ProfileRepo{store: db}
 }
 
 func (r *ProfileRepo) BeginTx(ctx context.Context) (*sql.Tx, error) {
-	return r.store.db.BeginTx(ctx, nil)
+	return r.store.DB.BeginTx(ctx, nil)
 }
 
 func (r *ProfileRepo) WithTx(ctx context.Context, tx *sql.Tx) profile.Repo {
@@ -41,7 +41,7 @@ func (r *ProfileRepo) Create(ctx context.Context, pro *profile.Profile) (*profil
 		Profiles.MutableColumns.Except(Profiles.CreatedAt, Profiles.UpdatedAt),
 	).MODEL(dbProfile).RETURNING(Profiles.AllColumns)
 
-	return runSelect[model.Profiles, profile.Profile](ctx, stmt, r.store.dbTx)
+	return runSelect[model.Profiles, profile.Profile](ctx, stmt, r.store.DBTX)
 }
 
 func (r *ProfileRepo) Get(ctx context.Context, id int64) (*profile.Profile, error) {
@@ -49,7 +49,7 @@ func (r *ProfileRepo) Get(ctx context.Context, id int64) (*profile.Profile, erro
 		FROM(Profiles).
 		WHERE(Profiles.ID.EQ(Int64(id)))
 
-	return runSelect[model.Profiles, profile.Profile](ctx, stmt, r.store.dbTx)
+	return runSelect[model.Profiles, profile.Profile](ctx, stmt, r.store.DBTX)
 }
 
 func (r *ProfileRepo) GetByEmail(ctx context.Context, email string) (*profile.Profile, error) {
@@ -57,5 +57,5 @@ func (r *ProfileRepo) GetByEmail(ctx context.Context, email string) (*profile.Pr
 		FROM(Profiles).
 		WHERE(Profiles.Email.EQ(String(email)))
 
-	return runSelect[model.Profiles, profile.Profile](ctx, stmt, r.store.dbTx)
+	return runSelect[model.Profiles, profile.Profile](ctx, stmt, r.store.DBTX)
 }

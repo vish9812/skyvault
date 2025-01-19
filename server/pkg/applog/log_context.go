@@ -12,7 +12,7 @@ var _ LogContext = (*zeroLogContext)(nil)
 // Use the Logger.With() method to create a new LogContext.
 // Populate the LogContext with the available methods.
 // Use the LogContext.Logger() method to get a new Logger with the populated fields.
-// Use the LogEvent.Write() method to actually write the log.
+// Use the LogEvent.Msg() method to actually write the log.
 type LogContext interface {
 	Str(key, val string) LogContext
 	Int(key string, val int) LogContext

@@ -46,7 +46,7 @@ func RespondError(w http.ResponseWriter, r *http.Request, status int, publicErr 
 		Logger().
 		Error().
 		Err(logErr).
-		Write(logErr.Error())
+		Msg(logErr.Error())
 
 	// Send the public error to the client
 	RespondJSON(w, status, publicErr)

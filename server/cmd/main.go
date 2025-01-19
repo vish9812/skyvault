@@ -9,8 +9,7 @@ import (
 	"skyvault/internal/api"
 	"skyvault/internal/domain/auth"
 	"skyvault/internal/domain/media"
-	"skyvault/internal/infra/store_db"
-	"skyvault/internal/infra/store_file"
+	"skyvault/internal/infrastructure"
 	"skyvault/internal/services"
 	"skyvault/pkg/appconfig"
 	"skyvault/pkg/applog"
@@ -31,13 +30,17 @@ func main() {
 	flag.StringVar(&envFilePath, "env", ".env", "Environment file name")
 	flag.Parse()
 
-	app = initApp()
+	// Context with cancellation
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 
-	apiServer := initDependencies()
+	app = initApp(ctx)
 
-	startServer(apiServer)
+	apiServer := initDependencies(ctx)
 
-	waitForShutdown()
+	startServer(ctx, apiServer)
+
+	waitForShutdown(ctx)
 }
 
 func initLogger(config *appconfig.Config) applog.Logger {
@@ -49,27 +52,35 @@ func initLogger(config *appconfig.Config) applog.Logger {
 	return applog.NewLogger(logConfig)
 }
 
-func initApp() *appconfig.App {
+func initApp(_ context.Context) *appconfig.App {
 	config := appconfig.LoadConfig(envFilePath, isDev)
 	logger := initLogger(config)
 	return appconfig.NewApp(config, logger)
 }
 
-func initDependencies() *api.API {
-	// Init store
-	store := store_db.NewStore(app, app.Config.DB.DSN)
-	authRepo := store_db.NewAuthRepo(store)
-	profileRepo := store_db.NewProfileRepo(store)
-	mediaRepo := store_db.NewMediaRepo(store)
+func initDependencies(ctx context.Context) *api.API {
+	// Init Infrastructure
+	infra := infrastructure.NewInfrastructure(ctx, app)
 
-	// Init storage
-	mediaStorage := store_file.NewLocal(app)
+	// Add health check endpoint
+	go monitorInfraHealth(ctx, infra)
+
+	// Register cleanup on shutdown
+	app.RegisterCleanup(func(ctx context.Context) {
+		cleanupCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
+		defer cancel()
+
+		if err := infra.Cleanup(cleanupCtx); err != nil {
+			app.Logger.Error().Err(err).Msg("failed to cleanup infrastructure")
+		}
+	})
 
 	// Init services
 	authJWT := auth.NewAuthJWT(app)
-	authSvc := services.NewAuthSvc(authRepo, profileRepo, authJWT)
-	mediaService := media.NewService(mediaRepo, mediaStorage)
-	profileSvc := services.NewProfileSvc(profileRepo)
+	authSvc := services.NewAuthSvc(infra.Repo.Auth, infra.Repo.Profile, authJWT)
+	mediaService := media.NewService(infra.Repo.Media, infra.FileStore.FS)
+	profileSvc := services.NewProfileSvc(infra.Repo.Profile)
+
 	// Init API
 	apiServer := api.NewAPI(app)
 	authAPI := api.NewAuthAPI(apiServer, authSvc)
@@ -77,7 +88,7 @@ func initDependencies() *api.API {
 	profileAPI := api.NewProfileAPI(apiServer, profileSvc)
 
 	// Init routes
-	apiServer.InitRoutes(authJWT)
+	apiServer.InitRoutes(authJWT, infra)
 	authAPI.InitRoutes()
 	mediaAPI.InitRoutes()
 	profileAPI.InitRoutes()
@@ -88,7 +99,23 @@ func initDependencies() *api.API {
 	return apiServer
 }
 
-func startServer(apiServer *api.API) {
+func monitorInfraHealth(ctx context.Context, infra *infrastructure.Infrastructure) {
+	ticker := time.NewTicker(30 * time.Second)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+			if err := infra.Health(ctx); err != nil {
+				app.Logger.Error().Err(err).Msg("infrastructure health check failed")
+			}
+		}
+	}
+}
+
+func startServer(_ context.Context, apiServer *api.API) {
 	app.Server = &http.Server{
 		Addr:    app.Config.Server.Addr,
 		Handler: apiServer.Router,
@@ -96,27 +123,32 @@ func startServer(apiServer *api.API) {
 
 	go func() {
 		if err := app.Server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			app.Logger.Fatal().Err(err).Write("failed to start server")
+			app.Logger.Fatal().Err(err).Msg("failed to start server")
 		}
 	}()
 
-	app.Logger.Info().Str("addr", app.Config.Server.Addr).Write("server started")
+	app.Logger.Info().Str("addr", app.Config.Server.Addr).Msg("server started")
 }
 
-func waitForShutdown() {
+func waitForShutdown(ctx context.Context) {
 	sig := make(chan os.Signal, 1)
 	signal.Notify(sig, syscall.SIGHUP, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
 
 	<-sig
 
-	app.Logger.Info().Write("shutting down server...")
+	app.Logger.Info().Msg("shutting down server...")
 
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-	defer cancel()
-
-	if err := app.Server.Shutdown(ctx); err != nil {
-		app.Logger.Fatal().Err(err).Write("failed to shutdown server gracefully")
+	// Run cleanup functions with context
+	for _, cleanup := range app.Cleanups {
+		cleanup(ctx)
 	}
 
-	app.Logger.Info().Write("server exited gracefully")
+	shutdownCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
+	defer cancel()
+
+	if err := app.Server.Shutdown(shutdownCtx); err != nil {
+		app.Logger.Fatal().Err(err).Msg("failed to shutdown server gracefully")
+	}
+
+	app.Logger.Info().Msg("server exited gracefully")
 }
