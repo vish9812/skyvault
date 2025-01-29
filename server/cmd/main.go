@@ -2,129 +2,149 @@ package main
 
 import (
 	"context"
+	"flag"
 	"net/http"
 	"os"
 	"os/signal"
 	"skyvault/internal/api"
-	"skyvault/internal/api/middlewares"
 	"skyvault/internal/domain/auth"
 	"skyvault/internal/domain/media"
-	"skyvault/internal/infra/store_db"
-	"skyvault/internal/infra/store_file"
-	"skyvault/internal/services"
-	"skyvault/pkg/common"
-	"strings"
+	"skyvault/internal/domain/profile"
+	"skyvault/internal/infrastructure"
+	"skyvault/internal/workflows"
+	"skyvault/pkg/appconfig"
+	"skyvault/pkg/applog"
 	"syscall"
 	"time"
-
-	"github.com/rs/zerolog"
-	"github.com/rs/zerolog/log"
-	"github.com/rs/zerolog/pkgerrors"
 )
 
+// Flags
+var (
+	isDev       bool
+	envFilePath string
+)
+
+var app *appconfig.App
+
 func main() {
-	initLogger()
-	app := initApp()
-	setLogLevel(app.Config.LOG_LEVEL)
+	flag.BoolVar(&isDev, "dev", false, "Run in development mode")
+	flag.StringVar(&envFilePath, "env", ".env", "Environment file name")
+	flag.Parse()
 
-	apiServer := initDependencies(app)
+	// Context with cancellation
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 
-	startServer(app, apiServer)
+	app = initApp(ctx)
 
-	waitForShutdown(app)
+	apiServer := initDependencies(ctx)
+
+	startServer(ctx, apiServer)
+
+	waitForShutdown(ctx)
 }
 
-func initLogger() {
-	zerolog.ErrorStackMarshaler = pkgerrors.MarshalStack
-	zerolog.SetGlobalLevel(zerolog.InfoLevel)
-	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr, TimeFormat: time.RFC3339})
+func initLogger(config *appconfig.Config) applog.Logger {
+	logConfig := &applog.Config{
+		Level:      config.Log.Level,
+		TimeFormat: time.RFC3339,
+		Console:    true,
+	}
+	return applog.NewLogger(logConfig)
 }
 
-func initApp() *common.App {
-	config := common.LoadConfig("../", "dev", "env")
-	return common.NewApp(config)
+func initApp(_ context.Context) *appconfig.App {
+	config := appconfig.LoadConfig(envFilePath, isDev)
+	logger := initLogger(config)
+	return appconfig.NewApp(config, logger)
 }
 
-func initDependencies(app *common.App) *api.API {
-	// Init store
-	store := store_db.NewStore(app, app.Config.DB_DSN)
-	authRepo := store_db.NewAuthRepo(store)
-	profileRepo := store_db.NewProfileRepo(store)
-	mediaRepo := store_db.NewMediaRepo(store)
+func initDependencies(ctx context.Context) *api.API {
+	// Init Infrastructure
+	infra := infrastructure.NewInfrastructure(app)
 
-	// Init storage
-	mediaStorage := store_file.NewLocal(app)
+	// Add health check endpoint
+	go monitorInfraHealth(ctx, infra)
 
-	// Init services
-	authJWT := auth.NewAuthJWT(app)
-	authSvc := services.NewAuthSvc(authRepo, profileRepo, authJWT)
-	mediaService := media.NewService(mediaRepo, mediaStorage)
+	// Register cleanup on shutdown
+	app.RegisterCleanup(infra.Cleanup)
 
-	// Init Middlewares
-	authMiddleware := middlewares.NewAuth(authJWT)
+	// Init workFlows, commands and queries
+	profileCommands := profile.NewCommandHandlers(infra.Repository.Profile)
+	profileQueries := profile.NewQueryHandlers(infra.Repository.Profile)
+	authCommands := auth.NewCommandHandlers(infra.Repository.Auth, infra.Auth)
+	authQueries := auth.NewQueryHandlers(infra.Repository.Auth, infra.Auth)
+	signUpFlow := workflows.NewSignUpFlow(app, authCommands, infra.Repository.Auth, profileCommands, infra.Repository.Profile)
+	signInFlow := workflows.NewSignInFlow(authCommands, authQueries, profileCommands, profileQueries)
+	mediaCommands := media.NewCommandHandlers(app, infra.Repository.Media, infra.Storage.LocalStorage)
+	mediaQueries := media.NewQueryHandlers(infra.Repository.Media, infra.Storage.LocalStorage)
 
 	// Init API
-	apiServer := api.NewAPI(app)
-	authAPI := api.NewAuthAPI(apiServer, authSvc)
-	mediaAPI := api.NewMedia(apiServer, app, mediaService)
-
-	// Init routes
-	apiServer.InitRoutes(authMiddleware)
-	authAPI.InitRoutes()
-	mediaAPI.InitRoutes()
+	apiServer := api.NewAPI(app).InitRoutes(infra)
+	api.NewAuthAPI(apiServer, signUpFlow, signInFlow).InitRoutes()
+	api.NewMediaAPI(apiServer, app, mediaCommands, mediaQueries).InitRoutes()
+	api.NewProfileAPI(apiServer, profileCommands, profileQueries).InitRoutes()
 
 	// Log all routes
-	apiServer.LogRoutes()
+	if isDev {
+		apiServer.LogRoutes()
+	}
 
 	return apiServer
 }
 
-func startServer(app *common.App, apiServer *api.API) {
+func monitorInfraHealth(ctx context.Context, infra *infrastructure.Infrastructure) {
+	ticker := time.NewTicker(time.Minute)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+			if err := infra.Health(ctx); err != nil {
+				app.Logger.Error().Err(err).Msg("infrastructure health check failed")
+			}
+		}
+	}
+}
+
+func startServer(_ context.Context, apiServer *api.API) {
 	app.Server = &http.Server{
-		Addr:    app.Config.APP_ADDR,
+		Addr:    app.Config.Server.Addr,
 		Handler: apiServer.Router,
 	}
 
 	go func() {
 		if err := app.Server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			log.Fatal().Err(err).Msg("failed to start server")
+			app.Logger.Fatal().Err(err).Msg("failed to start server")
 		}
 	}()
 
-	log.Info().Str("addr", app.Config.APP_ADDR).Msg("server started")
+	app.Logger.Info().Str("addr", app.Config.Server.Addr).Msg("server started")
 }
 
-func waitForShutdown(app *common.App) {
+func waitForShutdown(ctx context.Context) {
 	sig := make(chan os.Signal, 1)
 	signal.Notify(sig, syscall.SIGHUP, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
 
 	<-sig
 
-	log.Info().Msg("shutting down server...")
+	app.Logger.Info().Msg("shutting down server...")
 
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	// Run cleanup functions with context
+	for _, cleanup := range app.Cleanups {
+		if err := cleanup(ctx); err != nil {
+			app.Logger.Error().Err(err).Msg("failed to cleanup")
+		}
+	}
+
+	shutdownCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
 
-	if err := app.Server.Shutdown(ctx); err != nil {
-		log.Fatal().Err(err).Msg("failed to shutdown server gracefully")
+	if err := app.Server.Shutdown(shutdownCtx); err != nil {
+		app.Logger.Fatal().Err(err).Msg("failed to shutdown server gracefully")
 	}
 
-	log.Info().Msg("server exited gracefully")
-}
-
-// setLogLevel adjusts the zerolog global log level based on a string
-func setLogLevel(level string) {
-	switch strings.ToLower(level) {
-	case "debug":
-		zerolog.SetGlobalLevel(zerolog.DebugLevel)
-	case "info":
-		zerolog.SetGlobalLevel(zerolog.InfoLevel)
-	case "warn":
-		zerolog.SetGlobalLevel(zerolog.WarnLevel)
-	case "error":
-		zerolog.SetGlobalLevel(zerolog.ErrorLevel)
-	default:
-		log.Info().Str("log_level", level).Msg("Unknown log level, defaulting to 'info'")
-		zerolog.SetGlobalLevel(zerolog.InfoLevel)
-	}
+	app.Logger.Info().Msg("server exited gracefully")
 }

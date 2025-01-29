@@ -6,7 +6,8 @@
       "type": "go",
       "request": "launch",
       "mode": "auto",
-      "program": "${workspaceFolder}/server/cmd/main.go"
+      "program": "${workspaceFolder}/server/cmd/main.go",
+      "args": ["-dev", "-env", "${workspaceFolder}/server/dev.env"]
     }
   ]
 }

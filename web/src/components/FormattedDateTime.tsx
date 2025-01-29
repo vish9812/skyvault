@@ -1,4 +1,3 @@
-import React from "react";
 import utils, { cn } from "@/lib/utils";
 
 interface Props {

@@ -1,12 +1,12 @@
 import Thumbnail from "@/components/Thumbnail";
 import FormattedDateTime from "@/components/FormattedDateTime";
 import { Link } from "react-router";
-import { FileModel } from "@/lib/models";
+import { FileInfo } from "@/lib/models";
 import ActionDropdown from "./ActionDropdown";
 import utils from "@/lib/utils";
 
 interface Props {
-  file: FileModel;
+  file: FileInfo;
 }
 
 const Card = ({ file }: Props) => {
@@ -23,7 +23,7 @@ const Card = ({ file }: Props) => {
 
         <div className="flex flex-col items-end justify-between">
           <ActionDropdown file={file} />
-          <p className="body-1">{utils.prettySize(file.sizeBytes)}</p>
+          <p className="body-1">{utils.prettySize(file.size)}</p>
         </div>
       </div>
 

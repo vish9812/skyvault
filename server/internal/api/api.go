@@ -1,45 +1,70 @@
 package api
 
 import (
-	"encoding/json"
-	"errors"
 	"net/http"
+	"skyvault/internal/api/internal"
 	"skyvault/internal/api/middlewares"
-	"skyvault/pkg/common"
+	"skyvault/internal/infrastructure"
+	"skyvault/pkg/appconfig"
+	"skyvault/pkg/apperror"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
-	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 )
 
 type API struct {
-	app    *common.App
+	app    *appconfig.App
 	Router chi.Router
 	v1Pub  chi.Router
 	v1Pvt  chi.Router
 }
 
-func NewAPI(app *common.App) *API {
+func NewAPI(app *appconfig.App) *API {
 	return &API{app: app}
 }
 
-func (a *API) InitRoutes(authMiddleware *middlewares.Auth) {
+func (a *API) InitRoutes(infra *infrastructure.Infrastructure) *API {
+	// Base router
 	router := chi.NewRouter()
-	router.Use(middleware.RequestID)
-	router.Use(middleware.Logger)
-	router.Use(middleware.Recoverer)
-	router.Use(middleware.Heartbeat("/api/v1/ping"))
-	router.Use(middleware.CleanPath)
 
+	// Add middleware
+	router.Use(
+		middleware.RequestID,
+		middleware.Logger,
+		middleware.Recoverer,
+		middleware.Heartbeat("/api/v1/pub/ping"),
+		middleware.CleanPath,
+		middlewares.EnhanceContext(a.app),
+	)
+
+	// Serve static files
+	fs := http.FileServer(http.Dir("static"))
+	router.Handle("/*", fs)
+
+	// API routers
 	v1Pub := chi.NewRouter()
+	v1Pvt := chi.NewRouter().With(middlewares.JWT(infra.Auth.JWT))
+
+	// Mount routers
 	router.Mount("/api/v1/pub", v1Pub)
-	v1Pvt := chi.NewRouter().With(authMiddleware.JWT)
 	router.Mount("/api/v1", v1Pvt)
+
+	// Health check endpoint
+	v1Pub.Get("/health", func(w http.ResponseWriter, r *http.Request) {
+		err := infra.Health(r.Context())
+		if err != nil {
+			internal.RespondError(w, r, apperror.NewAppError(err, "API.InitRoutes:Health"))
+			return
+		}
+		internal.RespondJSON(w, http.StatusOK, map[string]string{"status": "healthy"})
+	})
 
 	a.v1Pub = v1Pub
 	a.v1Pvt = v1Pvt
 	a.Router = router
+
+	return a
 }
 
 func (a *API) LogRoutes() {
@@ -50,29 +75,4 @@ func (a *API) LogRoutes() {
 	if err != nil {
 		log.Fatal().Err(err).Msg("failed to walk routes")
 	}
-}
-
-// ResponseJSON writes the response as JSON
-func (a *API) ResponseJSON(w http.ResponseWriter, status int, data interface{}) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(status)
-	if err := json.NewEncoder(w).Encode(data); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-	}
-}
-
-func (a *API) ResponseErrorAndLog(w http.ResponseWriter, code int, resMsg string, logEvent *zerolog.Event, logMsg string, err error) {
-	ae := new(common.AppErr)
-	if errors.As(err, &ae) {
-		logEvent = logEvent.Str("funcName", ae.Where)
-	}
-
-	logEvent.Err(err).Msg(logMsg)
-
-	ve := new(common.ValidationError)
-	if errors.As(err, &ve) {
-		resMsg = resMsg + ": " + ve.Error()
-	}
-
-	http.Error(w, resMsg, code)
 }

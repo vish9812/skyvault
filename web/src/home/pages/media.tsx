@@ -1,7 +1,7 @@
 import filesSvc from "@/services/files.svc";
 import React, { useEffect } from "react";
 import { useParams } from "react-router";
-import { FileModel } from "@/lib/models";
+import { FileInfo } from "@/lib/models";
 import Card from "@/components/Card";
 
 const Media = () => {
@@ -11,13 +11,13 @@ const Media = () => {
 
   // const types = getFileTypesParams(type) as FileType[];
 
-  const [files, setFiles] = React.useState<FileModel[]>([]);
+  const [files, setFiles] = React.useState<FileInfo[]>([]);
 
   useEffect(() => {
     async function getFiles() {
       try {
         setFiles([]);
-        const f = await filesSvc.getFiles(null);
+        const f = await filesSvc.getFilesInfo(null);
         if (!ignore) {
           setFiles(f);
         }
@@ -54,7 +54,7 @@ const Media = () => {
 
       {files.length > 0 ? (
         <section className="file-list">
-          {files.map((f: FileModel) => (
+          {files.map((f: FileInfo) => (
             <Card key={f.id} file={f} />
           ))}
         </section>

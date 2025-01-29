@@ -1,12 +1,12 @@
-export interface FileModel {
+export interface FileInfo {
   id: number;
-  folderId?: number;
   ownerId: number;
+  folderId?: number;
   name: string;
-  sizeBytes: number;
+  size: number;
+  extension?: string;
   mimeType: string;
   type: string;
-  extension?: string;
   url: string;
   createdAt: string;
   updatedAt: string;

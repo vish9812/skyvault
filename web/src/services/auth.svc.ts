@@ -16,6 +16,7 @@ interface SignUpReq {
   fullName: string;
   email: string;
   password: string;
+  provider: string;
 }
 
 interface SignInRes {

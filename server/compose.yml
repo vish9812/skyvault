@@ -1,21 +1,20 @@
 name: skyvault
 services:
-  postgres:
-    env_file: dev.env
-    container_name: ${DB_CONTAINER_NAME}
-    image: $DB_CONTAINER_IMAGE
+  skyvault-db:
+    container_name: ${DB__CONTAINER__NAME}
+    image: ${DB__CONTAINER__IMAGE}
     restart: always
     environment:
-      POSTGRES_USER: $DB_USER
-      POSTGRES_PASSWORD: $DB_PASS
-      POSTGRES_DB: $DB_NAME
+      POSTGRES_USER: ${DB__USER}
+      POSTGRES_PASSWORD: ${DB__PASS}
+      POSTGRES_DB: ${DB__NAME}
     volumes:
-      - $DB_HOST_VOLUME:/var/lib/postgresql/data
+      - ${DB__HOST__VOLUME}:/var/lib/postgresql/data
     ports:
-      - "$DB_HOST_PORT:$DB_CONTAINER_PORT"
+      - "${DB__HOST__PORT}:${DB__CONTAINER__PORT}"
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -d $DB_NAME -U $DB_USER"]
+      test: ["CMD-SHELL", "pg_isready -d ${DB__NAME} -U ${DB__USER}"]
       interval: 1m30s
-      timeout: ${DB_CONN_TIMEOUT_SEC}s
+      timeout: 30s
       retries: 5
       start_period: 30s
