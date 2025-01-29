@@ -9,7 +9,7 @@ import (
 	"github.com/go-chi/chi/v5/middleware"
 )
 
-func LoggerContext(app *appconfig.App) func(http.Handler) http.Handler {
+func EnhanceContext(app *appconfig.App) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			// Add request context to logger
@@ -21,7 +21,6 @@ func LoggerContext(app *appconfig.App) func(http.Handler) http.Handler {
 
 			// Add logger to context
 			ctx := context.WithValue(r.Context(), common.CtxKeyLogger, reqLogger)
-			ctx = context.WithValue(ctx, common.CtxKeyApp, app)
 			next.ServeHTTP(w, r.WithContext(ctx))
 		})
 	}

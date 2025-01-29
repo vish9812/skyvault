@@ -4,10 +4,11 @@ dotenv:
   - ./server/dev.env
 
 vars:
-  DB_MIGRATION_PATH: server/internal/infrastructure/store_db/internal/migrations
-  DB_GEN_MODELS_PATH: server/internal/infrastructure/store_db/internal/gen_jet
-  SERVER_BUILD_OUTPUT: ./server/bin/server
-  STATIC_DIR: server/static
+  DB_MIGRATION_PATH: ./internal/infrastructure/internal/store_db/internal/migrations
+  DB_GEN_MODELS_PATH: ./internal/infrastructure/internal/store_db/internal/gen_jet
+  SERVER_BUILD_OUTPUT: ./bin/server
+  STATIC_DIR: ./static
+  SERVER_STATIC_DIR: ./server/static
 
 tasks:
   # Server tasks
@@ -41,29 +42,29 @@ tasks:
   migrate-up:
     dir: server
     desc: Migrate DB to the latest SQL file.
-    cmd: migrate -path $DB_MIGRATION_PATH -database ${DB__DSN} -verbose up
+    cmd: migrate -path {{.DB_MIGRATION_PATH}} -database ${DB__DSN} -verbose up
 
   migrate-down:
     dir: server
     desc: Migrate DB down to 1 previous version.
-    cmd: migrate -path $DB_MIGRATION_PATH -database ${DB__DSN} -verbose down 1
+    cmd: migrate -path {{.DB_MIGRATION_PATH}} -database ${DB__DSN} -verbose down 1
 
   migrate-create:
     dir: server
     desc: Create the next up and down sql files.
-    cmd: migrate create -ext sql -dir $DB_MIGRATION_PATH -seq $MIGRATION_FILE_NAME
+    cmd: migrate create -ext sql -dir {{.DB_MIGRATION_PATH}} -seq $MIGRATION_FILE_NAME
 
   gen-db-models:
     dir: server
     desc: Generate DB models.
-    cmd: jet -dsn="${DB__DSN}" -schema=public -path=$DB_GEN_MODELS_PATH
+    cmd: jet -dsn="${DB__DSN}" -schema=public -path={{.DB_GEN_MODELS_PATH}}
 
   server:build:
     dir: server
     desc: Build the server application
     cmds:
       - mkdir -p bin
-      - go build -o {{.SERVER_BUILD_OUTPUT}} ./cmd/main.go -dev -env ./dev.env
+      - go build -o {{.SERVER_BUILD_OUTPUT}} ./cmd/main.go -dev -env ./server/dev.env
     sources:
       - ./**/*.go
     generates:
@@ -131,8 +132,8 @@ tasks:
     desc: Build and run the server (which serves the web app)
     deps: [build]
     cmds:
-      - rm -rf server/static
-      - ln -s web/dist server/static
+      - rm -rf {{.SERVER_STATIC_DIR}}
+      - ln -s web/dist {{.SERVER_STATIC_DIR}}
       - task: server:run
 
   nuke:

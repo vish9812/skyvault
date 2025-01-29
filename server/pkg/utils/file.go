@@ -1,13 +1,17 @@
 package utils
 
-import (
-	"path/filepath"
-	"strings"
-)
+import "strings"
 
-// GetFileNameAndExtension returns the file name(without extension) and extension(with dot) from a given file name
-func GetFileNameAndExtension(fileName string) (nameWithoutExt string, extensionWithDot string) {
-	extensionWithDot = filepath.Ext(fileName)
-	nameWithoutExt = strings.TrimSuffix(fileName, extensionWithDot)
-	return nameWithoutExt, extensionWithDot
+func CleanFileName(name string) string {
+	// Remove any path separators to prevent directory traversal
+	name = strings.ReplaceAll(name, "/", "")
+	name = strings.ReplaceAll(name, "\\", "")
+
+	// Remove any null bytes that could be used to truncate strings
+	name = strings.ReplaceAll(name, "\x00", "")
+
+	// Trim spaces from start/end
+	name = strings.TrimSpace(name)
+
+	return name
 }

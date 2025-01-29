@@ -4,13 +4,12 @@ import (
 	"context"
 	"net/http"
 	"skyvault/pkg/applog"
-	"skyvault/pkg/common"
 )
 
 type App struct {
 	Config   *Config
 	Server   *http.Server
-	Logger   applog.Logger
+	Logger   applog.Logger // Only use this logger when NOT handling an api request, otherwise use the logger from the context.
 	Cleanups []CleanupFunc
 }
 
@@ -22,11 +21,7 @@ func NewApp(config *Config, logger applog.Logger) *App {
 	}
 }
 
-func GetAppFromContext(ctx context.Context) *App {
-	return ctx.Value(common.CtxKeyApp).(*App)
-}
-
-type CleanupFunc func(context.Context)
+type CleanupFunc func(context.Context) error
 
 func (a *App) RegisterCleanup(cleanup CleanupFunc) {
 	a.Cleanups = append(a.Cleanups, cleanup)

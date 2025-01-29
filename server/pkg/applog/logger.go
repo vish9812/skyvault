@@ -10,6 +10,10 @@ import (
 	"github.com/rs/zerolog"
 )
 
+func GetLoggerFromContext(ctx context.Context) Logger {
+	return ctx.Value(common.CtxKeyLogger).(Logger)
+}
+
 var _ Logger = (*zeroLogger)(nil)
 
 // Logger is the main logging interface
@@ -80,10 +84,6 @@ func parseLevel(level string) zerolog.Level {
 	default:
 		return zerolog.InfoLevel
 	}
-}
-
-func GetLoggerFromContext(ctx context.Context) Logger {
-	return ctx.Value(common.CtxKeyLogger).(Logger)
 }
 
 // Implementation of Logger interface

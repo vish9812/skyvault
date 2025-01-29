@@ -9,8 +9,9 @@ import (
 	"skyvault/internal/api"
 	"skyvault/internal/domain/auth"
 	"skyvault/internal/domain/media"
+	"skyvault/internal/domain/profile"
 	"skyvault/internal/infrastructure"
-	"skyvault/internal/services"
+	"skyvault/internal/workflows"
 	"skyvault/pkg/appconfig"
 	"skyvault/pkg/applog"
 	"syscall"
@@ -60,47 +61,40 @@ func initApp(_ context.Context) *appconfig.App {
 
 func initDependencies(ctx context.Context) *api.API {
 	// Init Infrastructure
-	infra := infrastructure.NewInfrastructure(ctx, app)
+	infra := infrastructure.NewInfrastructure(app)
 
 	// Add health check endpoint
 	go monitorInfraHealth(ctx, infra)
 
 	// Register cleanup on shutdown
-	app.RegisterCleanup(func(ctx context.Context) {
-		cleanupCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
-		defer cancel()
+	app.RegisterCleanup(infra.Cleanup)
 
-		if err := infra.Cleanup(cleanupCtx); err != nil {
-			app.Logger.Error().Err(err).Msg("failed to cleanup infrastructure")
-		}
-	})
-
-	// Init services
-	authJWT := auth.NewAuthJWT(app)
-	authSvc := services.NewAuthSvc(infra.Repo.Auth, infra.Repo.Profile, authJWT)
-	mediaService := media.NewService(infra.Repo.Media, infra.FileStore.FS)
-	profileSvc := services.NewProfileSvc(infra.Repo.Profile)
+	// Init workFlows, commands and queries
+	profileCommands := profile.NewCommandHandlers(infra.Repository.Profile)
+	profileQueries := profile.NewQueryHandlers(infra.Repository.Profile)
+	authCommands := auth.NewCommandHandlers(infra.Repository.Auth, infra.Auth)
+	authQueries := auth.NewQueryHandlers(infra.Repository.Auth, infra.Auth)
+	signUpFlow := workflows.NewSignUpFlow(app, authCommands, infra.Repository.Auth, profileCommands, infra.Repository.Profile)
+	signInFlow := workflows.NewSignInFlow(authCommands, authQueries, profileCommands, profileQueries)
+	mediaCommands := media.NewCommandHandlers(app, infra.Repository.Media, infra.Storage.LocalStorage)
+	mediaQueries := media.NewQueryHandlers(infra.Repository.Media, infra.Storage.LocalStorage)
 
 	// Init API
-	apiServer := api.NewAPI(app)
-	authAPI := api.NewAuthAPI(apiServer, authSvc)
-	mediaAPI := api.NewMedia(apiServer, app, mediaService)
-	profileAPI := api.NewProfileAPI(apiServer, profileSvc)
-
-	// Init routes
-	apiServer.InitRoutes(authJWT, infra)
-	authAPI.InitRoutes()
-	mediaAPI.InitRoutes()
-	profileAPI.InitRoutes()
+	apiServer := api.NewAPI(app).InitRoutes(infra)
+	api.NewAuthAPI(apiServer, signUpFlow, signInFlow).InitRoutes()
+	api.NewMediaAPI(apiServer, app, mediaCommands, mediaQueries).InitRoutes()
+	api.NewProfileAPI(apiServer, profileCommands, profileQueries).InitRoutes()
 
 	// Log all routes
-	apiServer.LogRoutes()
+	if isDev {
+		apiServer.LogRoutes()
+	}
 
 	return apiServer
 }
 
 func monitorInfraHealth(ctx context.Context, infra *infrastructure.Infrastructure) {
-	ticker := time.NewTicker(30 * time.Second)
+	ticker := time.NewTicker(time.Minute)
 	defer ticker.Stop()
 
 	for {
@@ -140,7 +134,9 @@ func waitForShutdown(ctx context.Context) {
 
 	// Run cleanup functions with context
 	for _, cleanup := range app.Cleanups {
-		cleanup(ctx)
+		if err := cleanup(ctx); err != nil {
+			app.Logger.Error().Err(err).Msg("failed to cleanup")
+		}
 	}
 
 	shutdownCtx, cancel := context.WithTimeout(ctx, 30*time.Second)

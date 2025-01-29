@@ -49,7 +49,7 @@ type DBConfig struct {
 }
 
 type JWTConfig struct {
-	Key             string
+	Key             []byte
 	TokenTimeoutMin int
 }
 
@@ -97,7 +97,7 @@ func LoadConfig(path string, isDev bool) *Config {
 	config.DB.DSN = envMap["DB__DSN"]
 
 	// Auth config
-	config.Auth.JWT.Key = envMap["AUTH__JWT__KEY"]
+	config.Auth.JWT.Key = []byte(envMap["AUTH__JWT__KEY"])
 	config.Auth.JWT.TokenTimeoutMin = getIntOrZero(envMap["AUTH__JWT__TOKEN_TIMEOUT_MIN"])
 
 	// Media config
@@ -225,7 +225,7 @@ func (c *Config) validate(logger zerolog.Logger, isDev bool) {
 	// Auth
 	if len(c.Auth.JWT.Key) < 32 {
 		if isDev {
-			c.Auth.JWT.Key = "skyvault"
+			c.Auth.JWT.Key = []byte("skyvault")
 			logger.Info().Msg("JWT key length is less than 32, using default key skyvault")
 		} else {
 			foundErr = true

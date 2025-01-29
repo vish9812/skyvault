@@ -40,9 +40,9 @@ func RandomString(n int) string {
 	return sb.String()
 }
 
-// RandomName generates a random string of length 8
+// RandomName generates a random string of length 15
 func RandomName() string {
-	return RandomString(8)
+	return RandomString(15)
 }
 
 // RandomEmail generates a random email

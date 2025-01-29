@@ -2,63 +2,121 @@ package infrastructure
 
 import (
 	"context"
-	"skyvault/internal/infrastructure/internal/store_db"
-	"skyvault/internal/infrastructure/internal/store_file"
+	"fmt"
+	"skyvault/internal/infrastructure/internal/authinfra"
+	"skyvault/internal/infrastructure/internal/repository"
+	"skyvault/internal/infrastructure/internal/storage"
 	"skyvault/pkg/appconfig"
 	"skyvault/pkg/apperror"
+	"time"
 )
 
 type Infrastructure struct {
-	DBStore   *store_db.Store
-	FileStore *store_file.Store
-	Repo      *store_db.Repo
-	app       *appconfig.App
+	app        *appconfig.App
+	Repository *repository.Repository
+	Storage    *storage.Storage
+	Auth       *authinfra.AuthInfra
 }
 
 // NewInfrastructure initializes all infrastructure components
-func NewInfrastructure(ctx context.Context, app *appconfig.App) *Infrastructure {
+func NewInfrastructure(app *appconfig.App) *Infrastructure {
 	instance := &Infrastructure{
 		app: app,
 	}
 
-	// Initialize database
-	instance.DBStore = store_db.NewStore(app, app.Config.DB.DSN)
-	instance.Repo = store_db.NewRepo(instance.DBStore)
-
-	// Initialize file storage
-	instance.FileStore = store_file.NewStore(app)
+	instance.Repository = repository.NewRepository(app)
+	instance.Storage = storage.NewStorage(app)
+	instance.Auth = authinfra.NewAuthInfra(app)
 
 	return instance
 }
 
 // Cleanup performs cleanup of all infrastructure components
 func (i *Infrastructure) Cleanup(ctx context.Context) error {
-	var err error
+	// Create timeout context
+	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
+	defer cancel()
 
-	// Cleanup database connection
-	if err := i.DBStore.Cleanup(); err != nil {
-		err = apperror.NewAppError(err, "i.Cleanup:DBStore.Cleanup")
+	var finalErr error
+
+	// Run cleanup in parallel
+	errChan := make(chan error, 2)
+	go func() {
+		if err := i.Repository.Cleanup(); err != nil {
+			errChan <- apperror.NewAppError(err, "i.Cleanup:repository.Cleanup")
+			return
+		}
+		errChan <- nil
+	}()
+
+	go func() {
+		if err := i.Storage.Cleanup(); err != nil {
+			errChan <- apperror.NewAppError(err, "i.Cleanup:storage.Cleanup")
+			return
+		}
+		errChan <- nil
+	}()
+
+	// Collect errors
+	for i := 0; i < len(errChan); i++ {
+		select {
+		case err := <-errChan:
+			if err != nil {
+				if finalErr == nil {
+					finalErr = err
+				} else {
+					finalErr = fmt.Errorf("%w: %w", finalErr, err)
+				}
+			}
+		case <-ctx.Done():
+			return apperror.NewAppError(ctx.Err(), "i.Cleanup:Timeout")
+		}
 	}
 
-	// Cleanup file storage
-	if err := i.FileStore.Cleanup(); err != nil {
-		err = apperror.NewAppError(err, "i.Cleanup:FileStore.Cleanup")
-	}
-
-	return err
+	return finalErr
 }
 
 // Health checks the health of all infrastructure components
 func (i *Infrastructure) Health(ctx context.Context) error {
-	var err error
+	// Create timeout context
+	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
+	defer cancel()
 
-	if err := i.DBStore.Health(ctx); err != nil {
-		err = apperror.NewAppError(err, "i.Health:DBStore.Health")
+	var finalErr error
+
+	// Run health checks in parallel
+	errChan := make(chan error, 2)
+	go func() {
+		if err := i.Repository.Health(ctx); err != nil {
+			errChan <- apperror.NewAppError(err, "Infrastructure.Health:repository.Health")
+			return
+		}
+		errChan <- nil
+	}()
+
+	go func() {
+		if err := i.Storage.Health(ctx); err != nil {
+			errChan <- apperror.NewAppError(err, "Infrastructure.Health:storage.Health")
+			return
+		}
+		errChan <- nil
+	}()
+
+	// Collect errors
+	for i := 0; i < len(errChan); i++ {
+		select {
+		case err := <-errChan:
+			if err != nil {
+				if finalErr == nil {
+					finalErr = err
+				} else {
+					finalErr = fmt.Errorf("%w: %w", finalErr, err)
+				}
+			}
+		case <-ctx.Done():
+			return apperror.NewAppError(ctx.Err(), "Infrastructure.Health:Timeout")
+		}
 	}
 
-	if err := i.FileStore.Health(ctx); err != nil {
-		err = apperror.NewAppError(err, "i.Health:FileStore.Health")
-	}
-
-	return err
+	return finalErr
 }
