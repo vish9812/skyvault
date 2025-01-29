@@ -4,8 +4,8 @@ dotenv:
   - ./server/dev.env
 
 vars:
-  DB_MIGRATION_PATH: ./internal/infrastructure/internal/store_db/internal/migrations
-  DB_GEN_MODELS_PATH: ./internal/infrastructure/internal/store_db/internal/gen_jet
+  DB_MIGRATION_PATH: ./internal/infrastructure/internal/repository/internal/migrations
+  DB_GEN_MODELS_PATH: ./internal/infrastructure/internal/repository/internal/gen_jet
   SERVER_BUILD_OUTPUT: ./bin/server
   STATIC_DIR: ./static
   SERVER_STATIC_DIR: ./server/static

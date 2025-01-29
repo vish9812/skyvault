@@ -5,7 +5,6 @@ type SignUpReq struct {
 	FullName       string  `json:"fullName"`
 	Password       *string `json:"password"`
 	Provider       string  `json:"provider"`
-	ProviderUserID string  `json:"providerUserId"`
 }
 
 type SignUpRes struct {

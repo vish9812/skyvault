@@ -6,21 +6,25 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
-function convertFileToUrl(file: File) {
+function convertFileToUrl(file: Blob) {
   return URL.createObjectURL(file);
 }
 
-function prettySize(sizeBytes: number) {
-  if (sizeBytes < 1024) {
-    return sizeBytes + " Bytes"; // Less than 1 KB, show in Bytes
-  } else if (sizeBytes < 1024 * 1024) {
-    const sizeInKB = sizeBytes / 1024;
+const BytesPerKB = 1 << 10;
+const BytesPerMB = 1 << 20;
+const BytesPerGB = 1 << 30;
+
+function prettySize(size: number) {
+  if (size < BytesPerKB) {
+    return size + " Bytes"; // Less than 1 KB, show in Bytes
+  } else if (size < BytesPerMB) {
+    const sizeInKB = size / BytesPerKB;
     return sizeInKB.toFixed(1) + " KB"; // Less than 1 MB, show in KB
-  } else if (sizeBytes < 1024 * 1024 * 1024) {
-    const sizeInMB = sizeBytes / (1024 * 1024);
+  } else if (size < BytesPerGB) {
+    const sizeInMB = size / BytesPerMB;
     return sizeInMB.toFixed(1) + " MB"; // Less than 1 GB, show in MB
   } else {
-    const sizeInGB = sizeBytes / (1024 * 1024 * 1024);
+    const sizeInGB = size / BytesPerGB;
     return sizeInGB.toFixed(1) + " GB"; // 1 GB or more, show in GB
   }
 }
@@ -72,44 +76,44 @@ function formattedDateTime(isoString: string | null | undefined) {
 function getFileIcon(extension: string | undefined, type: MediaType | string) {
   switch (extension) {
     // Text
-    case "pdf":
+    case ".pdf":
       return "/assets/icons/file-pdf.svg";
-    case "doc":
+    case ".doc":
       return "/assets/icons/file-doc.svg";
-    case "docx":
+    case ".docx":
       return "/assets/icons/file-docx.svg";
-    case "csv":
+    case ".csv":
       return "/assets/icons/file-csv.svg";
-    case "txt":
+    case ".txt":
       return "/assets/icons/file-txt.svg";
-    case "xls":
-    case "xlsx":
+    case ".xls":
+    case ".xlsx":
       return "/assets/icons/file-document.svg";
     // Image
-    case "svg":
+    case ".svg":
       return "/assets/icons/file-image.svg";
     // Video
-    case "mkv":
-    case "mov":
-    case "avi":
-    case "wmv":
-    case "mp4":
-    case "flv":
-    case "webm":
-    case "m4v":
-    case "3gp":
+    case ".mkv":
+    case ".mov":
+    case ".avi":
+    case ".wmv":
+    case ".mp4":
+    case ".flv":
+    case ".webm":
+    case ".m4v":
+    case ".3gp":
       return "/assets/icons/file-video.svg";
     // Audio
-    case "mp3":
-    case "mpeg":
-    case "wav":
-    case "aac":
-    case "flac":
-    case "ogg":
-    case "wma":
-    case "m4a":
-    case "aiff":
-    case "alac":
+    case ".mp3":
+    case ".mpeg":
+    case ".wav":
+    case ".aac":
+    case ".flac":
+    case ".ogg":
+    case ".wma":
+    case ".m4a":
+    case ".aiff":
+    case ".alac":
       return "/assets/icons/file-audio.svg";
 
     default:

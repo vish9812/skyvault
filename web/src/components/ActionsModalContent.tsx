@@ -1,15 +1,11 @@
 import Thumbnail from "@/components/Thumbnail";
 import FormattedDateTime from "@/components/FormattedDateTime";
-import { FileModel } from "@/lib/models";
+import { FileInfo } from "@/lib/models";
 import utils from "@/lib/utils";
 
-const ImageThumbnail = ({ file }: { file: FileModel }) => (
+const ImageThumbnail = ({ file }: { file: FileInfo }) => (
   <div className="file-details-thumbnail">
-    <Thumbnail
-      type={file.type}
-      extension={file.extension}
-      url={file.url}
-    />
+    <Thumbnail type={file.type} extension={file.extension} url={file.url} />
     <div className="flex flex-col">
       <p className="subtitle-2 mb-1">{file.name}</p>
       <FormattedDateTime date={file.createdAt} className="caption" />
@@ -28,13 +24,13 @@ const DetailRow = ({ label, value }: { label: string; value?: string }) => {
   );
 };
 
-export const FileDetails = ({ file }: { file: FileModel }) => {
+export const FileDetails = ({ file }: { file: FileInfo }) => {
   return (
     <>
       <ImageThumbnail file={file} />
       <div className="space-y-4 px-2 pt-2">
         <DetailRow label="Format:" value={file.extension} />
-        <DetailRow label="Size:" value={utils.prettySize(file.sizeBytes)} />
+        <DetailRow label="Size:" value={utils.prettySize(file.size)} />
         <DetailRow label="Owner:" value={file.ownerId.toString()} />
         <DetailRow
           label="Last edit:"

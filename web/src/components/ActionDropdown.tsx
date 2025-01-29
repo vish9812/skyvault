@@ -16,14 +16,14 @@ import {
 import { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { FileModel } from "@/lib/models";
+import { FileInfo } from "@/lib/models";
 import consts from "@/lib/consts";
 import { Link } from "react-router";
 import { FileDetails } from "./ActionsModalContent";
 import filesSvc from "@/services/files.svc";
 
 interface Props {
-  file: FileModel;
+  file: FileInfo;
 }
 
 const ActionDropdown = ({ file }: Props) => {
@@ -49,9 +49,9 @@ const ActionDropdown = ({ file }: Props) => {
 
     const actions = {
       // rename: () =>
-        // renameFile({ fileId: file.id, name, extension: file.extension }),
+      // renameFile({ fileId: file.id, name, extension: file.extension }),
       // share: () => updateFileUsers({ fileId: file.$id, emails }),
-      delete: () => filesSvc.deleteFile(file.id),
+      delete: () => filesSvc.trashFile(file.id),
     };
 
     success = await actions[action.value as keyof typeof actions]();

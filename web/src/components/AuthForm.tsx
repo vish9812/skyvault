@@ -55,6 +55,7 @@ const AuthForm = ({ type }: { type: FormType }) => {
           fullName: values.fullName!,
           email: values.email,
           password: values.password,
+          provider: "email",
         });
       } else {
         await authSvc.signIn({

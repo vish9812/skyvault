@@ -43,11 +43,12 @@ func (a *authAPI) SignUp(w http.ResponseWriter, r *http.Request) {
 	}
 
 	flowReq := &workflows.SignUpReq{
-		Email:          req.Email,
-		FullName:       req.FullName,
-		Password:       req.Password,
-		Provider:       auth.Provider(req.Provider),
-		ProviderUserID: req.ProviderUserID,
+		Email:    req.Email,
+		FullName: req.FullName,
+		Password: req.Password,
+		Provider: auth.Provider(req.Provider),
+		//TODO: ProviderUserID should be based on the provider
+		ProviderUserID: req.Email,
 	}
 
 	res, err := a.signUpFlow.Run(r.Context(), flowReq)
@@ -58,6 +59,7 @@ func (a *authAPI) SignUp(w http.ResponseWriter, r *http.Request) {
 
 	var dto dtos.SignUpRes
 	dto.Token = res.Token
+	dto.Profile = &dtos.GetProfileRes{}
 
 	err = copier.Copy(&dto.Profile, res.Profile)
 	if err != nil {
@@ -89,6 +91,7 @@ func (a *authAPI) SignIn(w http.ResponseWriter, r *http.Request) {
 
 	var dto dtos.SignInRes
 	dto.Token = res.Token
+	dto.Profile = &dtos.GetProfileRes{}
 
 	err = copier.Copy(&dto.Profile, res.Profile)
 	if err != nil {

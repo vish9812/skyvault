@@ -32,9 +32,9 @@ func (a *mediaAPI) InitRoutes() {
 	pvtRouter.Route("/media", func(r chi.Router) {
 		r.Post("/", a.UploadFile)
 		r.Get("/", a.GetFilesInfo)
-		r.Delete("/{fileID}", a.TrashFile)
-		r.Get("/info/{fileID}", a.GetFileInfo)
+		r.Get("/{fileID}", a.GetFileInfo)
 		r.Get("/file/{fileID}", a.GetFile)
+		r.Delete("/{fileID}", a.TrashFile)
 	})
 }
 
@@ -96,7 +96,7 @@ func (a *mediaAPI) GetFilesInfo(w http.ResponseWriter, r *http.Request) {
 	files, err := a.queries.GetFilesInfo(r.Context(), query)
 	if err != nil {
 		if errors.Is(err, apperror.ErrCommonNoData) {
-			internal.RespondJSON(w, http.StatusOK, nil)
+			internal.RespondJSON(w, http.StatusOK, dtos.GetFileInfoRes{})
 			return
 		}
 
@@ -105,6 +105,7 @@ func (a *mediaAPI) GetFilesInfo(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var dto dtos.GetFilesInfoRes
+	dto.Infos = make([]dtos.GetFileInfoRes, len(files))
 	err = copier.Copy(&dto.Infos, &files)
 	if err != nil || len(dto.Infos) != len(files) {
 		if err == nil {
