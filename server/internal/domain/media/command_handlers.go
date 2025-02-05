@@ -36,16 +36,21 @@ func (h *CommandHandlers) UploadFile(ctx context.Context, cmd UploadFileCommand)
 	}
 	defer tx.Rollback()
 
-	repoTx := h.repository.WithTx(ctx, tx)
-
-	info, err = repoTx.CreateFileInfo(ctx, info)
-	if err != nil {
-		return nil, apperror.NewAppError(err, "CommandHandlers.UploadFile:CreateFileInfo")
-	}
-
 	err = h.storage.SaveFile(ctx, cmd.File, info.GeneratedName, cmd.OwnerID)
 	if err != nil {
 		return nil, apperror.NewAppError(err, "CommandHandlers.UploadFile:SaveFile").WithMetadata("generated_name", info.GeneratedName)
+	}
+
+	// TODO: Generate previews asynchronously via background job
+	info, err = info.WithPreview(cmd.File)
+	if err != nil {
+		return nil, apperror.NewAppError(err, "CommandHandlers.UploadFile:WithPreview")
+	}
+
+	repoTx := h.repository.WithTx(ctx, tx)
+	info, err = repoTx.CreateFileInfo(ctx, info)
+	if err != nil {
+		return nil, apperror.NewAppError(err, "CommandHandlers.UploadFile:CreateFileInfo")
 	}
 
 	err = tx.Commit()

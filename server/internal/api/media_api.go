@@ -29,12 +29,34 @@ func NewMediaAPI(a *API, app *appconfig.App, commands media.Commands, queries me
 
 func (a *mediaAPI) InitRoutes() {
 	pvtRouter := a.api.v1Pvt
+
 	pvtRouter.Route("/media", func(r chi.Router) {
-		r.Post("/", a.UploadFile)
-		r.Get("/", a.GetFilesInfo)
-		r.Get("/{fileID}", a.GetFileInfo)
-		r.Get("/file/{fileID}", a.GetFile)
-		r.Delete("/{fileID}", a.TrashFile)
+		r.Route("/files", func(r chi.Router) {
+			r.Get("/", a.GetFilesInfo)
+		})
+
+		r.Route("/folders", func(r chi.Router) {
+			r.Route("/{folderID}", func(r chi.Router) {
+				r.Get("/items", a.GetFolderItems)
+				r.Post("/", a.CreateFolder)
+				r.Delete("/", a.TrashFolder)
+				r.Patch("/rename", a.RenameFolder)
+				r.Patch("/move", a.MoveFolder)
+				r.Patch("/restore", a.RestoreFolder)
+
+				r.Route("/files", func(r chi.Router) {
+					r.Post("/", a.UploadFile)
+
+					r.Route("/{fileID}", func(r chi.Router) {
+						r.Get("/download", a.DownloadFile)
+						r.Delete("/", a.TrashFile)
+						r.Patch("/rename", a.RenameFile)
+						r.Patch("/move", a.MoveFile)
+						r.Patch("/restore", a.RestoreFile)
+					})
+				})
+			})
+		})
 	})
 }
 
@@ -186,6 +208,56 @@ func (a *mediaAPI) TrashFile(w http.ResponseWriter, r *http.Request) {
 	err = a.commands.TrashFile(r.Context(), cmd)
 	if err != nil {
 		internal.RespondError(w, r, apperror.NewAppError(err, "mediaAPI.TrashFile:TrashFile"))
+		return
+	}
+
+	internal.RespondEmpty(w, http.StatusNoContent)
+}
+
+func (a *mediaAPI) CreateFolder(w http.ResponseWriter, r *http.Request) {
+	profileID := auth.GetProfileIDFromContext(r.Context())
+
+	var req struct {
+		Name           string `json:"name"`
+		ParentFolderID *int64 `json:"parent_folder_id"`
+	}
+
+	if err := internal.DecodeJSON(r, &req); err != nil {
+		internal.RespondError(w, r, apperror.NewAppError(err, "mediaAPI.CreateFolder:DecodeJSON"))
+		return
+	}
+
+	cmd := media.CreateFolderCommand{
+		OwnerID:        profileID,
+		Name:           req.Name,
+		ParentFolderID: req.ParentFolderID,
+	}
+
+	folder, err := a.commands.CreateFolder(r.Context(), cmd)
+	if err != nil {
+		internal.RespondError(w, r, apperror.NewAppError(err, "mediaAPI.CreateFolder:CreateFolder"))
+		return
+	}
+
+	internal.RespondJSON(w, http.StatusCreated, folder)
+}
+
+func (a *mediaAPI) TrashFolder(w http.ResponseWriter, r *http.Request) {
+	folderID, err := strconv.ParseInt(chi.URLParam(r, "folderID"), 10, 64)
+	if err != nil {
+		internal.RespondError(w, r, apperror.NewAppError(fmt.Errorf("%w: %w", apperror.ErrCommonInvalidValue, err), "mediaAPI.TrashFolder:ParseInt"))
+		return
+	}
+
+	profileID := auth.GetProfileIDFromContext(r.Context())
+	cmd := media.TrashFolderCommand{
+		OwnerID:  profileID,
+		FolderID: folderID,
+	}
+
+	err = a.commands.TrashFolder(r.Context(), cmd)
+	if err != nil {
+		internal.RespondError(w, r, apperror.NewAppError(err, "mediaAPI.TrashFolder:TrashFolder"))
 		return
 	}
 

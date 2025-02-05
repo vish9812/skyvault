@@ -8,6 +8,7 @@ import (
 	"skyvault/internal/infrastructure/internal/repository/internal/gen_jet/skyvault/public/model"
 	. "skyvault/internal/infrastructure/internal/repository/internal/gen_jet/skyvault/public/table"
 	"skyvault/pkg/apperror"
+	"skyvault/pkg/common"
 
 	. "github.com/go-jet/jet/v2/postgres"
 	"github.com/jinzhu/copier"
@@ -59,24 +60,53 @@ func (r *MediaRepository) GetFileInfo(ctx context.Context, fileID int64) (*media
 	return runSelect[model.FileInfo, media.FileInfo](ctx, stmt, r.repository.dbTx)
 }
 
-func (r *MediaRepository) GetFilesInfo(ctx context.Context, ownerID int64, folderID *int64) ([]*media.FileInfo, error) {
-	var folderCond BoolExpression
+func (r *MediaRepository) GetFilesInfo(ctx context.Context, pagingOpt *common.PagingOptions, ownerID int64, folderID *int64) (*common.PagedItems[*media.FileInfo], error) {
+	whereCond := FileInfo.OwnerID.EQ(Int64(ownerID))
 	if folderID == nil {
-		// Get all files in the root folder of the owner.
-		folderCond = FileInfo.FolderID.IS_NULL().AND(FileInfo.OwnerID.EQ(Int64(ownerID)))
+		whereCond = whereCond.AND(FileInfo.FolderID.IS_NULL())
 	} else {
-		// Get all files in the specified folder.
-		folderCond = FileInfo.FolderID.EQ(Int64(*folderID))
+		whereCond = whereCond.AND(FileInfo.FolderID.EQ(Int64(*folderID)))
 	}
+	whereCond = whereCond.AND(FileInfo.TrashedAt.IS_NULL())
+
+	orderBy := []OrderByClause{FileInfo.OwnerID.ASC(), FileInfo.FolderID.ASC()}
 
 	stmt := SELECT(FileInfo.AllColumns).
-		FROM(FileInfo).
-		WHERE(
-			folderCond.
-				AND(FileInfo.TrashedAt.IS_NULL()),
-		)
+		FROM(FileInfo)
 
-	return runSelectSlice[model.FileInfo, media.FileInfo](ctx, stmt, r.repository.dbTx)
+	cursorOpt := &cursorQueryOptions{
+		ID:        FileInfo.ID,
+		Name:      FileInfo.Name,
+		Updated:   FileInfo.UpdatedAt,
+		where:     whereCond,
+		orderBy:   orderBy,
+		pagingOpt: pagingOpt,
+	}
+
+	pagedItems, err := runSelectSlice[model.FileInfo, media.FileInfo](ctx, cursorOpt, stmt, r.repository.dbTx)
+	if err != nil {
+		return nil, apperror.NewAppError(err, "repository.GetFilesInfo:runSelectSlice")
+	}
+
+	lastItem := pagedItems.Items[len(pagedItems.Items)-1]
+	nextCursor := &common.Cursor{
+		ID:      lastItem.ID,
+		Name:    lastItem.Name,
+		Updated: lastItem.UpdatedAt,
+	}
+	pagedItems.NextCursor = pagingOpt.CreateCursor(nextCursor)
+
+	firstItem := pagedItems.Items[0]
+	prevCursor := &common.Cursor{
+		ID:      firstItem.ID,
+		Name:    firstItem.Name,
+		Updated: firstItem.UpdatedAt,
+	}
+	pagedItems.PrevCursor = pagingOpt.CreateCursor(prevCursor)
+
+	pagedItems.ResetCursorIfNoMore(pagingOpt)
+
+	return pagedItems, nil
 }
 
 func (r *MediaRepository) UpdateFileInfo(ctx context.Context, info *media.FileInfo) error {

@@ -12,6 +12,7 @@ import (
 	"skyvault/pkg/appconfig"
 	"skyvault/pkg/apperror"
 	"skyvault/pkg/applog"
+	"skyvault/pkg/common"
 	"time"
 
 	"github.com/go-jet/jet/v2/qrm"
@@ -62,6 +63,12 @@ func NewRepository(app *appconfig.App) *Repository {
 	repo.initRepositories()
 
 	return repo
+}
+
+func (r *Repository) initRepositories() {
+	r.Auth = NewAuthRepository(r)
+	r.Profile = NewProfileRepository(r)
+	r.Media = NewMediaRepository(r)
 }
 
 func connectDatabase(logger applog.Logger, dsn string) *sql.DB {
@@ -141,6 +148,103 @@ func (r *Repository) migrateUp() {
 // DB Queries runner functions
 // -----------------------------
 
+type cursorQueryOptions struct {
+	ID        jetpg.ColumnInteger
+	Name      jetpg.ColumnString
+	Updated   jetpg.ColumnTimestamp
+	where     jetpg.BoolExpression
+	orderBy   []jetpg.OrderByClause
+	pagingOpt *common.PagingOptions
+}
+
+func (o *cursorQueryOptions) buildClauses() error {
+	o.pagingOpt.Validate()
+	cursor, err := o.pagingOpt.GetCursor()
+	if err != nil {
+		return apperror.NewAppError(err, "repository.cursorQueryOptions.buildClauses:GetCursor")
+	}
+
+	if o.where == nil {
+		o.where = jetpg.Bool(true)
+	}
+
+	if o.orderBy == nil {
+		o.orderBy = []jetpg.OrderByClause{}
+	}
+
+	switch o.pagingOpt.SortBy {
+	case common.SortByID:
+		if o.pagingOpt.Sort == common.SortAsc {
+			o.orderBy = append(o.orderBy, o.ID.ASC())
+
+			if cursor != nil {
+				o.where = o.where.AND(o.ID.GT(jetpg.Int64(cursor.ID)))
+			}
+
+		} else {
+			o.orderBy = append(o.orderBy, o.ID.DESC())
+
+			if cursor != nil {
+				o.where = o.where.AND(o.ID.LT(jetpg.Int64(cursor.ID)))
+			}
+		}
+
+	case common.SortByName:
+		if o.pagingOpt.Sort == common.SortAsc {
+			o.orderBy = append(o.orderBy, o.Name.ASC(), o.ID.ASC())
+
+			if cursor != nil {
+				o.where = o.where.AND(
+					o.Name.GT(jetpg.String(cursor.Name)).
+						OR(o.Name.EQ(jetpg.String(cursor.Name)).AND(
+							o.ID.GT(jetpg.Int64(cursor.ID)),
+						)),
+				)
+			}
+
+		} else {
+			o.orderBy = append(o.orderBy, o.Name.DESC(), o.ID.DESC())
+
+			if cursor != nil {
+				o.where = o.where.AND(
+					o.Name.LT(jetpg.String(cursor.Name)).
+						OR(o.Name.EQ(jetpg.String(cursor.Name)).AND(
+							o.ID.LT(jetpg.Int64(cursor.ID)),
+						)),
+				)
+			}
+		}
+
+	case common.SortByUpdated:
+		if o.pagingOpt.Sort == common.SortAsc {
+			o.orderBy = append(o.orderBy, o.Updated.ASC(), o.ID.ASC())
+
+			if cursor != nil {
+				o.where = o.where.AND(
+					o.Updated.GT(jetpg.TimestampT(cursor.Updated)).
+						OR(o.Updated.EQ(jetpg.TimestampT(cursor.Updated)).AND(
+							o.ID.GT(jetpg.Int64(cursor.ID)),
+						)),
+				)
+			}
+
+		} else {
+			o.orderBy = append(o.orderBy, o.Updated.DESC(), o.ID.DESC())
+
+			if cursor != nil {
+				o.where = o.where.AND(
+					o.Updated.LT(jetpg.TimestampT(cursor.Updated)).
+						OR(o.Updated.EQ(jetpg.TimestampT(cursor.Updated)).AND(
+							o.ID.LT(jetpg.Int64(cursor.ID)),
+						)),
+				)
+			}
+		}
+	}
+
+	return nil
+}
+
 // runSelect is to be used with Select statements that return a single row.
 //
 // App Errors:
@@ -169,13 +273,39 @@ func runSelect[TDBModel any, TRes any](ctx context.Context, stmt jetpg.Statement
 //
 // App Errors:
 // - apperror.ErrNoData
-func runSelectSlice[TDBModel any, TRes any](ctx context.Context, stmt jetpg.Statement, dbTx qrm.DB) ([]*TRes, error) {
+func runSelectSlice[TDBModel any, TRes any](ctx context.Context, cursorOptions *cursorQueryOptions, stmt jetpg.SelectStatement, dbTx qrm.DB) (*common.PagedItems[*TRes], error) {
+	err := cursorOptions.buildClauses()
+	if err != nil {
+		return nil, apperror.NewAppError(err, "repository.runSelectSlice:cursorOptions.buildClauses")
+	}
+
+	stmt = stmt.WHERE(cursorOptions.where).
+		ORDER_BY(cursorOptions.orderBy...).
+		LIMIT(int64(cursorOptions.pagingOpt.Limit) + 1)
+
+	// TODO: Comment this once this function is tested.
+	applog.GetLoggerFromContext(ctx).Debug().Msg(stmt.DebugSql())
+
 	res, err := runSelect[[]*TDBModel, []*TRes](ctx, stmt, dbTx)
 	if err != nil {
 		return nil, apperror.NewAppError(err, "repository.runSelectSlice:runSelect")
 	}
+	items := *res
 
-	return *res, nil
+	pagedItems := &common.PagedItems[*TRes]{}
+
+	if len(items) > cursorOptions.pagingOpt.Limit {
+		pagedItems.HasMore = true
+		if cursorOptions.pagingOpt.Direction == common.DirectionNext {
+			items = items[:cursorOptions.pagingOpt.Limit]
+		} else {
+			items = items[1:]
+		}
+	}
+
+	pagedItems.Items = items
+
+	return pagedItems, nil
 }
 
 // runInsert is to be used with Insert statements
@@ -222,10 +352,4 @@ func runUpdateOrDelete(ctx context.Context, stmt jetpg.Statement, dbTx qrm.DB) e
 	}
 
 	return nil
-}
-
-func (r *Repository) initRepositories() {
-	r.Auth = NewAuthRepository(r)
-	r.Profile = NewProfileRepository(r)
-	r.Media = NewMediaRepository(r)
 }

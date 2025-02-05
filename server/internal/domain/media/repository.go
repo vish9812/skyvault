@@ -3,13 +3,14 @@ package media
 import (
 	"context"
 	"skyvault/internal/domain/internal"
+	"skyvault/pkg/common"
 )
 
 type Repository interface {
 	internal.RepositoryTx[Repository]
 
 	//--------------------------------
-	// File
+	// Files
 	//--------------------------------
 
 	// App Errors:
@@ -25,7 +26,11 @@ type Repository interface {
 	//
 	// App Errors:
 	// - apperror.ErrNoData
-	GetFilesInfo(ctx context.Context, ownerID int64, folderID *int64) ([]*FileInfo, error)
+	GetFilesInfo(ctx context.Context, pagingOpt common.PagingOptions, ownerID int64, folderID *int64) (common.PagedItems[*FileInfo], error)
+
+	// App Errors:
+	// - apperror.ErrNoData
+	GetFilesByCategory(ctx context.Context, pagingOpt common.PagingOptions, ownerID int64, category string) (common.PagedItems[*FileInfo], error)
 
 	// App Errors:
 	// - apperror.ErrNoData
@@ -36,7 +41,7 @@ type Repository interface {
 	DeleteFileInfo(ctx context.Context, fileID int64) error
 
 	//--------------------------------
-	// Folder
+	// Folders
 	//--------------------------------
 
 	// App Errors:
@@ -52,7 +57,7 @@ type Repository interface {
 	//
 	// App Errors:
 	// - apperror.ErrNoData
-	GetFoldersInfo(ctx context.Context, ownerID int64, parentFolderID *int64) ([]*FolderInfo, error)
+	GetFoldersInfo(ctx context.Context, pagingOpt common.PagingOptions, ownerID int64, parentFolderID *int64) (common.PagedItems[*FolderInfo], error)
 
 	// App Errors:
 	// - apperror.ErrNoData

@@ -1,6 +1,7 @@
 package media
 
 import (
+	"io"
 	"path/filepath"
 	"skyvault/pkg/apperror"
 	"skyvault/pkg/utils"
@@ -28,6 +29,7 @@ type FileInfo struct {
 	Size          int64 // bytes
 	Extension     *string
 	MimeType      string
+	Preview       []byte
 	CreatedAt     time.Time
 	UpdatedAt     time.Time
 	TrashedAt     *time.Time
@@ -77,6 +79,21 @@ func NewFileInfo(config FileConfig, ownerID int64, folderID *int64, name string,
 		CreatedAt:     time.Now().UTC(),
 		UpdatedAt:     time.Now().UTC(),
 	}, nil
+}
+
+func (f *FileInfo) WithPreview(file io.ReadSeeker) (*FileInfo, error) {
+	preview, err := utils.ScaleDownImageTo(file, 100, 100)
+	if err != nil {
+		// In case of unsupported image format, no need to set the preview
+		if err == utils.ErrUnsupportedImageFormat {
+			return f, nil
+		}
+
+		return nil, err
+	}
+
+	f.Preview = preview
+	return f, nil
 }
 
 func (f *FileInfo) Trash() {

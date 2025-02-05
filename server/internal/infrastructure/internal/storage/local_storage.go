@@ -64,8 +64,6 @@ func (s *LocalStorage) SaveFile(ctx context.Context, file io.ReadSeeker, name st
 		return apperror.NewAppError(err, "LocalStorage.SaveFile:Seek").WithMetadata("save_path", savePath)
 	}
 
-	// TODO: Check mime type by reading initial bytes of the file
-	
 	// Copy the file with an extra MB to check if file is greater than max size.
 	written, err := io.CopyN(f, file, maxSize+media.BytesPerMB)
 	if err != nil && !errors.Is(err, io.EOF) {

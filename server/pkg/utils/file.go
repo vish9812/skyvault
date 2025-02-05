@@ -1,6 +1,20 @@
 package utils
 
-import "strings"
+import (
+	"bytes"
+	"errors"
+	"image"
+	"image/jpeg"
+	"image/png"
+	"io"
+	"strings"
+
+	"golang.org/x/image/draw"
+)
+
+var (
+	ErrUnsupportedImageFormat = errors.New("unsupported image format")
+)
 
 func CleanFileName(name string) string {
 	// Remove any path separators to prevent directory traversal
@@ -14,4 +28,51 @@ func CleanFileName(name string) string {
 	name = strings.TrimSpace(name)
 
 	return name
+}
+
+// ScaleDownImageTo resizes an image of type jpeg or png to the given width and height
+func ScaleDownImageTo(reader io.ReadSeeker, maxWidth, maxHeight int) ([]byte, error) {
+	config, format, err := image.DecodeConfig(reader)
+	if err != nil {
+		return nil, err
+	}
+
+	if format != "jpeg" && format != "png" {
+		return nil, ErrUnsupportedImageFormat
+	}
+
+	if config.Width <= maxWidth && config.Height <= maxHeight {
+		return nil, nil
+	}
+
+	reader.Seek(0, io.SeekStart)
+
+	var img image.Image
+	if format == "jpeg" {
+		img, err = jpeg.Decode(reader)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		img, err = png.Decode(reader)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	resized := image.NewRGBA(image.Rect(0, 0, maxWidth, maxHeight))
+	draw.NearestNeighbor.Scale(resized, resized.Bounds(), img, img.Bounds(), draw.Over, nil)
+
+	buf := bytes.NewBuffer(nil)
+	if format == "jpeg" {
+		err = jpeg.Encode(buf, resized, nil)
+	} else {
+		err = png.Encode(buf, resized)
+	}
+
+	if err != nil {
+		return nil, err
+	}
+
+	return buf.Bytes(), nil
 }

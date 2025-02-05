@@ -42,6 +42,8 @@ create table if not exists file_info (
 	size bigint not null,
 	extension text,
 	mime_type text not null,
+	category text,
+	preview bytea,
 	trashed_at timestamp,
 	created_at timestamp not null default (timezone('utc', now())),
 	updated_at timestamp not null default (timezone('utc', now()))
@@ -49,4 +51,8 @@ create table if not exists file_info (
 
 create unique index if not exists file_info_idx_unq_file_per_user 
 on file_info(owner_id, folder_id, name)
+where trashed_at is null;
+
+create index if not exists file_info_idx_category
+on file_info(owner_id, category)
 where trashed_at is null;
