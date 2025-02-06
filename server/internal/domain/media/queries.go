@@ -3,25 +3,20 @@ package media
 import (
 	"context"
 	"io"
+	"skyvault/pkg/paging"
 )
 
 type Queries interface {
-	// App Errors:
-	// - apperror.ErrNoData
-	// - apperror.ErrNoAccess
-	GetFileInfo(ctx context.Context, query GetFileInfoQuery) (*FileInfo, error)
+	GetFilesInfoByCategory(ctx context.Context, query *GetFilesInfoByCategoryQuery) (*paging.Page[*FileInfo], error)
 
-	// App Errors:
-	// - apperror.ErrNoData
-	// - apperror.ErrNoAccess
-	GetFilesInfo(ctx context.Context, query GetFilesInfoQuery) ([]*FileInfo, error)
+	GetFolderContent(ctx context.Context, query *GetFolderContentQuery) (*GetFolderContentQueryRes, error)
 
-	// The file must be closed after use by the caller.
+	// The file MUST be CLOSED after use by the caller.
 	//
 	// App Errors:
-	// - apperror.ErrNoData
-	// - apperror.ErrNoAccess
-	GetFile(ctx context.Context, query GetFileQuery) (*GetFileQueryRes, error)
+	// - ErrCommonNoData
+	// - ErrCommonNoAccess
+	GetFile(ctx context.Context, query *GetFileQuery) (*GetFileQueryRes, error)
 }
 
 type GetFileInfoQuery struct {
@@ -30,9 +25,22 @@ type GetFileInfoQuery struct {
 }
 
 // If FolderID is nil, it will return all files in the root folder of the owner
-type GetFilesInfoQuery struct {
-	OwnerID  int64
-	FolderID *int64
+type GetFilesInfoByCategoryQuery struct {
+	OwnerID   int64
+	Category  string
+	PagingOpt *paging.Options
+}
+
+type GetFolderContentQuery struct {
+	OwnerID         int64
+	FolderID        *int64
+	FilePagingOpt   *paging.Options
+	FolderPagingOpt *paging.Options
+}
+
+type GetFolderContentQueryRes struct {
+	FilePage   *paging.Page[*FileInfo]
+	FolderPage *paging.Page[*FolderInfo]
 }
 
 type GetFileQuery struct {

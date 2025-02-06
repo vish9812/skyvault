@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 	"skyvault/pkg/apperror"
 	"skyvault/pkg/utils"
+	"strings"
 	"time"
 )
 
@@ -14,12 +15,19 @@ const (
 	BytesPerGB = 1 << 30
 )
 
+const (
+	CategoryImages    = "images"
+	CategoryDocuments = "documents"
+	CategoryVideos    = "videos"
+	CategoryAudios    = "audios"
+	CategoryOthers    = "others"
+)
+
 type FileConfig struct {
 	MaxSizeMB int64
 }
 
-// TODO: 1. Keep preview as byte array of image type files
-// TODO: 2. Later generate previews asynchronously via worker
+// TODO: Generate preview asynchronously via worker
 type FileInfo struct {
 	ID            int64
 	OwnerID       int64
@@ -29,6 +37,7 @@ type FileInfo struct {
 	Size          int64 // bytes
 	Extension     *string
 	MimeType      string
+	Category      string
 	Preview       []byte
 	CreatedAt     time.Time
 	UpdatedAt     time.Time
@@ -36,8 +45,8 @@ type FileInfo struct {
 }
 
 // App Errors:
-// - ErrInvalidName
-// - ErrFileSizeLimitExceeded
+// - ErrCommonInvalidValue
+// - ErrMediaFileSizeLimitExceeded
 func NewFileInfo(config FileConfig, ownerID int64, folderID *int64, name string, size int64, mimeType string) (*FileInfo, error) {
 	if ownerID < 1 {
 		return nil, apperror.NewAppError(apperror.ErrCommonInvalidValue, "media.NewFileInfo:ownerID").WithMetadata("owner_id", ownerID)
@@ -76,13 +85,37 @@ func NewFileInfo(config FileConfig, ownerID int64, folderID *int64, name string,
 		Size:          size,
 		Extension:     ext,
 		MimeType:      mimeType,
+		Category:      getCategory(mimeType),
 		CreatedAt:     time.Now().UTC(),
 		UpdatedAt:     time.Now().UTC(),
 	}, nil
 }
 
+func getCategory(mimeType string) string {
+	var category string
+	baseMime := strings.Split(mimeType, "/")[0]
+	switch baseMime {
+	case "text":
+		category = CategoryDocuments
+	case "image":
+		category = CategoryImages
+	case "audio":
+		category = CategoryAudios
+	case "video":
+		category = CategoryVideos
+	default:
+		category = CategoryOthers
+	}
+	return category
+}
+
 func (f *FileInfo) WithPreview(file io.ReadSeeker) (*FileInfo, error) {
-	preview, err := utils.ScaleDownImageTo(file, 100, 100)
+	if f.Category != CategoryImages {
+		return f, nil
+	}
+
+	format := strings.Split(f.MimeType, "/")[1]
+	preview, err := utils.ScaleDownImageTo(format, file, 100, 100)
 	if err != nil {
 		// In case of unsupported image format, no need to set the preview
 		if err == utils.ErrUnsupportedImageFormat {
@@ -107,11 +140,23 @@ func (f *FileInfo) Restore() {
 	f.UpdatedAt = time.Now().UTC()
 }
 
-func (f *FileInfo) IsTrashed() bool {
-	return f.TrashedAt != nil
+func (f *FileInfo) IsAccessibleBy(ownerID int64) bool {
+	return f.OwnerID == ownerID
 }
 
-// TODO: Rename to IsAccessible
-func (f *FileInfo) HasAccess(ownerID int64) bool {
-	return f.OwnerID == ownerID
+// App Errors:
+// - ErrCommonInvalidValue
+func (f *FileInfo) Rename(newName string) error {
+	newName = utils.CleanFileName(newName)
+	if newName == "" {
+		return apperror.NewAppError(apperror.ErrCommonInvalidValue, "media.FileInfo.Rename").WithMetadata("cleaned_name", newName)
+	}
+	f.Name = newName
+	f.UpdatedAt = time.Now().UTC()
+	return nil
+}
+
+func (f *FileInfo) MoveTo(destFolderID *int64) {
+	f.FolderID = destFolderID
+	f.UpdatedAt = time.Now().UTC()
 }

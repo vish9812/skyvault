@@ -25,6 +25,8 @@ type fileInfoTable struct {
 	Size          postgres.ColumnInteger
 	Extension     postgres.ColumnString
 	MimeType      postgres.ColumnString
+	Category      postgres.ColumnString
+	Preview       postgres.ColumnString
 	TrashedAt     postgres.ColumnTimestamp
 	CreatedAt     postgres.ColumnTimestamp
 	UpdatedAt     postgres.ColumnTimestamp
@@ -76,11 +78,13 @@ func newFileInfoTableImpl(schemaName, tableName, alias string) fileInfoTable {
 		SizeColumn          = postgres.IntegerColumn("size")
 		ExtensionColumn     = postgres.StringColumn("extension")
 		MimeTypeColumn      = postgres.StringColumn("mime_type")
+		CategoryColumn      = postgres.StringColumn("category")
+		PreviewColumn       = postgres.StringColumn("preview")
 		TrashedAtColumn     = postgres.TimestampColumn("trashed_at")
 		CreatedAtColumn     = postgres.TimestampColumn("created_at")
 		UpdatedAtColumn     = postgres.TimestampColumn("updated_at")
-		allColumns          = postgres.ColumnList{IDColumn, OwnerIDColumn, FolderIDColumn, NameColumn, GeneratedNameColumn, SizeColumn, ExtensionColumn, MimeTypeColumn, TrashedAtColumn, CreatedAtColumn, UpdatedAtColumn}
-		mutableColumns      = postgres.ColumnList{OwnerIDColumn, FolderIDColumn, NameColumn, GeneratedNameColumn, SizeColumn, ExtensionColumn, MimeTypeColumn, TrashedAtColumn, CreatedAtColumn, UpdatedAtColumn}
+		allColumns          = postgres.ColumnList{IDColumn, OwnerIDColumn, FolderIDColumn, NameColumn, GeneratedNameColumn, SizeColumn, ExtensionColumn, MimeTypeColumn, CategoryColumn, PreviewColumn, TrashedAtColumn, CreatedAtColumn, UpdatedAtColumn}
+		mutableColumns      = postgres.ColumnList{OwnerIDColumn, FolderIDColumn, NameColumn, GeneratedNameColumn, SizeColumn, ExtensionColumn, MimeTypeColumn, CategoryColumn, PreviewColumn, TrashedAtColumn, CreatedAtColumn, UpdatedAtColumn}
 	)
 
 	return fileInfoTable{
@@ -95,6 +99,8 @@ func newFileInfoTableImpl(schemaName, tableName, alias string) fileInfoTable {
 		Size:          SizeColumn,
 		Extension:     ExtensionColumn,
 		MimeType:      MimeTypeColumn,
+		Category:      CategoryColumn,
+		Preview:       PreviewColumn,
 		TrashedAt:     TrashedAtColumn,
 		CreatedAt:     CreatedAtColumn,
 		UpdatedAt:     UpdatedAtColumn,

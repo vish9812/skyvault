@@ -31,23 +31,23 @@ func CleanFileName(name string) string {
 }
 
 // ScaleDownImageTo resizes an image of type jpeg or png to the given width and height
-func ScaleDownImageTo(reader io.ReadSeeker, maxWidth, maxHeight int) ([]byte, error) {
-	config, format, err := image.DecodeConfig(reader)
-	if err != nil {
-		return nil, err
-	}
-
+//
+// App Errors:
+// - ErrUnsupportedImageFormat
+func ScaleDownImageTo(format string, reader io.ReadSeeker, maxWidth, maxHeight int) ([]byte, error) {
 	if format != "jpeg" && format != "png" {
 		return nil, ErrUnsupportedImageFormat
-	}
-
-	if config.Width <= maxWidth && config.Height <= maxHeight {
-		return nil, nil
 	}
 
 	reader.Seek(0, io.SeekStart)
 
 	var img image.Image
+	var err error
+
+	// img, _, err = image.Decode(reader)
+	// if err != nil {
+	// 	return nil, err
+	// }
 	if format == "jpeg" {
 		img, err = jpeg.Decode(reader)
 		if err != nil {

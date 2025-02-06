@@ -16,8 +16,6 @@ type Repository interface {
 	// - apperror.ErrNoData
 	Get(ctx context.Context, id int64) (*Auth, error)
 
-	// App Errors:
-	// - apperror.ErrNoData
 	GetByProfileID(ctx context.Context, profileID int64) ([]*Auth, error)
 
 	// App Errors:

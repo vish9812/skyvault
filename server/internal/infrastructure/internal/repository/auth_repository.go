@@ -28,7 +28,7 @@ func (r *AuthRepository) BeginTx(ctx context.Context) (*sql.Tx, error) {
 }
 
 func (r *AuthRepository) WithTx(ctx context.Context, tx *sql.Tx) auth.Repository {
-	return &AuthRepository{repository: r.repository.WithTx(ctx, tx)}
+	return &AuthRepository{repository: r.repository.withTx(ctx, tx)}
 }
 
 func (r *AuthRepository) Create(ctx context.Context, au *auth.Auth) (*auth.Auth, error) {
@@ -58,7 +58,7 @@ func (r *AuthRepository) GetByProfileID(ctx context.Context, id int64) ([]*auth.
 		FROM(Auth).
 		WHERE(Auth.ProfileID.EQ(Int(id)))
 
-	return runSelectSlice[model.Auth, auth.Auth](ctx, stmt, r.repository.dbTx)
+	return runSelectSliceAll[model.Auth, auth.Auth](ctx, stmt, r.repository.dbTx)
 }
 
 func (r *AuthRepository) GetByProvider(ctx context.Context, provider auth.Provider, providerUserID string) (*auth.Auth, error) {

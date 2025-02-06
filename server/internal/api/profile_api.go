@@ -1,7 +1,6 @@
 package api
 
 import (
-	"encoding/json"
 	"fmt"
 	"net/http"
 	"skyvault/internal/api/internal"
@@ -31,34 +30,13 @@ func NewProfileAPI(a *API, commands profile.Commands, queries profile.Queries) *
 func (a *profileAPI) InitRoutes() {
 	pvtRouter := a.api.v1Pvt
 	pvtRouter.Route("/profile", func(r chi.Router) {
-		r.Post("/", a.CreateProfile)
-		r.Get("/{id}", a.GetProfile)
-		r.Get("/by-email", a.GetProfileByEmail)
-		r.Delete("/{id}", a.DeleteProfile)
+		r.Get("/by-email/{email}", a.GetProfileByEmail)
+
+		r.Route("/{id}", func(r chi.Router) {
+			r.Get("/", a.GetProfile)
+			r.Delete("/", a.DeleteProfile)
+		})
 	})
-}
-
-func (a *profileAPI) CreateProfile(w http.ResponseWriter, r *http.Request) {
-	var cmd profile.CreateCommand
-	if err := json.NewDecoder(r.Body).Decode(&cmd); err != nil {
-		internal.RespondError(w, r, apperror.NewAppError(fmt.Errorf("%w: %w", apperror.ErrCommonInvalidValue, err), "profileAPI.CreateProfile:DecodeBody"))
-		return
-	}
-
-	createdProfile, err := a.commands.Create(r.Context(), &cmd)
-	if err != nil {
-		internal.RespondError(w, r, apperror.NewAppError(err, "profileAPI.CreateProfile:Create"))
-		return
-	}
-
-	var dto dtos.CreateProfileRes
-	err = copier.Copy(&dto, createdProfile)
-	if err != nil {
-		internal.RespondError(w, r, apperror.NewAppError(err, "profileAPI.CreateProfile:Copy"))
-		return
-	}
-
-	internal.RespondJSON(w, http.StatusCreated, dto)
 }
 
 func (a *profileAPI) GetProfile(w http.ResponseWriter, r *http.Request) {
@@ -90,7 +68,7 @@ func (a *profileAPI) GetProfile(w http.ResponseWriter, r *http.Request) {
 
 func (a *profileAPI) GetProfileByEmail(w http.ResponseWriter, r *http.Request) {
 	query := &profile.GetByEmailQuery{
-		Email: r.URL.Query().Get("email"),
+		Email: chi.URLParam(r, "email"),
 	}
 
 	pro, err := a.queries.GetByEmail(r.Context(), query)

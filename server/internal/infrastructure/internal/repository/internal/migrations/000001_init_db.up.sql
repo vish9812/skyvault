@@ -30,7 +30,7 @@ create table if not exists folder_info (
 );
 
 create unique index if not exists folder_info_idx_unq_folder_per_user 
-on folder_info(owner_id, parent_folder_id, name)
+on folder_info(owner_id, parent_folder_id, name) nulls not distinct
 where trashed_at is null;
 
 create table if not exists file_info (
@@ -50,7 +50,7 @@ create table if not exists file_info (
 );
 
 create unique index if not exists file_info_idx_unq_file_per_user 
-on file_info(owner_id, folder_id, name)
+on file_info(owner_id, folder_id, name) nulls not distinct
 where trashed_at is null;
 
 create index if not exists file_info_idx_category

@@ -3,6 +3,7 @@ package media
 import (
 	"fmt"
 	"skyvault/pkg/apperror"
+	"skyvault/pkg/utils"
 	"time"
 )
 
@@ -17,7 +18,7 @@ type FolderInfo struct {
 }
 
 // App Errors:
-// - ErrInvalidName
+// - ErrCommonInvalidValue
 func NewFolderInfo(ownerID int64, name string, parentFolderID *int64) (*FolderInfo, error) {
 	if name == "" {
 		return nil, apperror.NewAppError(fmt.Errorf("empty folder name: %w", apperror.ErrCommonInvalidValue), "media.NewFolderInfo")
@@ -43,6 +44,28 @@ func (f *FolderInfo) Restore() {
 	f.UpdatedAt = time.Now().UTC()
 }
 
-func (f *FolderInfo) HasAccess(ownerID int64) bool {
+func (f *FolderInfo) IsAccessibleBy(ownerID int64) bool {
 	return f.OwnerID == ownerID
+}
+
+// App Errors:
+// - ErrCommonInvalidValue
+func (f *FolderInfo) Rename(newName string) error {
+	newName = utils.CleanFileName(newName)
+	if newName == "" {
+		return apperror.NewAppError(fmt.Errorf("empty folder name: %w", apperror.ErrCommonInvalidValue), "media.FolderInfo.Rename")
+	}
+	f.Name = newName
+	f.UpdatedAt = time.Now().UTC()
+	return nil
+}
+
+func (f *FolderInfo) MoveTo(destParentFolderID *int64) {
+	f.ParentFolderID = destParentFolderID
+	f.UpdatedAt = time.Now().UTC()
+}
+
+type FolderContent struct {
+	FoldersInfo []*FolderInfo
+	FilesInfo   []*FileInfo
 }

@@ -24,6 +24,7 @@ func NewAuthAPI(a *API, signUpFlow *workflows.SignUpFlow, signInFlow *workflows.
 	return &authAPI{
 		api:        a,
 		signUpFlow: signUpFlow,
+		signInFlow: signInFlow,
 	}
 }
 

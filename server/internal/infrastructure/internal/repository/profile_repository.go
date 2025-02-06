@@ -28,7 +28,7 @@ func (r *ProfileRepository) BeginTx(ctx context.Context) (*sql.Tx, error) {
 }
 
 func (r *ProfileRepository) WithTx(ctx context.Context, tx *sql.Tx) profile.Repository {
-	return &ProfileRepository{repository: r.repository.WithTx(ctx, tx)}
+	return &ProfileRepository{repository: r.repository.withTx(ctx, tx)}
 }
 
 func (r *ProfileRepository) Create(ctx context.Context, pro *profile.Profile) (*profile.Profile, error) {

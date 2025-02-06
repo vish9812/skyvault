@@ -1,10 +1,10 @@
 package dtos
 
 type SignUpReq struct {
-	Email          string  `json:"email"`
-	FullName       string  `json:"fullName"`
-	Password       *string `json:"password"`
-	Provider       string  `json:"provider"`
+	Email    string  `json:"email"`
+	FullName string  `json:"fullName"`
+	Password *string `json:"password"`
+	Provider string  `json:"provider"`
 }
 
 type SignUpRes struct {

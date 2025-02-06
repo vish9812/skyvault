@@ -103,27 +103,27 @@ func (a *JWTAuth) ValidateToken(ctx context.Context, tokenStr string) (auth.Clai
 }
 
 func (a *JWTAuth) ValidateCredentials(ctx context.Context, credentials map[auth.CredsKeys]any) error {
-	passwordHashPtr, ok := credentials[auth.CredsKeysPasswordHash]
+	passwordHashAny, ok := credentials[auth.CredsKeysPasswordHash]
 	if !ok {
 		return apperror.NewAppError(apperror.ErrCommonInvalidValue, "JWTAuth.ValidateCredentials:PasswordHash")
 	}
 
-	passwordHash, ok := passwordHashPtr.(string)
+	passwordHash, ok := passwordHashAny.(*string)
 	if !ok {
 		return apperror.NewAppError(apperror.ErrCommonInvalidValue, "JWTAuth.ValidateCredentials:PasswordHash:InvalidType")
 	}
 
-	passwordPtr, ok := credentials[auth.CredsKeysPassword]
+	passwordAny, ok := credentials[auth.CredsKeysPassword]
 	if !ok {
 		return apperror.NewAppError(apperror.ErrCommonInvalidValue, "JWTAuth.ValidateCredentials:Password")
 	}
 
-	password, ok := passwordPtr.(string)
+	password, ok := passwordAny.(*string)
 	if !ok {
 		return apperror.NewAppError(apperror.ErrCommonInvalidValue, "JWTAuth.ValidateCredentials:Password:InvalidType")
 	}
 
-	ok, err := utils.IsValidPassword(passwordHash, password)
+	ok, err := utils.IsValidPassword(*passwordHash, *password)
 	if err != nil {
 		return apperror.NewAppError(err, "JWTAuth.ValidateCredentials:IsValidPassword")
 	}

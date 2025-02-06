@@ -11,41 +11,69 @@ type Commands interface {
 	//--------------------------------
 
 	// App Errors:
-	// - apperror.ErrDuplicateData
-	// - apperror.ErrFileSizeLimitExceeded
-	// - apperror.ErrInvalidValue
-	UploadFile(ctx context.Context, cmd UploadFileCommand) (*FileInfo, error)
+	// - ErrCommonNoData
+	// - ErrCommonNoAccess
+	// - ErrCommonDuplicateData
+	// - ErrMediaFileSizeLimitExceeded
+	// - ErrCommonInvalidValue
+	UploadFile(ctx context.Context, cmd *UploadFileCommand) (*FileInfo, error)
 
 	// App Errors:
-	// - apperror.ErrNoData
-	// - apperror.ErrNoAccess
-	TrashFile(ctx context.Context, cmd TrashFileCommand) error
+	// - ErrCommonNoData
+	// - ErrCommonNoAccess
+	TrashFile(ctx context.Context, cmd *TrashFileCommand) error
 
-	RenameFile(ctx context.Context, cmd RenameFileCommand) error
+	// App Errors:
+	// - ErrCommonInvalidValue
+	// - ErrCommonNoData
+	// - ErrCommonNoAccess
+	RenameFile(ctx context.Context, cmd *RenameFileCommand) error
 
-	MoveFile(ctx context.Context, cmd MoveFileCommand) error
+	// App Errors:
+	// - ErrCommonNoData
+	// - ErrCommonNoAccess
+	MoveFile(ctx context.Context, cmd *MoveFileCommand) error
 
-	RestoreFile(ctx context.Context, cmd RestoreFileCommand) error
+	// RestoreFile restores to original parent folder if it still exists.
+	// Otherwise, it restores to the root folder.
+	//
+	// App Errors:
+	// - ErrCommonNoData
+	// - ErrCommonNoAccess
+	RestoreFile(ctx context.Context, cmd *RestoreFileCommand) error
 
 	//--------------------------------
 	// Folders
 	//--------------------------------
 
 	// App Errors:
-	// - apperror.ErrInvalidValue
-	// - apperror.ErrDuplicateData
-	CreateFolder(ctx context.Context, cmd CreateFolderCommand) (*FolderInfo, error)
+	// - ErrCommonInvalidValue
+	// - ErrCommonDuplicateData
+	CreateFolder(ctx context.Context, cmd *CreateFolderCommand) (*FolderInfo, error)
 
 	// App Errors:
-	// - apperror.ErrNoData
-	// - apperror.ErrNoAccess
-	TrashFolder(ctx context.Context, cmd TrashFolderCommand) error
+	// - ErrCommonNoData
+	// - ErrCommonNoAccess
+	TrashFolder(ctx context.Context, cmd *TrashFolderCommand) error
 
-	RenameFolder(ctx context.Context, cmd RenameFolderCommand) error
+	// App Errors:
+	// - ErrCommonInvalidValue
+	// - ErrCommonNoData
+	// - ErrCommonNoAccess
+	RenameFolder(ctx context.Context, cmd *RenameFolderCommand) error
 
-	MoveFolder(ctx context.Context, cmd MoveFolderCommand) error
+	// App Errors:
+	// - ErrCommonNoData
+	// - ErrCommonNoAccess
+	MoveFolder(ctx context.Context, cmd *MoveFolderCommand) error
 
-	RestoreFolder(ctx context.Context, cmd RestoreFolderCommand) error
+	// RestoreFolder restores to original parent folder if it still exists.
+	// Otherwise, it restores to the root folder.
+	//
+	// App Errors:
+	// - ErrCommonNoData
+	// - ErrCommonNoAccess
+	RestoreFolder(ctx context.Context, cmd *RestoreFolderCommand) error
 }
 
 //--------------------------------
@@ -75,7 +103,7 @@ type RenameFileCommand struct {
 type MoveFileCommand struct {
 	OwnerID  int64
 	FileID   int64
-	FolderID int64
+	FolderID *int64
 }
 
 type RestoreFileCommand struct {
@@ -107,7 +135,7 @@ type RenameFolderCommand struct {
 type MoveFolderCommand struct {
 	OwnerID        int64
 	FolderID       int64
-	ParentFolderID int64
+	ParentFolderID *int64
 }
 
 type RestoreFolderCommand struct {
