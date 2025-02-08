@@ -156,11 +156,10 @@ func (r *MediaRepository) DeleteFileInfo(ctx context.Context, fileID int64) erro
 	return runUpdateOrDelete(ctx, stmt, r.repository.dbTx)
 }
 
-func (r *MediaRepository) TrashFilesInfoByFolderID(ctx context.Context, folderID int64) error {
-	// Define the recursive CTE to get all nested folders
+func (r *MediaRepository) withNestedFoldersCTE(folderID int64, stmt Statement) Statement {
 	nestedFolders := CTE("nested_folders")
-
-	stmt := WITH_RECURSIVE(
+	
+	return WITH_RECURSIVE(
 		nestedFolders.AS(
 			SELECT(
 				FolderInfo.ID,
@@ -179,7 +178,11 @@ func (r *MediaRepository) TrashFilesInfoByFolderID(ctx context.Context, folderID
 				),
 			),
 		),
-	)(
+	)(stmt)
+}
+
+func (r *MediaRepository) TrashFilesInfoByFolderID(ctx context.Context, folderID int64) error {
+	stmt := r.withNestedFoldersCTE(folderID,
 		FileInfo.UPDATE().
 			SET(
 				FileInfo.TrashedAt.SET(TimestampT(time.Now().UTC())),
@@ -301,29 +304,7 @@ func (r *MediaRepository) DeleteFolderInfo(ctx context.Context, folderID int64) 
 }
 
 func (r *MediaRepository) TrashFolderInfo(ctx context.Context, folderID int64) error {
-	// Define the recursive CTE to get all nested folders
-	nestedFolders := CTE("nested_folders")
-
-	stmt := WITH_RECURSIVE(
-		nestedFolders.AS(
-			SELECT(
-				FolderInfo.ID,
-			).FROM(
-				FolderInfo,
-			).WHERE(
-				FolderInfo.ID.EQ(Int64(folderID)).AND(FolderInfo.TrashedAt.IS_NULL()),
-			).UNION(
-				SELECT(
-					FolderInfo.ID,
-				).FROM(
-					FolderInfo.
-						INNER_JOIN(nestedFolders, FolderInfo.ID.From(nestedFolders).EQ(FolderInfo.ParentFolderID)),
-				).WHERE(
-					FolderInfo.TrashedAt.IS_NULL(),
-				),
-			),
-		),
-	)(
+	stmt := r.withNestedFoldersCTE(folderID,
 		FolderInfo.UPDATE().
 			SET(
 				FolderInfo.TrashedAt.SET(TimestampT(time.Now().UTC())),
