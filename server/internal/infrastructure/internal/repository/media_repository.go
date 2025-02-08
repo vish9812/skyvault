@@ -264,8 +264,22 @@ func (r *MediaRepository) DeleteFolderInfo(ctx context.Context, folderID int64) 
 }
 
 func (r *MediaRepository) TrashFolderInfo(ctx context.Context, folderID int64) error {
-	nestedFolders, withStmt := r.getNestedFoldersCTE(folderID)
+	tx, err := r.BeginTx(ctx)
+	if err != nil {
+		return apperror.NewAppError(err, "repository.TrashFolderInfo:BeginTx")
+	}
+	defer tx.Rollback()
 
+	repoTx := r.WithTx(ctx, tx)
+
+	// First trash all files in the folder and its subfolders
+	err = repoTx.TrashFilesInfoByFolderID(ctx, folderID)
+	if err != nil {
+		return apperror.NewAppError(err, "repository.TrashFolderInfo:TrashFilesInfoByFolderID")
+	}
+
+	// Then trash the folder and its subfolders
+	nestedFolders, withStmt := r.getNestedFoldersCTE(folderID)
 	stmt := withStmt(
 		FolderInfo.UPDATE().
 			SET(
@@ -278,7 +292,12 @@ func (r *MediaRepository) TrashFolderInfo(ctx context.Context, folderID int64) e
 			),
 	)
 
-	return runUpdateOrDelete(ctx, stmt, r.repository.dbTx)
+	err = runUpdateOrDelete(ctx, stmt, repoTx.(*MediaRepository).repository.dbTx)
+	if err != nil {
+		return apperror.NewAppError(err, "repository.TrashFolderInfo:runUpdateOrDelete")
+	}
+
+	return tx.Commit()
 }
 
 func (r *MediaRepository) TrashFilesInfoByFolderID(ctx context.Context, folderID int64) error {
