@@ -156,40 +156,17 @@ func (r *MediaRepository) DeleteFileInfo(ctx context.Context, fileID int64) erro
 	return runUpdateOrDelete(ctx, stmt, r.repository.dbTx)
 }
 
-func (r *MediaRepository) withNestedFoldersCTE(folderID int64, stmt Statement) Statement {
-	nestedFolders := CTE("nested_folders")
-	
-	return WITH_RECURSIVE(
-		nestedFolders.AS(
-			SELECT(
-				FolderInfo.ID,
-			).FROM(
-				FolderInfo,
-			).WHERE(
-				FolderInfo.ID.EQ(Int64(folderID)).AND(FolderInfo.TrashedAt.IS_NULL()),
-			).UNION(
-				SELECT(
-					FolderInfo.ID,
-				).FROM(
-					FolderInfo.
-						INNER_JOIN(nestedFolders, FolderInfo.ID.From(nestedFolders).EQ(FolderInfo.ParentFolderID)),
-				).WHERE(
-					FolderInfo.TrashedAt.IS_NULL(),
-				),
-			),
-		),
-	)(stmt)
-}
-
 func (r *MediaRepository) TrashFilesInfoByFolderID(ctx context.Context, folderID int64) error {
-	stmt := r.withNestedFoldersCTE(folderID,
+	cteFolderIDCol, cteStmt := r.getNestedFoldersCTE(folderID)
+
+	stmt := cteStmt(
 		FileInfo.UPDATE().
 			SET(
 				FileInfo.TrashedAt.SET(TimestampT(time.Now().UTC())),
 			).
 			WHERE(
 				FileInfo.FolderID.IN(
-					SELECT(nestedFolders.AllColumns()).FROM(nestedFolders),
+					SELECT(cteFolderIDCol),
 				).AND(FileInfo.TrashedAt.IS_NULL()),
 			),
 	)
@@ -304,17 +281,45 @@ func (r *MediaRepository) DeleteFolderInfo(ctx context.Context, folderID int64) 
 }
 
 func (r *MediaRepository) TrashFolderInfo(ctx context.Context, folderID int64) error {
-	stmt := r.withNestedFoldersCTE(folderID,
+	cteFolderIDCol, cteStmt := r.getNestedFoldersCTE(folderID)
+
+	stmt := cteStmt(
 		FolderInfo.UPDATE().
 			SET(
 				FolderInfo.TrashedAt.SET(TimestampT(time.Now().UTC())),
 			).
 			WHERE(
 				FolderInfo.ID.IN(
-					SELECT(nestedFolders.AllColumns()).FROM(nestedFolders),
+					SELECT(cteFolderIDCol),
 				),
 			),
 	)
 
 	return runUpdateOrDelete(ctx, stmt, r.repository.dbTx)
+}
+
+func (r *MediaRepository) getNestedFoldersCTE(folderID int64) (ColumnInteger, func(statement Statement) Statement) {
+	nestedFolders := CTE("nested_folders")
+	cteFolderIDCol := FolderInfo.ID.From(nestedFolders)
+
+	return cteFolderIDCol, WITH_RECURSIVE(
+		nestedFolders.AS(
+			SELECT(
+				FolderInfo.ID,
+			).FROM(
+				FolderInfo,
+			).WHERE(
+				FolderInfo.ID.EQ(Int64(folderID)).AND(FolderInfo.TrashedAt.IS_NULL()),
+			).UNION(
+				SELECT(
+					FolderInfo.ID,
+				).FROM(
+					FolderInfo.
+						INNER_JOIN(nestedFolders, FolderInfo.ID.From(nestedFolders).EQ(FolderInfo.ParentFolderID)),
+				).WHERE(
+					FolderInfo.TrashedAt.IS_NULL(),
+				),
+			),
+		),
+	)
 }
