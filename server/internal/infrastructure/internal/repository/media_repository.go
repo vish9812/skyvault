@@ -298,9 +298,9 @@ func (r *MediaRepository) TrashFolderInfo(ctx context.Context, folderID int64) e
 	return runUpdateOrDelete(ctx, stmt, r.repository.dbTx)
 }
 
-func (r *MediaRepository) getNestedFoldersCTE(folderID int64) (CTE, func(Statement) Statement) {
+func (r *MediaRepository) getNestedFoldersCTE(folderID int64) (CommonTableExpression, func(Statement) Statement) {
 	nestedFolders := CTE("nested_folders")
-	
+
 	return nestedFolders, WITH_RECURSIVE(
 		nestedFolders.AS(
 			SELECT(
