@@ -156,23 +156,6 @@ func (r *MediaRepository) DeleteFileInfo(ctx context.Context, fileID int64) erro
 	return runUpdateOrDelete(ctx, stmt, r.repository.dbTx)
 }
 
-func (r *MediaRepository) TrashFilesInfoByFolderID(ctx context.Context, folderID int64) error {
-	nestedFolders, withStmt := r.getNestedFoldersCTE(folderID)
-
-	stmt := withStmt(
-		FileInfo.UPDATE().
-			SET(
-				FileInfo.TrashedAt.SET(TimestampT(time.Now().UTC())),
-			).
-			WHERE(
-				FileInfo.FolderID.IN(
-					SELECT(FolderInfo.ID.From(nestedFolders)).FROM(nestedFolders),
-				).AND(FileInfo.TrashedAt.IS_NULL()),
-			),
-	)
-
-	return runUpdateOrDelete(ctx, stmt, r.repository.dbTx)
-}
 
 //--------------------------------
 // Folder
@@ -282,15 +265,29 @@ func (r *MediaRepository) DeleteFolderInfo(ctx context.Context, folderID int64) 
 
 func (r *MediaRepository) TrashFolderInfo(ctx context.Context, folderID int64) error {
 	nestedFolders, withStmt := r.getNestedFoldersCTE(folderID)
-
+	
+	nowUTC := TimestampT(time.Now().UTC())
+	
 	stmt := withStmt(
-		FolderInfo.UPDATE().
+		UPDATE(FolderInfo, FileInfo).
 			SET(
-				FolderInfo.TrashedAt.SET(TimestampT(time.Now().UTC())),
+				FolderInfo.TrashedAt.SET(nowUTC),
+				FileInfo.TrashedAt.SET(nowUTC),
 			).
+			FROM(nestedFolders).
 			WHERE(
-				FolderInfo.ID.IN(
-					SELECT(FolderInfo.ID.From(nestedFolders)).FROM(nestedFolders),
+				OR(
+					FolderInfo.ID.IN(
+						SELECT(FolderInfo.ID.From(nestedFolders)).FROM(nestedFolders),
+					),
+					FileInfo.FolderID.IN(
+						SELECT(FolderInfo.ID.From(nestedFolders)).FROM(nestedFolders),
+					),
+				).AND(
+					AND(
+						FolderInfo.TrashedAt.IS_NULL(),
+						FileInfo.TrashedAt.IS_NULL(),
+					),
 				),
 			),
 	)
