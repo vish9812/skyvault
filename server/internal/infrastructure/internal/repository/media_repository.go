@@ -267,7 +267,7 @@ func (r *MediaRepository) TrashFolderInfo(ctx context.Context, folderID int64) e
 	nestedFolders, withStmt := r.getNestedFoldersCTE(folderID)
 	
 	nowUTC := TimestampT(time.Now().UTC())
-	
+
 	stmt := withStmt(
 		FolderInfo.UPDATE().
 			SET(FolderInfo.TrashedAt.SET(nowUTC)).
