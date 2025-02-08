@@ -265,20 +265,35 @@ func (r *MediaRepository) DeleteFolderInfo(ctx context.Context, folderID int64) 
 
 func (r *MediaRepository) TrashFolderInfo(ctx context.Context, folderID int64) error {
 	nestedFolders, withStmt := r.getNestedFoldersCTE(folderID)
-	
-	nowUTC := TimestampT(time.Now().UTC())
 
 	stmt := withStmt(
 		FolderInfo.UPDATE().
-			SET(FolderInfo.TrashedAt.SET(nowUTC)).
-			JOIN(FileInfo, FileInfo.FolderID.EQ(FolderInfo.ID)).
+			SET(
+				FolderInfo.TrashedAt.SET(TimestampT(time.Now().UTC())),
+			).
 			WHERE(
 				FolderInfo.ID.IN(
 					SELECT(FolderInfo.ID.From(nestedFolders)).FROM(nestedFolders),
 				).AND(FolderInfo.TrashedAt.IS_NULL()),
+			),
+	)
+
+	return runUpdateOrDelete(ctx, stmt, r.repository.dbTx)
+}
+
+func (r *MediaRepository) TrashFilesInfoByFolderID(ctx context.Context, folderID int64) error {
+	nestedFolders, withStmt := r.getNestedFoldersCTE(folderID)
+
+	stmt := withStmt(
+		FileInfo.UPDATE().
+			SET(
+				FileInfo.TrashedAt.SET(TimestampT(time.Now().UTC())),
 			).
-			SET(FileInfo.TrashedAt.SET(nowUTC)).
-			WHERE(FileInfo.TrashedAt.IS_NULL()),
+			WHERE(
+				FileInfo.FolderID.IN(
+					SELECT(FolderInfo.ID.From(nestedFolders)).FROM(nestedFolders),
+				).AND(FileInfo.TrashedAt.IS_NULL()),
+			),
 	)
 
 	return runUpdateOrDelete(ctx, stmt, r.repository.dbTx)
