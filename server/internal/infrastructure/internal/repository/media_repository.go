@@ -269,27 +269,16 @@ func (r *MediaRepository) TrashFolderInfo(ctx context.Context, folderID int64) e
 	nowUTC := TimestampT(time.Now().UTC())
 	
 	stmt := withStmt(
-		UPDATE(FolderInfo, FileInfo).
-			SET(
-				FolderInfo.TrashedAt.SET(nowUTC),
-				FileInfo.TrashedAt.SET(nowUTC),
-			).
-			FROM(nestedFolders).
+		FolderInfo.UPDATE().
+			SET(FolderInfo.TrashedAt.SET(nowUTC)).
+			JOIN(FileInfo, FileInfo.FolderID.EQ(FolderInfo.ID)).
 			WHERE(
-				OR(
-					FolderInfo.ID.IN(
-						SELECT(FolderInfo.ID.From(nestedFolders)).FROM(nestedFolders),
-					),
-					FileInfo.FolderID.IN(
-						SELECT(FolderInfo.ID.From(nestedFolders)).FROM(nestedFolders),
-					),
-				).AND(
-					AND(
-						FolderInfo.TrashedAt.IS_NULL(),
-						FileInfo.TrashedAt.IS_NULL(),
-					),
-				),
-			),
+				FolderInfo.ID.IN(
+					SELECT(FolderInfo.ID.From(nestedFolders)).FROM(nestedFolders),
+				).AND(FolderInfo.TrashedAt.IS_NULL()),
+			).
+			SET(FileInfo.TrashedAt.SET(nowUTC)).
+			WHERE(FileInfo.TrashedAt.IS_NULL()),
 	)
 
 	return runUpdateOrDelete(ctx, stmt, r.repository.dbTx)
