@@ -37,24 +37,24 @@ func (h *QueryHandlers) GetFile(ctx context.Context, query *GetFileQuery) (*GetF
 	}, nil
 }
 
-func (h *QueryHandlers) GetFilesInfoByCategory(ctx context.Context, query *GetFilesInfoByCategoryQuery) (*paging.Page[*FileInfo], error) {
-	files, err := h.repository.GetFilesInfoByCategory(ctx, query.PagingOpt, query.OwnerID, query.Category)
+func (h *QueryHandlers) GetFileInfosByCategory(ctx context.Context, query *GetFileInfosByCategoryQuery) (*paging.Page[*FileInfo], error) {
+	files, err := h.repository.GetFileInfosByCategory(ctx, query.PagingOpt, query.OwnerID, query.Category)
 	if err != nil {
-		return nil, apperror.NewAppError(err, "QueryHandlers.GetFilesInfoByCategory:GetFilesInfoByCategory")
+		return nil, apperror.NewAppError(err, "QueryHandlers.GetFileInfosByCategory:GetFileInfosByCategory")
 	}
 
 	return files, nil
 }
 
 func (h *QueryHandlers) GetFolderContent(ctx context.Context, query *GetFolderContentQuery) (*GetFolderContentQueryRes, error) {
-	files, err := h.repository.GetFilesInfo(ctx, query.FilePagingOpt, query.OwnerID, query.FolderID)
+	files, err := h.repository.GetFileInfos(ctx, query.FilePagingOpt, query.OwnerID, query.FolderID)
 	if err != nil {
-		return nil, apperror.NewAppError(err, "QueryHandlers.GetFolderContent:GetFilesInfo")
+		return nil, apperror.NewAppError(err, "QueryHandlers.GetFolderContent:GetFileInfos")
 	}
 
-	folders, err := h.repository.GetFoldersInfo(ctx, query.FolderPagingOpt, query.OwnerID, query.FolderID)
+	folders, err := h.repository.GetFolderInfos(ctx, query.FolderPagingOpt, query.OwnerID, query.FolderID)
 	if err != nil {
-		return nil, apperror.NewAppError(err, "QueryHandlers.GetFolderContent:GetFoldersInfo")
+		return nil, apperror.NewAppError(err, "QueryHandlers.GetFolderContent:GetFolderInfos")
 	}
 
 	return &GetFolderContentQueryRes{

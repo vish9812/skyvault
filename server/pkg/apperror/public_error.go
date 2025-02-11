@@ -15,6 +15,8 @@ var (
 	ErrCommonDuplicateData = PublicError{Code: "COMMON_DUPLICATE_DATA"}
 	ErrCommonNoData        = PublicError{Code: "COMMON_NO_DATA"}
 	ErrCommonInvalidValue  = PublicError{Code: "COMMON_INVALID_VALUE"}
+	// TODO: Log additional info for ErrCommonNoAccess. 
+	// Since this error indicates that it could be a problem user who is trying to access a resource that they shouldn't have access to.
 	ErrCommonNoAccess      = PublicError{Code: "COMMON_NO_ACCESS"} // ErrCommonNoAccess should not be returned to the client for most cases. Instead, return ErrCommonNoData, since we don't want to expose the existence of the resource.
 
 	// Media errors

@@ -25,9 +25,9 @@ type Repository interface {
 	// - ErrCommonNoData
 	GetFileInfoTrashed(ctx context.Context, fileID int64) (*FileInfo, error)
 
-	GetFilesInfo(ctx context.Context, pagingOpt *paging.Options, ownerID int64, folderID *int64) (*paging.Page[*FileInfo], error)
+	GetFileInfos(ctx context.Context, pagingOpt *paging.Options, ownerID int64, folderID *int64) (*paging.Page[*FileInfo], error)
 
-	GetFilesInfoByCategory(ctx context.Context, pagingOpt *paging.Options, ownerID int64, category string) (*paging.Page[*FileInfo], error)
+	GetFileInfosByCategory(ctx context.Context, pagingOpt *paging.Options, ownerID int64, category string) (*paging.Page[*FileInfo], error)
 
 	// App Errors:
 	// - ErrCommonNoData
@@ -42,7 +42,7 @@ type Repository interface {
 
 	// App Errors:
 	// - ErrCommonNoData
-	TrashFilesInfo(ctx context.Context, ownerID int64, filesID []int64) error
+	TrashFileInfos(ctx context.Context, ownerID int64, fileIDs []int64) error
 
 	//--------------------------------
 	// Folders
@@ -60,7 +60,7 @@ type Repository interface {
 	// - ErrCommonNoData
 	GetFolderInfoTrashed(ctx context.Context, folderID int64) (*FolderInfo, error)
 
-	GetFoldersInfo(ctx context.Context, pagingOpt *paging.Options, ownerID int64, parentFolderID *int64) (*paging.Page[*FolderInfo], error)
+	GetFolderInfos(ctx context.Context, pagingOpt *paging.Options, ownerID int64, parentFolderID *int64) (*paging.Page[*FolderInfo], error)
 
 	// App Errors:
 	// - ErrCommonNoData
@@ -74,11 +74,11 @@ type Repository interface {
 	//
 	// App Errors:
 	// - ErrCommonNoData
-	TrashFoldersInfo(ctx context.Context, ownerID int64, foldersID []int64) error
+	TrashFolderInfos(ctx context.Context, ownerID int64, folderIDs []int64) error
 
 	// Recursively restore all files and sub-folders.
 	//
 	// App Errors:
 	// - ErrCommonNoData
-	RestoreFoldersInfo(ctx context.Context, ownerID int64, folderID int64) error
+	RestoreFolderInfo(ctx context.Context, ownerID int64, folderID int64) error
 }

@@ -129,13 +129,11 @@ func (f *FileInfo) WithPreview(file io.ReadSeeker) (*FileInfo, error) {
 	return f, nil
 }
 
-func (f *FileInfo) Trash() {
-	now := time.Now().UTC()
-	f.TrashedAt = &now
-	f.UpdatedAt = now
-}
+func (f *FileInfo) Restore(isParentFolderTrashed bool) {
+	if isParentFolderTrashed {
+		f.FolderID = nil
+	}
 
-func (f *FileInfo) Restore() {
 	f.TrashedAt = nil
 	f.UpdatedAt = time.Now().UTC()
 }

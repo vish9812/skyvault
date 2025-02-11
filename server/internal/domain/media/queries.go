@@ -7,7 +7,7 @@ import (
 )
 
 type Queries interface {
-	GetFilesInfoByCategory(ctx context.Context, query *GetFilesInfoByCategoryQuery) (*paging.Page[*FileInfo], error)
+	GetFileInfosByCategory(ctx context.Context, query *GetFileInfosByCategoryQuery) (*paging.Page[*FileInfo], error)
 
 	GetFolderContent(ctx context.Context, query *GetFolderContentQuery) (*GetFolderContentQueryRes, error)
 
@@ -25,7 +25,7 @@ type GetFileInfoQuery struct {
 }
 
 // If FolderID is nil, it will return all files in the root folder of the owner
-type GetFilesInfoByCategoryQuery struct {
+type GetFileInfosByCategoryQuery struct {
 	OwnerID   int64
 	Category  string
 	PagingOpt *paging.Options

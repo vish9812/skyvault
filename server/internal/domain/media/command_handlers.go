@@ -2,6 +2,7 @@ package media
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 	"skyvault/pkg/appconfig"
 	"skyvault/pkg/apperror"
@@ -18,6 +19,10 @@ type CommandHandlers struct {
 func NewCommandHandlers(app *appconfig.App, repository Repository, storage Storage) *CommandHandlers {
 	return &CommandHandlers{app: app, repository: repository, storage: storage}
 }
+
+//--------------------------------
+// Files
+//--------------------------------
 
 func (h *CommandHandlers) UploadFile(ctx context.Context, cmd *UploadFileCommand) (*FileInfo, error) {
 	// Create domain model
@@ -70,41 +75,6 @@ func (h *CommandHandlers) UploadFile(ctx context.Context, cmd *UploadFileCommand
 	err = tx.Commit()
 	if err != nil {
 		return nil, apperror.NewAppError(err, "CommandHandlers.UploadFile:Commit")
-	}
-
-	return info, nil
-}
-
-func (h *CommandHandlers) TrashFiles(ctx context.Context, cmd *TrashFilesCommand) error {
-	err := h.repository.TrashFilesInfo(ctx, cmd.OwnerID, cmd.FilesID)
-	if err != nil {
-		return apperror.NewAppError(err, "CommandHandlers.TrashFiles:TrashFilesInfo")
-	}
-
-	return nil
-}
-
-func (h *CommandHandlers) CreateFolder(ctx context.Context, cmd *CreateFolderCommand) (*FolderInfo, error) {
-	// check if the owner has access to the folder
-	if cmd.ParentFolderID != nil {
-		parentFolderInfo, err := h.repository.GetFolderInfo(ctx, *cmd.ParentFolderID)
-		if err != nil {
-			return nil, apperror.NewAppError(err, "CommandHandlers.CreateFolder:GetParentFolderInfo")
-		}
-
-		if !parentFolderInfo.IsAccessibleBy(cmd.OwnerID) {
-			return nil, apperror.NewAppError(apperror.ErrCommonNoAccess, "CommandHandlers.CreateFolder:ParentFolderIsAccessibleBy")
-		}
-	}
-
-	info, err := NewFolderInfo(cmd.OwnerID, cmd.Name, cmd.ParentFolderID)
-	if err != nil {
-		return nil, apperror.NewAppError(err, "CommandHandlers.CreateFolder:NewFolderInfo")
-	}
-
-	info, err = h.repository.CreateFolderInfo(ctx, info)
-	if err != nil {
-		return nil, apperror.NewAppError(err, "CommandHandlers.CreateFolder:CreateFolderInfo")
 	}
 
 	return info, nil
@@ -164,6 +134,15 @@ func (h *CommandHandlers) MoveFile(ctx context.Context, cmd *MoveFileCommand) er
 	return nil
 }
 
+func (h *CommandHandlers) TrashFiles(ctx context.Context, cmd *TrashFilesCommand) error {
+	err := h.repository.TrashFileInfos(ctx, cmd.OwnerID, cmd.FileIDs)
+	if err != nil {
+		return apperror.NewAppError(err, "CommandHandlers.TrashFiles:TrashFileInfos")
+	}
+
+	return nil
+}
+
 func (h *CommandHandlers) RestoreFile(ctx context.Context, cmd *RestoreFileCommand) error {
 	info, err := h.repository.GetFileInfoTrashed(ctx, cmd.FileID)
 	if err != nil {
@@ -174,20 +153,12 @@ func (h *CommandHandlers) RestoreFile(ctx context.Context, cmd *RestoreFileComma
 		return apperror.NewAppError(apperror.ErrCommonNoAccess, "CommandHandlers.RestoreFile:HasAccess")
 	}
 
-	// Check if the original parent folder still exists
-	if info.FolderID != nil {
-		_, err := h.repository.GetFolderInfo(ctx, *info.FolderID)
-		if err != nil {
-			if errors.Is(err, apperror.ErrCommonNoData) {
-				// If not found then restore to root folder
-				info.FolderID = nil
-			}
-
-			return apperror.NewAppError(err, "CommandHandlers.RestoreFile:GetFolderInfo")
-		}
+	isParentFolderTrashed, err := h.isParentFolderTrashed(ctx, info.FolderID)
+	if err != nil {
+		return apperror.NewAppError(err, "CommandHandlers.RestoreFile:IsParentFolderTrashed")
 	}
 
-	info.Restore()
+	info.Restore(isParentFolderTrashed)
 
 	err = h.repository.UpdateFileInfo(ctx, info)
 	if err != nil {
@@ -195,6 +166,36 @@ func (h *CommandHandlers) RestoreFile(ctx context.Context, cmd *RestoreFileComma
 	}
 
 	return nil
+}
+
+//--------------------------------
+// Folders
+//--------------------------------
+
+func (h *CommandHandlers) CreateFolder(ctx context.Context, cmd *CreateFolderCommand) (*FolderInfo, error) {
+	// check if the owner has access to the folder
+	if cmd.ParentFolderID != nil {
+		parentFolderInfo, err := h.repository.GetFolderInfo(ctx, *cmd.ParentFolderID)
+		if err != nil {
+			return nil, apperror.NewAppError(err, "CommandHandlers.CreateFolder:GetParentFolderInfo")
+		}
+
+		if !parentFolderInfo.IsAccessibleBy(cmd.OwnerID) {
+			return nil, apperror.NewAppError(apperror.ErrCommonNoAccess, "CommandHandlers.CreateFolder:ParentFolderIsAccessibleBy")
+		}
+	}
+
+	info, err := NewFolderInfo(cmd.OwnerID, cmd.Name, cmd.ParentFolderID)
+	if err != nil {
+		return nil, apperror.NewAppError(err, "CommandHandlers.CreateFolder:NewFolderInfo")
+	}
+
+	info, err = h.repository.CreateFolderInfo(ctx, info)
+	if err != nil {
+		return nil, apperror.NewAppError(err, "CommandHandlers.CreateFolder:CreateFolderInfo")
+	}
+
+	return info, nil
 }
 
 func (h *CommandHandlers) RenameFolder(ctx context.Context, cmd *RenameFolderCommand) error {
@@ -252,9 +253,9 @@ func (h *CommandHandlers) MoveFolder(ctx context.Context, cmd *MoveFolderCommand
 }
 
 func (h *CommandHandlers) TrashFolders(ctx context.Context, cmd *TrashFoldersCommand) error {
-	err := h.repository.TrashFoldersInfo(ctx, cmd.OwnerID, cmd.FoldersID)
+	err := h.repository.TrashFolderInfos(ctx, cmd.OwnerID, cmd.FolderIDs)
 	if err != nil {
-		return apperror.NewAppError(err, "CommandHandlers.TrashFolders:TrashFoldersInfo")
+		return apperror.NewAppError(err, "CommandHandlers.TrashFolders:TrashFolderInfos")
 	}
 
 	return nil
@@ -270,26 +271,60 @@ func (h *CommandHandlers) RestoreFolder(ctx context.Context, cmd *RestoreFolderC
 		return apperror.NewAppError(apperror.ErrCommonNoAccess, "CommandHandlers.RestoreFolder:HasAccess")
 	}
 
-	// Check if the original parent folder still exists and is not trashed
-	if info.ParentFolderID != nil {
-		parentFolder, err := h.repository.GetFolderInfo(ctx, *info.ParentFolderID)
-		if err != nil || parentFolder.TrashedAt != nil {
-			// If parent not found or is trashed, restore to root folder
-			info.ParentFolderID = nil
-			
-			// Update the folder's parent reference
-			err = h.repository.UpdateFolderInfo(ctx, info)
-			if err != nil {
-				return apperror.NewAppError(err, "CommandHandlers.RestoreFolder:UpdateFolderInfo")
-			}
+	isParentFolderTrashed, err := h.isParentFolderTrashed(ctx, info.ParentFolderID)
+	if err != nil {
+		return apperror.NewAppError(err, "CommandHandlers.RestoreFolder:IsParentFolderTrashed")
+	}
+
+	var tx *sql.Tx
+	repoTx := h.repository
+	if isParentFolderTrashed {
+		// Update the parent folder to root folder
+		tx, err = h.repository.BeginTx(ctx)
+		if err != nil {
+			return apperror.NewAppError(err, "CommandHandlers.RestoreFolder:BeginTx")
+		}
+
+		repoTx = h.repository.WithTx(ctx, tx)
+		defer tx.Rollback()
+
+		info.ParentFolderID = nil
+
+		err = repoTx.UpdateFolderInfo(ctx, info)
+		if err != nil {
+			return apperror.NewAppError(err, "CommandHandlers.RestoreFolder:UpdateFolderInfo")
 		}
 	}
 
 	// Restore the main folder and all nested items
-	err = h.repository.RestoreFoldersInfo(ctx, cmd.OwnerID, cmd.FolderID)
+	err = repoTx.RestoreFolderInfo(ctx, cmd.OwnerID, cmd.FolderID)
 	if err != nil {
-		return apperror.NewAppError(err, "CommandHandlers.RestoreFolder:RestoreFoldersInfo")
+		return apperror.NewAppError(err, "CommandHandlers.RestoreFolder:RestoreFolderInfos")
+	}
+
+	if isParentFolderTrashed {
+		err = tx.Commit()
+		if err != nil {
+			return apperror.NewAppError(err, "CommandHandlers.RestoreFolder:Commit")
+		}
 	}
 
 	return nil
+}
+
+func (h *CommandHandlers) isParentFolderTrashed(ctx context.Context, folderID *int64) (bool, error) {
+	if folderID == nil {
+		return false, nil
+	}
+
+	_, err := h.repository.GetFolderInfo(ctx, *folderID)
+	if err != nil {
+		if errors.Is(err, apperror.ErrCommonNoData) {
+			return true, nil
+		}
+
+		return false, err
+	}
+
+	return false, nil
 }

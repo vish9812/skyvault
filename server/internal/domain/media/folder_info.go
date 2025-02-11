@@ -33,17 +33,6 @@ func NewFolderInfo(ownerID int64, name string, parentFolderID *int64) (*FolderIn
 	}, nil
 }
 
-func (f *FolderInfo) Trash() {
-	now := time.Now().UTC()
-	f.TrashedAt = &now
-	f.UpdatedAt = now
-}
-
-func (f *FolderInfo) Restore() {
-	f.TrashedAt = nil
-	f.UpdatedAt = time.Now().UTC()
-}
-
 func (f *FolderInfo) IsAccessibleBy(ownerID int64) bool {
 	return f.OwnerID == ownerID
 }
@@ -66,6 +55,6 @@ func (f *FolderInfo) MoveTo(destParentFolderID *int64) {
 }
 
 type FolderContent struct {
-	FoldersInfo []*FolderInfo
-	FilesInfo   []*FileInfo
+	FolderInfos []*FolderInfo
+	FileInfos   []*FileInfo
 }

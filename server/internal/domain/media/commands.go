@@ -19,11 +19,6 @@ type Commands interface {
 	UploadFile(ctx context.Context, cmd *UploadFileCommand) (*FileInfo, error)
 
 	// App Errors:
-	// - ErrCommonNoData
-	// - ErrCommonNoAccess
-	TrashFile(ctx context.Context, cmd *TrashFileCommand) error
-
-	// App Errors:
 	// - ErrCommonInvalidValue
 	// - ErrCommonNoData
 	// - ErrCommonNoAccess
@@ -33,6 +28,10 @@ type Commands interface {
 	// - ErrCommonNoData
 	// - ErrCommonNoAccess
 	MoveFile(ctx context.Context, cmd *MoveFileCommand) error
+
+	// App Errors:
+	// - ErrCommonNoData
+	TrashFiles(ctx context.Context, cmd *TrashFilesCommand) error
 
 	// RestoreFile restores to original parent folder if it still exists.
 	// Otherwise, it restores to the root folder.
@@ -52,11 +51,6 @@ type Commands interface {
 	CreateFolder(ctx context.Context, cmd *CreateFolderCommand) (*FolderInfo, error)
 
 	// App Errors:
-	// - ErrCommonNoData
-	// - ErrCommonNoAccess
-	TrashFolder(ctx context.Context, cmd *TrashFolderCommand) error
-
-	// App Errors:
 	// - ErrCommonInvalidValue
 	// - ErrCommonNoData
 	// - ErrCommonNoAccess
@@ -66,6 +60,10 @@ type Commands interface {
 	// - ErrCommonNoData
 	// - ErrCommonNoAccess
 	MoveFolder(ctx context.Context, cmd *MoveFolderCommand) error
+
+	// App Errors:
+	// - ErrCommonNoData
+	TrashFolders(ctx context.Context, cmd *TrashFoldersCommand) error
 
 	// RestoreFolder restores to original parent folder if it still exists.
 	// Otherwise, it restores to the root folder.
@@ -89,9 +87,9 @@ type UploadFileCommand struct {
 	File     io.ReadSeeker
 }
 
-type TrashFileCommand struct {
+type TrashFilesCommand struct {
 	OwnerID int64
-	FileID  int64
+	FileIDs []int64
 }
 
 type RenameFileCommand struct {
@@ -121,9 +119,9 @@ type CreateFolderCommand struct {
 	ParentFolderID *int64
 }
 
-type TrashFolderCommand struct {
-	OwnerID  int64
-	FolderID int64
+type TrashFoldersCommand struct {
+	OwnerID   int64
+	FolderIDs []int64
 }
 
 type RenameFolderCommand struct {
