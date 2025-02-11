@@ -4,19 +4,44 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	"io"
 	"os"
-	"path/filepath"
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"skyvault/pkg/appconfig"
 	"skyvault/pkg/apperror"
+	"skyvault/pkg/applog"
+	"skyvault/pkg/utils"
 )
+
+// testDB just to be used to create and drop test databases
+//
+// store.db is the actual DB to be used in the tests
+var testDB *sql.DB
+
+// TestMain sets up the test database connection
+func TestMain(m *testing.M) {
+	// Connect to main postgres database to create/drop test databases
+	testLogger := applog.NewLogger(nil)
+	testDB = connectDatabase(testLogger, "postgres://skyvault:skyvault@localhost:5432/postgres?sslmode=disable&connect_timeout=30")
+
+	code := m.Run()
+
+	testLogger.Info().Msg("closing the test db")
+	testDB.Close()
+	os.Exit(code)
+}
+
+func connectDatabase(logger applog.Logger, dsn string) *sql.DB {
+	db, err := sql.Open("pgx", dsn)
+	if err != nil {
+		logger.Fatal().Err(err).Msg("failed to open the db")
+	}
+	return db
+}
 
 // testSetup contains all dependencies needed for testing
 type testSetup struct {
@@ -87,26 +112,6 @@ func setupTest(t *testing.T) *testSetup {
 	}
 }
 
-// TestMain sets up the test database connection
-func TestMain(m *testing.M) {
-	// Connect to main postgres database to create/drop test databases
-	testLogger := applog.NewLogger(nil)
-	testDB = connectDatabase(testLogger, "postgres://skyvault:skyvault@localhost:5432/postgres?sslmode=disable")
-
-	code := m.Run()
-
-	testDB.Close()
-	os.Exit(code)
-}
-
-func connectDatabase(logger applog.Logger, dsn string) *sql.DB {
-	db, err := sql.Open("postgres", dsn)
-	if err != nil {
-		logger.Fatal().Err(err).Msg("Failed to connect to database")
-	}
-	return db
-}
-
 // Test cases
 func TestUploadFile(t *testing.T) {
 	t.Run("successful upload", func(t *testing.T) {
@@ -116,7 +121,7 @@ func TestUploadFile(t *testing.T) {
 
 		content := "test content"
 		reader := strings.NewReader(content)
-		
+
 		cmd := &UploadFileCommand{
 			OwnerID:  1,
 			Name:     "test.txt",
