@@ -2,10 +2,10 @@ package media
 
 import (
 	"context"
-	"database/sql"
-	"fmt"
 	"os"
 	"strings"
+
+	"skyvault/pkg/infrahelper"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -17,30 +17,13 @@ import (
 	"skyvault/pkg/utils"
 )
 
-// testDB just to be used to create and drop test databases
-//
-// store.db is the actual DB to be used in the tests
-var testDB *sql.DB
+var testDB *infrahelper.TestDB
 
-// TestMain sets up the test database connection
 func TestMain(m *testing.M) {
-	// Connect to main postgres database to create/drop test databases
-	testLogger := applog.NewLogger(nil)
-	testDB = connectDatabase(testLogger, "postgres://skyvault:skyvault@localhost:5432/postgres?sslmode=disable&connect_timeout=30")
-
-	code := m.Run()
-
-	testLogger.Info().Msg("closing the test db")
-	testDB.Close()
-	os.Exit(code)
-}
-
-func connectDatabase(logger applog.Logger, dsn string) *sql.DB {
-	db, err := sql.Open("pgx", dsn)
-	if err != nil {
-		logger.Fatal().Err(err).Msg("failed to open the db")
-	}
-	return db
+	testDB = infrahelper.NewTestDB("postgres://skyvault:skyvault@localhost:5432/postgres?sslmode=disable&connect_timeout=30")
+	defer testDB.Close()
+	
+	os.Exit(m.Run())
 }
 
 // testSetup contains all dependencies needed for testing
@@ -52,55 +35,33 @@ type testSetup struct {
 	cleanup  func()
 }
 
-// setupTest creates a new test environment with real implementations
 func setupTest(t *testing.T) *testSetup {
 	t.Helper()
 
-	// Create unique test database
-	dbName := fmt.Sprintf("skyvault_test_%s", utils.RandomName())
-	_, err := testDB.ExecContext(context.Background(), fmt.Sprintf("CREATE DATABASE %s", dbName))
-	require.NoError(t, err, "Failed to create test database")
+	// Create test database
+	config, dbCleanup := testDB.CreateTestDB(t)
 
-	// Connect to test database
-	testConfig := &appconfig.Config{
-		DB: appconfig.DBConfig{
-			DSN: fmt.Sprintf("postgres://skyvault:skyvault@localhost:5432/%s?sslmode=disable", dbName),
-		},
-		Media: appconfig.MediaConfig{
-			MaxSizeMB: 100,
-		},
-	}
+	// Create test storage
+	config, storageCleanup := infrahelper.CreateTestStorage(t, config)
 
-	// Create temp directory for file storage
-	tempDir, err := os.MkdirTemp("", "skyvault-test-*")
-	require.NoError(t, err, "Failed to create temp directory")
+	// Set media config
+	config.Media.MaxSizeMB = 100
 
-	// Setup app with test config
-	testLogger := applog.NewLogger(nil)
-	app := appconfig.NewApp(testConfig, testLogger)
+	// Setup app
+	app := appconfig.NewApp(config, applog.NewLogger(nil))
 
-	// Initialize real repository
+	// Initialize repository and storage
 	baseRepo := repository.NewRepository(app)
 	mediaRepo := repository.NewMediaRepository(baseRepo)
-
-	// Initialize real storage
 	localStorage := storage.NewLocalStorage(app)
 
 	handlers := NewCommandHandlers(app, mediaRepo, localStorage)
 	ctx := context.Background()
 
 	cleanup := func() {
-		// Close repository connections
 		baseRepo.Cleanup()
-
-		// Drop test database
-		_, err := testDB.ExecContext(context.Background(), fmt.Sprintf("DROP DATABASE %s", dbName))
-		if err != nil {
-			t.Errorf("Failed to drop test database: %v", err)
-		}
-
-		// Remove temp storage directory
-		os.RemoveAll(tempDir)
+		dbCleanup()
+		storageCleanup()
 	}
 
 	return &testSetup{
