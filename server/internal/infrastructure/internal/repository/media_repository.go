@@ -315,61 +315,6 @@ func (r *MediaRepository) TrashFoldersInfo(ctx context.Context, ownerID int64, f
 	return runUpdateOrDelete(ctx, stmt, r.repository.dbTx)
 }
 
-// func (r *MediaRepository) TrashFoldersInfo(ctx context.Context, foldersID []int64) error {
-// 	tx, err := r.BeginTx(ctx)
-// 	if err != nil {
-// 		return apperror.NewAppError(err, "repository.TrashFolderInfo:BeginTx")
-// 	}
-// 	defer tx.Rollback()
-
-// 	repoTx := r.WithTx(ctx, tx)
-
-// 	// First trash all files in the folder and its subfolders
-// 	err = repoTx.trashFilesInfoByFoldersID(ctx, foldersID)
-// 	if err != nil {
-// 		return apperror.NewAppError(err, "repository.TrashFolderInfo:TrashFilesInfoByFolderID")
-// 	}
-
-// 	// Then trash the folder and its subfolders
-// 	nestedFolders, withStmt := r.getNestedFoldersCTE(folderID)
-// 	stmt := withStmt(
-// 		FolderInfo.UPDATE().
-// 			SET(
-// 				FolderInfo.TrashedAt.SET(TimestampT(time.Now().UTC())),
-// 			).
-// 			WHERE(
-// 				FolderInfo.ID.IN(
-// 					SELECT(FolderInfo.ID.From(nestedFolders)).FROM(nestedFolders),
-// 				).AND(FolderInfo.TrashedAt.IS_NULL()),
-// 			),
-// 	)
-
-// 	err = runUpdateOrDelete(ctx, stmt, repoTx.(*MediaRepository).repository.dbTx)
-// 	if err != nil {
-// 		return apperror.NewAppError(err, "repository.TrashFolderInfo:runUpdateOrDelete")
-// 	}
-
-// 	return tx.Commit()
-// }
-
-// func (r *MediaRepository) trashFilesInfoByFolderID(ctx context.Context, foldersID []int64) error {
-// 	nestedFolders, withStmt := r.getNestedFoldersCTE(foldersID)
-
-// 	stmt := withStmt(
-// 		FileInfo.UPDATE().
-// 			SET(
-// 				FileInfo.TrashedAt.SET(TimestampT(time.Now().UTC())),
-// 			).
-// 			WHERE(
-// 				FileInfo.FolderID.IN(
-// 					SELECT(FolderInfo.ID.From(nestedFolders)).FROM(nestedFolders),
-// 				).AND(FileInfo.TrashedAt.IS_NULL()),
-// 			),
-// 	)
-
-// 	return runUpdateOrDelete(ctx, stmt, r.repository.dbTx)
-// }
-
 func (r *MediaRepository) RestoreFoldersInfo(ctx context.Context, ownerID int64, foldersID []int64) error {
 	nestedFoldersCTE := r.getNestedFoldersCTE(ownerID, foldersID)
 	restoreFilesCTE := CTE("restore_files")
