@@ -324,10 +324,8 @@ func (r *MediaRepository) RestoreFoldersInfo(ctx context.Context, ownerID int64,
 	stmt := WITH_RECURSIVE(
 		nestedFoldersCTE,
 		restoreFoldersCTE.AS(
-			FolderInfo.UPDATE().
-				SET(
-					FolderInfo.TrashedAt.SET(NULL),
-				).
+			FolderInfo.UPDATE(FolderInfo.TrashedAt).
+				MODEL(model.FolderInfo{}).
 				WHERE(
 					FolderInfo.ID.IN(
 						SELECT(FolderInfo.ID.From(nestedFoldersCTE)).FROM(nestedFoldersCTE),
@@ -335,15 +333,13 @@ func (r *MediaRepository) RestoreFoldersInfo(ctx context.Context, ownerID int64,
 				),
 		),
 	)(
-		FileInfo.UPDATE().
-			SET(
-				FileInfo.TrashedAt.SET(NULL),
-			).
+		FileInfo.UPDATE(FileInfo.TrashedAt).
+			MODEL(model.FileInfo{}).
 			WHERE(
 				FileInfo.FolderID.IN(
 					SELECT(FolderInfo.ID.From(nestedFoldersCTE)).FROM(nestedFoldersCTE),
 				).AND(FileInfo.TrashedAt.IS_NOT_NULL()),
-		),
+			),
 	)
 
 	return runUpdateOrDelete(ctx, stmt, r.repository.dbTx)

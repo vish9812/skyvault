@@ -75,21 +75,10 @@ func (h *CommandHandlers) UploadFile(ctx context.Context, cmd *UploadFileCommand
 	return info, nil
 }
 
-func (h *CommandHandlers) TrashFile(ctx context.Context, cmd *TrashFileCommand) error {
-	info, err := h.repository.GetFileInfo(ctx, cmd.FileID)
+func (h *CommandHandlers) TrashFiles(ctx context.Context, cmd *TrashFilesCommand) error {
+	err := h.repository.TrashFilesInfo(ctx, cmd.OwnerID, cmd.FilesID)
 	if err != nil {
-		return apperror.NewAppError(err, "CommandHandlers.TrashFile:GetFileInfo")
-	}
-
-	if !info.IsAccessibleBy(cmd.OwnerID) {
-		return apperror.NewAppError(apperror.ErrCommonNoAccess, "CommandHandlers.TrashFile:HasAccess")
-	}
-
-	info.Trash()
-
-	err = h.repository.UpdateFileInfo(ctx, info)
-	if err != nil {
-		return apperror.NewAppError(err, "CommandHandlers.TrashFile:UpdateFileInfo")
+		return apperror.NewAppError(err, "CommandHandlers.TrashFiles:TrashFilesInfo")
 	}
 
 	return nil
@@ -119,26 +108,6 @@ func (h *CommandHandlers) CreateFolder(ctx context.Context, cmd *CreateFolderCom
 	}
 
 	return info, nil
-}
-
-func (h *CommandHandlers) TrashFolder(ctx context.Context, cmd *TrashFolderCommand) error {
-	info, err := h.repository.GetFolderInfo(ctx, cmd.FolderID)
-	if err != nil {
-		return apperror.NewAppError(err, "CommandHandlers.TrashFolder:GetFolderInfo")
-	}
-
-	if !info.IsAccessibleBy(cmd.OwnerID) {
-		return apperror.NewAppError(apperror.ErrCommonNoAccess, "CommandHandlers.TrashFolder:HasAccess")
-	}
-
-	info.Trash()
-
-	err = h.repository.UpdateFolderInfo(ctx, info)
-	if err != nil {
-		return apperror.NewAppError(err, "CommandHandlers.TrashFolder:UpdateFolderInfo")
-	}
-
-	return nil
 }
 
 func (h *CommandHandlers) RenameFile(ctx context.Context, cmd *RenameFileCommand) error {
@@ -277,6 +246,15 @@ func (h *CommandHandlers) MoveFolder(ctx context.Context, cmd *MoveFolderCommand
 	err = h.repository.UpdateFolderInfo(ctx, info)
 	if err != nil {
 		return apperror.NewAppError(err, "CommandHandlers.MoveFolder:UpdateFolderInfo")
+	}
+
+	return nil
+}
+
+func (h *CommandHandlers) TrashFolders(ctx context.Context, cmd *TrashFoldersCommand) error {
+	err := h.repository.TrashFoldersInfo(ctx, cmd.OwnerID, cmd.FoldersID)
+	if err != nil {
+		return apperror.NewAppError(err, "CommandHandlers.TrashFolders:TrashFoldersInfo")
 	}
 
 	return nil
