@@ -317,33 +317,33 @@ func (r *MediaRepository) TrashFoldersInfo(ctx context.Context, ownerID int64, f
 
 func (r *MediaRepository) RestoreFoldersInfo(ctx context.Context, ownerID int64, foldersID []int64) error {
 	nestedFoldersCTE := r.getNestedFoldersCTE(ownerID, foldersID, true)
-	restoreFilesCTE := CTE("restore_files")
+	restoreFoldersCTE := CTE("restore_folders")
 
-	// First restore all files in the folder and its sub-folders.
-	// Then restore the folder and its sub-folders.
+	// First restore the folder and its sub-folders
+	// Then restore all files in those folders
 	stmt := WITH_RECURSIVE(
 		nestedFoldersCTE,
-		restoreFilesCTE.AS(
-			FileInfo.UPDATE().
+		restoreFoldersCTE.AS(
+			FolderInfo.UPDATE().
 				SET(
-					FileInfo.TrashedAt.SET(NULL),
+					FolderInfo.TrashedAt.SET(NULL),
 				).
 				WHERE(
-					FileInfo.FolderID.IN(
+					FolderInfo.ID.IN(
 						SELECT(FolderInfo.ID.From(nestedFoldersCTE)).FROM(nestedFoldersCTE),
-					).AND(FileInfo.TrashedAt.IS_NOT_NULL()),
+					),
 				),
 		),
 	)(
-		FolderInfo.UPDATE().
+		FileInfo.UPDATE().
 			SET(
-				FolderInfo.TrashedAt.SET(NULL),
+				FileInfo.TrashedAt.SET(NULL),
 			).
 			WHERE(
-				FolderInfo.ID.IN(
+				FileInfo.FolderID.IN(
 					SELECT(FolderInfo.ID.From(nestedFoldersCTE)).FROM(nestedFoldersCTE),
-				),
-			),
+				).AND(FileInfo.TrashedAt.IS_NOT_NULL()),
+		),
 	)
 
 	return runUpdateOrDelete(ctx, stmt, r.repository.dbTx)
