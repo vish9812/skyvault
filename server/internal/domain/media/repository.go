@@ -37,6 +37,13 @@ type Repository interface {
 	// - ErrCommonNoData
 	DeleteFileInfo(ctx context.Context, fileID int64) error
 
+	// TODO: Once, sharing/permissions feature is implemented,
+	// replace the ownerID param with deletableBy to check appropriate permissions.
+
+	// App Errors:
+	// - ErrCommonNoData
+	TrashFilesInfo(ctx context.Context, ownerID int64, filesID []int64) error
+
 	//--------------------------------
 	// Folders
 	//--------------------------------
@@ -62,4 +69,10 @@ type Repository interface {
 	// App Errors:
 	// - ErrCommonNoData
 	DeleteFolderInfo(ctx context.Context, folderID int64) error
+
+	// Recursively trash all files and sub-folders.
+	//
+	// App Errors:
+	// - ErrCommonNoData
+	TrashFoldersInfo(ctx context.Context, ownerID int64, foldersID []int64) error
 }

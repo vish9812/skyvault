@@ -156,6 +156,24 @@ func (r *MediaRepository) DeleteFileInfo(ctx context.Context, fileID int64) erro
 	return runUpdateOrDelete(ctx, stmt, r.repository.dbTx)
 }
 
+func (r *MediaRepository) TrashFilesInfo(ctx context.Context, ownerID int64, filesID []int64) error {
+	inExp := make([]Expression, 0, len(filesID))
+	for _, fileID := range filesID {
+		inExp = append(inExp, Int64(fileID))
+	}
+
+	stmt := FileInfo.UPDATE().
+		SET(
+			FileInfo.TrashedAt.SET(TimestampT(time.Now().UTC())),
+		).
+		WHERE(
+			FileInfo.ID.IN(inExp...).
+				AND(FileInfo.TrashedAt.IS_NULL()).
+				AND(FileInfo.OwnerID.EQ(Int64(ownerID))),
+		)
+
+	return runUpdateOrDelete(ctx, stmt, r.repository.dbTx)
+}
 
 //--------------------------------
 // Folder
@@ -263,81 +281,120 @@ func (r *MediaRepository) DeleteFolderInfo(ctx context.Context, folderID int64) 
 	return runUpdateOrDelete(ctx, stmt, r.repository.dbTx)
 }
 
-func (r *MediaRepository) TrashFolderInfo(ctx context.Context, folderID int64) error {
-	tx, err := r.BeginTx(ctx)
-	if err != nil {
-		return apperror.NewAppError(err, "repository.TrashFolderInfo:BeginTx")
-	}
-	defer tx.Rollback()
+func (r *MediaRepository) TrashFoldersInfo(ctx context.Context, ownerID int64, foldersID []int64) error {
+	nestedFoldersCTE := r.getNestedFoldersCTE(ownerID, foldersID)
+	trashFilesCTE := CTE("trash_files")
 
-	repoTx := r.WithTx(ctx, tx)
-
-	// First trash all files in the folder and its subfolders
-	err = repoTx.TrashFilesInfoByFolderID(ctx, folderID)
-	if err != nil {
-		return apperror.NewAppError(err, "repository.TrashFolderInfo:TrashFilesInfoByFolderID")
-	}
-
-	// Then trash the folder and its subfolders
-	nestedFolders, withStmt := r.getNestedFoldersCTE(folderID)
-	stmt := withStmt(
+	// First trash all files in the folder and its sub-folders.
+	// Then trash the folder and its sub-folders.
+	stmt := WITH_RECURSIVE(
+		nestedFoldersCTE,
+		trashFilesCTE.AS(
+			FileInfo.UPDATE().
+				SET(
+					FileInfo.TrashedAt.SET(TimestampT(time.Now().UTC())),
+				).
+				WHERE(
+					FileInfo.FolderID.IN(
+						SELECT(FolderInfo.ID.From(nestedFoldersCTE)).FROM(nestedFoldersCTE),
+					).AND(FileInfo.TrashedAt.IS_NULL()),
+				),
+		),
+	)(
 		FolderInfo.UPDATE().
 			SET(
 				FolderInfo.TrashedAt.SET(TimestampT(time.Now().UTC())),
 			).
 			WHERE(
 				FolderInfo.ID.IN(
-					SELECT(FolderInfo.ID.From(nestedFolders)).FROM(nestedFolders),
-				).AND(FolderInfo.TrashedAt.IS_NULL()),
-			),
-	)
-
-	err = runUpdateOrDelete(ctx, stmt, repoTx.(*MediaRepository).repository.dbTx)
-	if err != nil {
-		return apperror.NewAppError(err, "repository.TrashFolderInfo:runUpdateOrDelete")
-	}
-
-	return tx.Commit()
-}
-
-func (r *MediaRepository) TrashFilesInfoByFolderID(ctx context.Context, folderID int64) error {
-	nestedFolders, withStmt := r.getNestedFoldersCTE(folderID)
-
-	stmt := withStmt(
-		FileInfo.UPDATE().
-			SET(
-				FileInfo.TrashedAt.SET(TimestampT(time.Now().UTC())),
-			).
-			WHERE(
-				FileInfo.FolderID.IN(
-					SELECT(FolderInfo.ID.From(nestedFolders)).FROM(nestedFolders),
-				).AND(FileInfo.TrashedAt.IS_NULL()),
+					SELECT(FolderInfo.ID.From(nestedFoldersCTE)).FROM(nestedFoldersCTE),
+				),
 			),
 	)
 
 	return runUpdateOrDelete(ctx, stmt, r.repository.dbTx)
 }
 
-func (r *MediaRepository) getNestedFoldersCTE(folderID int64) (CommonTableExpression, func(Statement) Statement) {
+// func (r *MediaRepository) TrashFoldersInfo(ctx context.Context, foldersID []int64) error {
+// 	tx, err := r.BeginTx(ctx)
+// 	if err != nil {
+// 		return apperror.NewAppError(err, "repository.TrashFolderInfo:BeginTx")
+// 	}
+// 	defer tx.Rollback()
+
+// 	repoTx := r.WithTx(ctx, tx)
+
+// 	// First trash all files in the folder and its subfolders
+// 	err = repoTx.trashFilesInfoByFoldersID(ctx, foldersID)
+// 	if err != nil {
+// 		return apperror.NewAppError(err, "repository.TrashFolderInfo:TrashFilesInfoByFolderID")
+// 	}
+
+// 	// Then trash the folder and its subfolders
+// 	nestedFolders, withStmt := r.getNestedFoldersCTE(folderID)
+// 	stmt := withStmt(
+// 		FolderInfo.UPDATE().
+// 			SET(
+// 				FolderInfo.TrashedAt.SET(TimestampT(time.Now().UTC())),
+// 			).
+// 			WHERE(
+// 				FolderInfo.ID.IN(
+// 					SELECT(FolderInfo.ID.From(nestedFolders)).FROM(nestedFolders),
+// 				).AND(FolderInfo.TrashedAt.IS_NULL()),
+// 			),
+// 	)
+
+// 	err = runUpdateOrDelete(ctx, stmt, repoTx.(*MediaRepository).repository.dbTx)
+// 	if err != nil {
+// 		return apperror.NewAppError(err, "repository.TrashFolderInfo:runUpdateOrDelete")
+// 	}
+
+// 	return tx.Commit()
+// }
+
+// func (r *MediaRepository) trashFilesInfoByFolderID(ctx context.Context, foldersID []int64) error {
+// 	nestedFolders, withStmt := r.getNestedFoldersCTE(foldersID)
+
+// 	stmt := withStmt(
+// 		FileInfo.UPDATE().
+// 			SET(
+// 				FileInfo.TrashedAt.SET(TimestampT(time.Now().UTC())),
+// 			).
+// 			WHERE(
+// 				FileInfo.FolderID.IN(
+// 					SELECT(FolderInfo.ID.From(nestedFolders)).FROM(nestedFolders),
+// 				).AND(FileInfo.TrashedAt.IS_NULL()),
+// 			),
+// 	)
+
+// 	return runUpdateOrDelete(ctx, stmt, r.repository.dbTx)
+// }
+
+func (r *MediaRepository) getNestedFoldersCTE(ownerID int64, foldersID []int64) CommonTableExpression {
 	nestedFolders := CTE("nested_folders")
 
-	return nestedFolders, WITH_RECURSIVE(
-		nestedFolders.AS(
+	inExp := make([]Expression, 0, len(foldersID))
+	for _, folderID := range foldersID {
+		inExp = append(inExp, Int64(folderID))
+	}
+
+	return nestedFolders.AS(
+		SELECT(
+			FolderInfo.ID,
+		).FROM(
+			FolderInfo,
+		).WHERE(
+			FolderInfo.ID.IN(inExp...).
+				AND(FolderInfo.TrashedAt.IS_NULL()).
+				AND(FolderInfo.OwnerID.EQ(Int64(ownerID))),
+		).UNION(
 			SELECT(
 				FolderInfo.ID,
 			).FROM(
-				FolderInfo,
+				FolderInfo.
+					INNER_JOIN(nestedFolders, FolderInfo.ID.From(nestedFolders).EQ(FolderInfo.ParentFolderID)),
 			).WHERE(
-				FolderInfo.ID.EQ(Int64(folderID)).AND(FolderInfo.TrashedAt.IS_NULL()),
-			).UNION(
-				SELECT(
-					FolderInfo.ID,
-				).FROM(
-					FolderInfo.
-						INNER_JOIN(nestedFolders, FolderInfo.ID.From(nestedFolders).EQ(FolderInfo.ParentFolderID)),
-				).WHERE(
-					FolderInfo.TrashedAt.IS_NULL(),
-				),
+				FolderInfo.TrashedAt.IS_NULL(),
 			),
 		),
 	)
