@@ -315,8 +315,8 @@ func (r *MediaRepository) TrashFoldersInfo(ctx context.Context, ownerID int64, f
 	return runUpdateOrDelete(ctx, stmt, r.repository.dbTx)
 }
 
-func (r *MediaRepository) RestoreFoldersInfo(ctx context.Context, ownerID int64, foldersID []int64) error {
-	nestedFoldersCTE := r.getNestedFoldersCTE(ownerID, foldersID, true)
+func (r *MediaRepository) RestoreFoldersInfo(ctx context.Context, ownerID int64, folderID int64) error {
+	nestedFoldersCTE := r.getNestedFoldersCTE(ownerID, []int64{folderID}, true)
 	restoreFoldersCTE := CTE("restore_folders")
 
 	// First restore the folder and its sub-folders

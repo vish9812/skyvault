@@ -80,5 +80,5 @@ type Repository interface {
 	//
 	// App Errors:
 	// - ErrCommonNoData
-	RestoreFoldersInfo(ctx context.Context, ownerID int64, foldersID []int64) error
+	RestoreFoldersInfo(ctx context.Context, ownerID int64, folderID int64) error
 }

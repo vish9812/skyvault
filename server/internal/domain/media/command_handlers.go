@@ -270,24 +270,25 @@ func (h *CommandHandlers) RestoreFolder(ctx context.Context, cmd *RestoreFolderC
 		return apperror.NewAppError(apperror.ErrCommonNoAccess, "CommandHandlers.RestoreFolder:HasAccess")
 	}
 
-	// Check if the original parent folder still exists
+	// Check if the original parent folder still exists and is not trashed
 	if info.ParentFolderID != nil {
-		_, err := h.repository.GetFolderInfo(ctx, *info.ParentFolderID)
-		if err != nil {
-			if errors.Is(err, apperror.ErrCommonNoData) {
-				// If not found then restore to root folder
-				info.ParentFolderID = nil
+		parentFolder, err := h.repository.GetFolderInfo(ctx, *info.ParentFolderID)
+		if err != nil || parentFolder.TrashedAt != nil {
+			// If parent not found or is trashed, restore to root folder
+			info.ParentFolderID = nil
+			
+			// Update the folder's parent reference
+			err = h.repository.UpdateFolderInfo(ctx, info)
+			if err != nil {
+				return apperror.NewAppError(err, "CommandHandlers.RestoreFolder:UpdateFolderInfo")
 			}
-
-			return apperror.NewAppError(err, "CommandHandlers.RestoreFolder:GetParentFolderInfo")
 		}
 	}
 
-	info.Restore()
-
-	err = h.repository.UpdateFolderInfo(ctx, info)
+	// Restore the main folder and all nested items
+	err = h.repository.RestoreFoldersInfo(ctx, cmd.OwnerID, cmd.FolderID)
 	if err != nil {
-		return apperror.NewAppError(err, "CommandHandlers.RestoreFolder:UpdateFolderInfo")
+		return apperror.NewAppError(err, "CommandHandlers.RestoreFolder:RestoreFoldersInfo")
 	}
 
 	return nil
