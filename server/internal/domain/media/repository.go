@@ -75,4 +75,10 @@ type Repository interface {
 	// App Errors:
 	// - ErrCommonNoData
 	TrashFoldersInfo(ctx context.Context, ownerID int64, foldersID []int64) error
+
+	// Recursively restore all files and sub-folders.
+	//
+	// App Errors:
+	// - ErrCommonNoData
+	RestoreFoldersInfo(ctx context.Context, ownerID int64, foldersID []int64) error
 }

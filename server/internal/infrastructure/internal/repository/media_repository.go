@@ -370,6 +370,40 @@ func (r *MediaRepository) TrashFoldersInfo(ctx context.Context, ownerID int64, f
 // 	return runUpdateOrDelete(ctx, stmt, r.repository.dbTx)
 // }
 
+func (r *MediaRepository) RestoreFoldersInfo(ctx context.Context, ownerID int64, foldersID []int64) error {
+	nestedFoldersCTE := r.getNestedFoldersCTE(ownerID, foldersID)
+	restoreFilesCTE := CTE("restore_files")
+
+	// First restore all files in the folder and its sub-folders.
+	// Then restore the folder and its sub-folders.
+	stmt := WITH_RECURSIVE(
+		nestedFoldersCTE,
+		restoreFilesCTE.AS(
+			FileInfo.UPDATE().
+				SET(
+					FileInfo.TrashedAt.SET(NULL),
+				).
+				WHERE(
+					FileInfo.FolderID.IN(
+						SELECT(FolderInfo.ID.From(nestedFoldersCTE)).FROM(nestedFoldersCTE),
+					).AND(FileInfo.TrashedAt.IS_NOT_NULL()),
+				),
+		),
+	)(
+		FolderInfo.UPDATE().
+			SET(
+				FolderInfo.TrashedAt.SET(NULL),
+			).
+			WHERE(
+				FolderInfo.ID.IN(
+					SELECT(FolderInfo.ID.From(nestedFoldersCTE)).FROM(nestedFoldersCTE),
+				),
+			),
+	)
+
+	return runUpdateOrDelete(ctx, stmt, r.repository.dbTx)
+}
+
 func (r *MediaRepository) getNestedFoldersCTE(ownerID int64, foldersID []int64) CommonTableExpression {
 	nestedFolders := CTE("nested_folders")
 
