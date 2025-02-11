@@ -3,10 +3,13 @@ package media
 import (
 	"context"
 	"database/sql"
+	"errors"
+	"fmt"
 	"io"
 	"skyvault/pkg/appconfig"
 	"skyvault/pkg/apperror"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -179,6 +182,40 @@ func TestUploadFile(t *testing.T) {
 				mockRepo.On("CreateFileInfo", mock.Anything, mock.Anything).Return(&FileInfo{ID: 1}, nil)
 			},
 			expectedError: nil,
+		},
+		{
+			name: "file exceeds size limit",
+			cmd: &UploadFileCommand{
+				OwnerID:  1,
+				Name:     "large.txt",
+				Size:     11 * 1024 * 1024, // 11MB > 10MB limit
+				MimeType: "text/plain",
+				File:     strings.NewReader("test content"),
+			},
+			setupMocks: func() {
+				// No mocks needed as it should fail early
+			},
+			expectedError: ErrFileSizeLimitExceeded,
+		},
+		{
+			name: "rollback on storage error",
+			cmd: &UploadFileCommand{
+				OwnerID:  1,
+				Name:     "test.txt",
+				Size:     1024,
+				MimeType: "text/plain",
+				File:     strings.NewReader("test content"),
+			},
+			setupMocks: func() {
+				tx := &sql.Tx{}
+				mockRepo.On("BeginTx", mock.Anything).Return(tx, nil)
+				mockRepo.On("WithTx", mock.Anything, tx).Return(mockRepo)
+				mockStorage.On("SaveFile", mock.Anything, mock.Anything, mock.Anything, int64(1)).
+					Return(errors.New("storage error"))
+				// Should rollback on error
+				mockRepo.On("Rollback").Return(nil)
+			},
+			expectedError: errors.New("storage error"),
 		},
 	}
 
@@ -621,6 +658,71 @@ func TestTrashFolders(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestConcurrentOperations(t *testing.T) {
+	handlers, mockRepo, mockStorage := setupTest(t)
+	ctx := context.Background()
+
+	t.Run("concurrent uploads to same folder", func(t *testing.T) {
+		folderID := &[]int64{1}[0]
+		mockRepo.On("GetFolderInfo", mock.Anything, int64(1)).Return(&FolderInfo{
+			ID:      1,
+			OwnerID: 1,
+		}, nil)
+		mockRepo.On("BeginTx", mock.Anything).Return(&sql.Tx{}, nil)
+		mockRepo.On("WithTx", mock.Anything, mock.Anything).Return(mockRepo)
+		mockStorage.On("SaveFile", mock.Anything, mock.Anything, mock.Anything, int64(1)).Return(nil)
+		mockRepo.On("CreateFileInfo", mock.Anything, mock.Anything).Return(&FileInfo{ID: 1}, nil)
+
+		var wg sync.WaitGroup
+		for i := 0; i < 3; i++ {
+			wg.Add(1)
+			go func(i int) {
+				defer wg.Done()
+				cmd := &UploadFileCommand{
+					OwnerID:  1,
+					FolderID: folderID,
+					Name:     fmt.Sprintf("concurrent-%d.txt", i),
+					Size:     1024,
+					MimeType: "text/plain",
+					File:     strings.NewReader("test content"),
+				}
+				_, err := handlers.UploadFile(ctx, cmd)
+				assert.NoError(t, err)
+			}(i)
+		}
+		wg.Wait()
+	})
+
+	t.Run("concurrent moves of same file", func(t *testing.T) {
+		mockRepo.On("GetFileInfo", mock.Anything, int64(1)).Return(&FileInfo{
+			ID:      1,
+			OwnerID: 1,
+		}, nil)
+		mockRepo.On("GetFolderInfo", mock.Anything, mock.Anything).Return(&FolderInfo{
+			ID:      2,
+			OwnerID: 1,
+		}, nil)
+		mockRepo.On("UpdateFileInfo", mock.Anything, mock.Anything).Return(nil)
+
+		var wg sync.WaitGroup
+		for i := 0; i < 3; i++ {
+			wg.Add(1)
+			go func(i int) {
+				defer wg.Done()
+				folderID := &[]int64{int64(i + 2)}[0]
+				cmd := &MoveFileCommand{
+					OwnerID:  1,
+					FileID:   1,
+					FolderID: folderID,
+				}
+				err := handlers.MoveFile(ctx, cmd)
+				assert.NoError(t, err)
+			}(i)
+		}
+		wg.Wait()
+	})
 }
 
 func TestRestoreFolder(t *testing.T) {
