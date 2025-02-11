@@ -364,7 +364,6 @@ func (r *MediaRepository) getNestedFoldersCTE(ownerID int64, foldersID []int64) 
 			FolderInfo,
 		).WHERE(
 			FolderInfo.ID.IN(inExp...).
-				AND(FolderInfo.TrashedAt.IS_NULL()).
 				AND(FolderInfo.OwnerID.EQ(Int64(ownerID))),
 		).UNION(
 			SELECT(
@@ -372,8 +371,6 @@ func (r *MediaRepository) getNestedFoldersCTE(ownerID int64, foldersID []int64) 
 			).FROM(
 				FolderInfo.
 					INNER_JOIN(nestedFolders, FolderInfo.ID.From(nestedFolders).EQ(FolderInfo.ParentFolderID)),
-			).WHERE(
-				FolderInfo.TrashedAt.IS_NULL(),
 			),
 		),
 	)
