@@ -282,7 +282,7 @@ func (r *MediaRepository) DeleteFolderInfo(ctx context.Context, folderID int64) 
 }
 
 func (r *MediaRepository) TrashFoldersInfo(ctx context.Context, ownerID int64, foldersID []int64) error {
-	nestedFoldersCTE := r.getNestedFoldersCTE(ownerID, foldersID)
+	nestedFoldersCTE := r.getNestedFoldersCTE(ownerID, foldersID, false)
 	trashFilesCTE := CTE("trash_files")
 
 	// First trash all files in the folder and its sub-folders.
@@ -316,7 +316,7 @@ func (r *MediaRepository) TrashFoldersInfo(ctx context.Context, ownerID int64, f
 }
 
 func (r *MediaRepository) RestoreFoldersInfo(ctx context.Context, ownerID int64, foldersID []int64) error {
-	nestedFoldersCTE := r.getNestedFoldersCTE(ownerID, foldersID)
+	nestedFoldersCTE := r.getNestedFoldersCTE(ownerID, foldersID, true)
 	restoreFilesCTE := CTE("restore_files")
 
 	// First restore all files in the folder and its sub-folders.
@@ -349,12 +349,18 @@ func (r *MediaRepository) RestoreFoldersInfo(ctx context.Context, ownerID int64,
 	return runUpdateOrDelete(ctx, stmt, r.repository.dbTx)
 }
 
-func (r *MediaRepository) getNestedFoldersCTE(ownerID int64, foldersID []int64) CommonTableExpression {
+// getNestedFoldersCTE returns a CTE that returns all nested folders of the given folders, including the folders themselves.
+func (r *MediaRepository) getNestedFoldersCTE(ownerID int64, foldersID []int64, onlyTrashed bool) CommonTableExpression {
 	nestedFolders := CTE("nested_folders")
 
 	inExp := make([]Expression, 0, len(foldersID))
 	for _, folderID := range foldersID {
 		inExp = append(inExp, Int64(folderID))
+	}
+
+	trashedCond := FolderInfo.TrashedAt.IS_NULL()
+	if onlyTrashed {
+		trashedCond = FolderInfo.TrashedAt.IS_NOT_NULL()
 	}
 
 	return nestedFolders.AS(
@@ -364,13 +370,17 @@ func (r *MediaRepository) getNestedFoldersCTE(ownerID int64, foldersID []int64) 
 			FolderInfo,
 		).WHERE(
 			FolderInfo.ID.IN(inExp...).
-				AND(FolderInfo.OwnerID.EQ(Int64(ownerID))),
+				AND(FolderInfo.OwnerID.EQ(Int64(ownerID))).
+				AND(trashedCond),
 		).UNION(
 			SELECT(
 				FolderInfo.ID,
 			).FROM(
 				FolderInfo.
 					INNER_JOIN(nestedFolders, FolderInfo.ID.From(nestedFolders).EQ(FolderInfo.ParentFolderID)),
+			).WHERE(
+				FolderInfo.OwnerID.EQ(Int64(ownerID)).
+					AND(trashedCond),
 			),
 		),
 	)
