@@ -31,131 +31,86 @@ type testSetup struct {
 func setupTest(t *testing.T) *testSetup {
 	t.Helper()
 
+	// Create unique test database
+	dbName := fmt.Sprintf("skyvault_test_%s", utils.RandomName())
+	_, err := testDB.ExecContext(context.Background(), fmt.Sprintf("CREATE DATABASE %s", dbName))
+	require.NoError(t, err, "Failed to create test database")
+
+	// Connect to test database
+	testConfig := &appconfig.Config{
+		DB: appconfig.DBConfig{
+			DSN: fmt.Sprintf("postgres://skyvault:skyvault@localhost:5432/%s?sslmode=disable", dbName),
+		},
+		Media: appconfig.MediaConfig{
+			MaxSizeMB: 100,
+		},
+	}
+
 	// Create temp directory for file storage
 	tempDir, err := os.MkdirTemp("", "skyvault-test-*")
 	require.NoError(t, err, "Failed to create temp directory")
 
-	app := &appconfig.App{
-		Config: &appconfig.Config{
-			Media: appconfig.MediaConfig{
-				MaxSizeMB: 100,
-			},
-		},
-	}
+	// Setup app with test config
+	testLogger := applog.NewLogger(nil)
+	app := appconfig.NewApp(testConfig, testLogger)
 
-	// TODO: Initialize real repository implementation
-	// For now using a mock that implements Repository interface
-	repo := &mockRepository{}
+	// Initialize real repository
+	baseRepo := repository.NewRepository(app)
+	mediaRepo := repository.NewMediaRepository(baseRepo)
 
-	// Initialize real storage using temp directory
-	storage := &mockStorage{
-		baseDir: tempDir,
-	}
+	// Initialize real storage
+	localStorage := storage.NewLocalStorage(app)
 
-	handlers := NewCommandHandlers(app, repo, storage)
+	handlers := NewCommandHandlers(app, mediaRepo, localStorage)
 	ctx := context.Background()
 
 	cleanup := func() {
+		// Close repository connections
+		baseRepo.Cleanup()
+
+		// Drop test database
+		_, err := testDB.ExecContext(context.Background(), fmt.Sprintf("DROP DATABASE %s", dbName))
+		if err != nil {
+			t.Errorf("Failed to drop test database: %v", err)
+		}
+
+		// Remove temp storage directory
 		os.RemoveAll(tempDir)
 	}
 
 	return &testSetup{
 		handlers: handlers,
-		repo:     repo,
-		storage:  storage,
+		repo:     mediaRepo,
+		storage:  localStorage,
 		ctx:      ctx,
 		cleanup:  cleanup,
 	}
 }
 
-// mockRepository implements Repository interface for testing
-type mockRepository struct {
-	files   map[int64]*FileInfo
-	folders map[int64]*FolderInfo
+// TestMain sets up the test database connection
+func TestMain(m *testing.M) {
+	// Connect to main postgres database to create/drop test databases
+	testLogger := applog.NewLogger(nil)
+	testDB = connectDatabase(testLogger, "postgres://skyvault:skyvault@localhost:5432/postgres?sslmode=disable")
+
+	code := m.Run()
+
+	testDB.Close()
+	os.Exit(code)
 }
 
-func (m *mockRepository) CreateFileInfo(ctx context.Context, info *FileInfo) (*FileInfo, error) {
-	if m.files == nil {
-		m.files = make(map[int64]*FileInfo)
-	}
-	info.ID = int64(len(m.files) + 1)
-	info.CreatedAt = time.Now()
-	info.UpdatedAt = time.Now()
-	m.files[info.ID] = info
-	return info, nil
-}
-
-func (m *mockRepository) GetFileInfo(ctx context.Context, id int64) (*FileInfo, error) {
-	if file, ok := m.files[id]; ok {
-		return file, nil
-	}
-	return nil, apperror.ErrNoData
-}
-
-func (m *mockRepository) CreateFolderInfo(ctx context.Context, info *FolderInfo) (*FolderInfo, error) {
-	if m.folders == nil {
-		m.folders = make(map[int64]*FolderInfo)
-	}
-	info.ID = int64(len(m.folders) + 1)
-	info.CreatedAt = time.Now()
-	info.UpdatedAt = time.Now()
-	m.folders[info.ID] = info
-	return info, nil
-}
-
-func (m *mockRepository) GetFolderInfo(ctx context.Context, id int64) (*FolderInfo, error) {
-	if folder, ok := m.folders[id]; ok {
-		return folder, nil
-	}
-	return nil, apperror.ErrNoData
-}
-
-func (m *mockRepository) BeginTx(ctx context.Context) (*sql.Tx, error) {
-	return nil, nil // Mock implementation
-}
-
-func (m *mockRepository) WithTx(ctx context.Context, tx *sql.Tx) Repository {
-	return m // Mock implementation
-}
-
-// mockStorage implements Storage interface for testing
-type mockStorage struct {
-	baseDir string
-	files   map[string][]byte
-}
-
-func (m *mockStorage) SaveFile(ctx context.Context, file io.ReadSeeker, name string, ownerID int64) error {
-	if m.files == nil {
-		m.files = make(map[string][]byte)
-	}
-	
-	data, err := io.ReadAll(file)
+func connectDatabase(logger applog.Logger, dsn string) *sql.DB {
+	db, err := sql.Open("postgres", dsn)
 	if err != nil {
-		return err
+		logger.Fatal().Err(err).Msg("Failed to connect to database")
 	}
-	
-	m.files[name] = data
-	return nil
-}
-
-func (m *mockStorage) GetFile(ctx context.Context, name string) (io.ReadCloser, error) {
-	if data, ok := m.files[name]; ok {
-		return io.NopCloser(strings.NewReader(string(data))), nil
-	}
-	return nil, apperror.ErrNoData
-}
-
-func (m *mockStorage) DeleteFile(ctx context.Context, name string) error {
-	if _, ok := m.files[name]; !ok {
-		return apperror.ErrNoData
-	}
-	delete(m.files, name)
-	return nil
+	return db
 }
 
 // Test cases
 func TestUploadFile(t *testing.T) {
 	t.Run("successful upload", func(t *testing.T) {
+		t.Parallel()
 		ts := setupTest(t)
 		defer ts.cleanup()
 
@@ -179,6 +134,7 @@ func TestUploadFile(t *testing.T) {
 	})
 
 	t.Run("file size exceeds limit", func(t *testing.T) {
+		t.Parallel()
 		ts := setupTest(t)
 		defer ts.cleanup()
 
@@ -199,6 +155,7 @@ func TestUploadFile(t *testing.T) {
 
 func TestCreateFolder(t *testing.T) {
 	t.Run("successful creation", func(t *testing.T) {
+		t.Parallel()
 		ts := setupTest(t)
 		defer ts.cleanup()
 
@@ -215,6 +172,7 @@ func TestCreateFolder(t *testing.T) {
 	})
 
 	t.Run("create nested folder", func(t *testing.T) {
+		t.Parallel()
 		ts := setupTest(t)
 		defer ts.cleanup()
 
@@ -243,6 +201,7 @@ func TestCreateFolder(t *testing.T) {
 
 func TestTrashAndRestore(t *testing.T) {
 	t.Run("trash and restore folder", func(t *testing.T) {
+		t.Parallel()
 		ts := setupTest(t)
 		defer ts.cleanup()
 
