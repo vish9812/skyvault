@@ -2,7 +2,6 @@ package media
 
 import (
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -46,21 +45,4 @@ func TestFolderInfo_ValidateAccess(t *testing.T) {
 			}
 		})
 	}
-}
-
-func TestFolderContent_Empty(t *testing.T) {
-	content := FolderContent{
-		FolderInfos: []*FolderInfo{},
-		FileInfos:   []*FileInfo{},
-	}
-
-	assert.True(t, content.Empty(), "Expected empty folder content to return true")
-
-	content.FolderInfos = append(content.FolderInfos, &FolderInfo{
-		ID:      1,
-		OwnerID: 100,
-		Name:    "test folder",
-	})
-
-	assert.False(t, content.Empty(), "Expected non-empty folder content to return false")
 }

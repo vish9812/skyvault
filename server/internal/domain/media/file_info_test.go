@@ -5,6 +5,7 @@ import (
 	"image"
 	"image/png"
 	"io"
+	"skyvault/pkg/utils"
 	"testing"
 	"time"
 
@@ -207,7 +208,7 @@ func TestFileInfo_MoveTo(t *testing.T) {
 			name: "move to same folder",
 			file: FileInfo{
 				OwnerID:  100,
-				FolderID: ptr(int64(1)),
+				FolderID: utils.Ptr(int64(1)),
 			},
 			destFolder: &FolderInfo{
 				ID:      1,
@@ -241,24 +242,24 @@ func TestFileInfo_MoveTo(t *testing.T) {
 func TestFileInfo_Restore(t *testing.T) {
 	tests := []struct {
 		name                  string
-		file                 FileInfo
+		file                  FileInfo
 		parentFolderIsTrashed bool
 		expectedFolderID      *int64
 	}{
 		{
 			name: "restore with valid parent",
 			file: FileInfo{
-				FolderID:  ptr(int64(1)),
-				TrashedAt: ptr(time.Now()),
+				FolderID:  utils.Ptr(int64(1)),
+				TrashedAt: utils.Ptr(time.Now()),
 			},
 			parentFolderIsTrashed: false,
-			expectedFolderID:      ptr(int64(1)),
+			expectedFolderID:      utils.Ptr(int64(1)),
 		},
 		{
 			name: "restore with trashed parent",
 			file: FileInfo{
-				FolderID:  ptr(int64(1)),
-				TrashedAt: ptr(time.Now()),
+				FolderID:  utils.Ptr(int64(1)),
+				TrashedAt: utils.Ptr(time.Now()),
 			},
 			parentFolderIsTrashed: true,
 			expectedFolderID:      nil,
@@ -286,11 +287,11 @@ func TestFileInfo_WithPreview(t *testing.T) {
 	require.NoError(t, err)
 
 	tests := []struct {
-		name           string
-		file           FileInfo
-		reader         io.ReadSeeker
-		expectPreview  bool
-		expectError    bool
+		name          string
+		file          FileInfo
+		reader        io.ReadSeeker
+		expectPreview bool
+		expectError   bool
 	}{
 		{
 			name: "generate preview for image",
@@ -370,9 +371,4 @@ func TestGetCategory(t *testing.T) {
 			assert.Equal(t, tt.want, got)
 		})
 	}
-}
-
-// Helper function to create pointer to int64
-func ptr(i int64) *int64 {
-	return &i
 }
