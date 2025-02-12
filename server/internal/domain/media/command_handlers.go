@@ -110,19 +110,21 @@ func (h *CommandHandlers) MoveFile(ctx context.Context, cmd *MoveFileCommand) er
 		return apperror.NewAppError(err, "CommandHandlers.MoveFile:GetFileInfo")
 	}
 
-	if !info.IsAccessibleBy(cmd.OwnerID) {
-		return apperror.NewAppError(apperror.ErrCommonNoAccess, "CommandHandlers.MoveFile:IsAccessibleBy")
+	if err := info.ValidateAccess(cmd.OwnerID); err != nil {
+		return apperror.NewAppError(err, "CommandHandlers.MoveFile:ValidateAccess")
 	}
 
+	var targetFolder *FolderInfo
 	if cmd.FolderID != nil {
-		folderInfo, err := h.repository.GetFolderInfo(ctx, *cmd.FolderID)
+		var err error
+		targetFolder, err = h.repository.GetFolderInfo(ctx, *cmd.FolderID)
 		if err != nil {
 			return apperror.NewAppError(err, "CommandHandlers.MoveFile:GetFolderInfo")
 		}
+	}
 
-		if !folderInfo.IsAccessibleBy(cmd.OwnerID) {
-			return apperror.NewAppError(apperror.ErrCommonNoAccess, "CommandHandlers.MoveFile:FolderIsAccessibleBy")
-		}
+	if err := info.ValidateMove(targetFolder); err != nil {
+		return apperror.NewAppError(err, "CommandHandlers.MoveFile:ValidateMove")
 	}
 
 	info.MoveTo(cmd.FolderID)
