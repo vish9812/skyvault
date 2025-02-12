@@ -7,6 +7,7 @@ import (
 )
 
 func TestFolderInfo_ValidateAccess(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name        string
 		folder      FolderInfo

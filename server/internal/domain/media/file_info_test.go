@@ -14,6 +14,7 @@ import (
 )
 
 func TestNewFileInfo(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name        string
 		config      FileConfig
@@ -92,6 +93,7 @@ func TestNewFileInfo(t *testing.T) {
 }
 
 func TestFileInfo_ValidateAccess(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name        string
 		file        FileInfo
@@ -131,6 +133,7 @@ func TestFileInfo_ValidateAccess(t *testing.T) {
 }
 
 func TestFileInfo_Rename(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name        string
 		file        FileInfo
@@ -174,6 +177,7 @@ func TestFileInfo_Rename(t *testing.T) {
 }
 
 func TestFileInfo_MoveTo(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name        string
 		file        FileInfo
@@ -240,6 +244,7 @@ func TestFileInfo_MoveTo(t *testing.T) {
 }
 
 func TestFileInfo_Restore(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name                  string
 		file                  FileInfo
@@ -280,6 +285,7 @@ func TestFileInfo_Restore(t *testing.T) {
 }
 
 func TestFileInfo_WithPreview(t *testing.T) {
+	t.Parallel()
 	// Create a small test image
 	img := image.NewRGBA(image.Rect(0, 0, 100, 100))
 	buf := new(bytes.Buffer)
@@ -333,6 +339,7 @@ func TestFileInfo_WithPreview(t *testing.T) {
 }
 
 func TestGetCategory(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name     string
 		mimeType string
