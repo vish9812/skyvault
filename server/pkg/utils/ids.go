@@ -15,3 +15,6 @@ func IsValidEmail(email string) error {
 	return err
 }
 
+func Ptr[T any](v T) *T {
+	return &v
+}

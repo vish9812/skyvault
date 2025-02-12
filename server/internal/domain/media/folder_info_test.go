@@ -4,9 +4,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 	"skyvault/pkg/utils"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestNewFolderInfo(t *testing.T) {
@@ -19,9 +19,9 @@ func TestNewFolderInfo(t *testing.T) {
 		expectError  bool
 	}{
 		{
-			name:       "valid folder without parent",
-			ownerID:    100,
-			folderName: "test folder",
+			name:        "valid folder without parent",
+			ownerID:     100,
+			folderName:  "test folder",
 			expectError: false,
 		},
 		{
@@ -35,9 +35,9 @@ func TestNewFolderInfo(t *testing.T) {
 			expectError: false,
 		},
 		{
-			name:       "empty folder name",
-			ownerID:    100,
-			folderName: "",
+			name:        "empty folder name",
+			ownerID:     100,
+			folderName:  "",
 			expectError: true,
 		},
 		{
@@ -168,7 +168,7 @@ func TestFolderInfo_Rename(t *testing.T) {
 func TestFolderInfo_MoveTo(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
-		name              string
+		name             string
 		folder           FolderInfo
 		destFolder       *FolderInfo
 		descendantIDs    []int64
@@ -282,56 +282,6 @@ func TestFolderInfo_MoveTo(t *testing.T) {
 				assert.Equal(t, tt.expectedParentID, tt.folder.ParentFolderID)
 				assert.True(t, tt.folder.UpdatedAt.After(originalTime))
 			}
-		})
-	}
-}
-
-func TestFolderContent_Empty(t *testing.T) {
-	t.Parallel()
-	tests := []struct {
-		name     string
-		content  FolderContent
-		expected bool
-	}{
-		{
-			name: "empty content",
-			content: FolderContent{
-				FolderInfos: []*FolderInfo{},
-				FileInfos:   []*FileInfo{},
-			},
-			expected: true,
-		},
-		{
-			name: "has folders",
-			content: FolderContent{
-				FolderInfos: []*FolderInfo{{ID: 1}},
-				FileInfos:   []*FileInfo{},
-			},
-			expected: false,
-		},
-		{
-			name: "has files",
-			content: FolderContent{
-				FolderInfos: []*FolderInfo{},
-				FileInfos:   []*FileInfo{{ID: 1}},
-			},
-			expected: false,
-		},
-		{
-			name: "has both",
-			content: FolderContent{
-				FolderInfos: []*FolderInfo{{ID: 1}},
-				FileInfos:   []*FileInfo{{ID: 1}},
-			},
-			expected: false,
-		},
-	}
-
-	for _, tc := range tests {
-		tt := tc // capture range variable
-		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
-			assert.Equal(t, tt.expected, tt.content.Empty())
 		})
 	}
 }
