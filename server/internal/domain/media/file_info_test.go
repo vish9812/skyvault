@@ -73,8 +73,10 @@ func TestNewFileInfo(t *testing.T) {
 		},
 	}
 
-	for _, tt := range tests {
+	for _, tc := range tests {
+		tt := tc // capture range variable
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			fileInfo, err := NewFileInfo(tt.config, tt.ownerID, tt.folderID, tt.fileName, tt.size, tt.mimeType)
 			if tt.expectError {
 				assert.Error(t, err)
