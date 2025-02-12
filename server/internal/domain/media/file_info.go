@@ -138,8 +138,20 @@ func (f *FileInfo) Restore(isParentFolderTrashed bool) {
 	f.UpdatedAt = time.Now().UTC()
 }
 
-func (f *FileInfo) IsAccessibleBy(ownerID int64) bool {
-	return f.OwnerID == ownerID
+func (f *FileInfo) ValidateAccess(ownerID int64) error {
+	if f.OwnerID != ownerID {
+		return apperror.NewAppError(apperror.ErrCommonNoAccess, "media.FileInfo.ValidateAccess")
+	}
+	return nil
+}
+
+func (f *FileInfo) ValidateMove(targetFolder *FolderInfo) error {
+	if targetFolder != nil {
+		if err := targetFolder.ValidateAccess(f.OwnerID); err != nil {
+			return apperror.NewAppError(err, "media.FileInfo.ValidateMove")
+		}
+	}
+	return nil
 }
 
 // App Errors:

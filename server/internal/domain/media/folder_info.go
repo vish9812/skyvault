@@ -33,8 +33,20 @@ func NewFolderInfo(ownerID int64, name string, parentFolderID *int64) (*FolderIn
 	}, nil
 }
 
-func (f *FolderInfo) IsAccessibleBy(ownerID int64) bool {
-	return f.OwnerID == ownerID
+func (f *FolderInfo) ValidateAccess(ownerID int64) error {
+	if f.OwnerID != ownerID {
+		return apperror.NewAppError(apperror.ErrCommonNoAccess, "media.FolderInfo.ValidateAccess")
+	}
+	return nil
+}
+
+func (f *FolderInfo) ValidateMove(targetFolder *FolderInfo) error {
+	if targetFolder != nil {
+		if err := targetFolder.ValidateAccess(f.OwnerID); err != nil {
+			return apperror.NewAppError(err, "media.FolderInfo.ValidateMove")
+		}
+	}
+	return nil
 }
 
 // App Errors:

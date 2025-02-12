@@ -30,15 +30,16 @@ func (h *CommandHandlers) UploadFile(ctx context.Context, cmd *UploadFileCommand
 		MaxSizeMB: h.app.Config.Media.MaxSizeMB,
 	}
 
-	// check if the owner has access to the folder
+	var targetFolder *FolderInfo
 	if cmd.FolderID != nil {
-		folderInfo, err := h.repository.GetFolderInfo(ctx, *cmd.FolderID)
+		var err error
+		targetFolder, err = h.repository.GetFolderInfo(ctx, *cmd.FolderID)
 		if err != nil {
 			return nil, apperror.NewAppError(err, "CommandHandlers.UploadFile:GetFolderInfo")
 		}
-
-		if !folderInfo.IsAccessibleBy(cmd.OwnerID) {
-			return nil, apperror.NewAppError(apperror.ErrCommonNoAccess, "CommandHandlers.UploadFile:FolderIsAccessibleBy")
+		
+		if err := targetFolder.ValidateAccess(cmd.OwnerID); err != nil {
+			return nil, apperror.NewAppError(err, "CommandHandlers.UploadFile:ValidateAccess")
 		}
 	}
 
@@ -86,8 +87,8 @@ func (h *CommandHandlers) RenameFile(ctx context.Context, cmd *RenameFileCommand
 		return apperror.NewAppError(err, "CommandHandlers.RenameFile:GetFileInfo")
 	}
 
-	if !info.IsAccessibleBy(cmd.OwnerID) {
-		return apperror.NewAppError(apperror.ErrCommonNoAccess, "CommandHandlers.RenameFile:HasAccess")
+	if err := info.ValidateAccess(cmd.OwnerID); err != nil {
+		return apperror.NewAppError(err, "CommandHandlers.RenameFile:ValidateAccess")
 	}
 
 	err = info.Rename(cmd.Name)
