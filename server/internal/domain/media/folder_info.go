@@ -40,15 +40,6 @@ func (f *FolderInfo) ValidateAccess(ownerID int64) error {
 	return nil
 }
 
-func (f *FolderInfo) ValidateMove(targetFolder *FolderInfo) error {
-	if targetFolder != nil {
-		if err := targetFolder.ValidateAccess(f.OwnerID); err != nil {
-			return apperror.NewAppError(err, "media.FolderInfo.ValidateMove")
-		}
-	}
-	return nil
-}
-
 // App Errors:
 // - ErrCommonInvalidValue
 func (f *FolderInfo) Rename(newName string) error {
@@ -61,9 +52,17 @@ func (f *FolderInfo) Rename(newName string) error {
 	return nil
 }
 
-func (f *FolderInfo) MoveTo(destParentFolderID *int64) {
+// App Errors:
+// - ErrCommonNoAccess 
+func (f *FolderInfo) MoveTo(destParentFolderID *int64, targetFolder *FolderInfo) error {
+	if targetFolder != nil {
+		if err := targetFolder.ValidateAccess(f.OwnerID); err != nil {
+			return apperror.NewAppError(err, "media.FolderInfo.MoveTo")
+		}
+	}
 	f.ParentFolderID = destParentFolderID
 	f.UpdatedAt = time.Now().UTC()
+	return nil
 }
 
 type FolderContent struct {

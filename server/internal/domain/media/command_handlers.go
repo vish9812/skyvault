@@ -123,11 +123,9 @@ func (h *CommandHandlers) MoveFile(ctx context.Context, cmd *MoveFileCommand) er
 		}
 	}
 
-	if err := info.ValidateMove(targetFolder); err != nil {
-		return apperror.NewAppError(err, "CommandHandlers.MoveFile:ValidateMove")
+	if err := info.MoveTo(cmd.FolderID, targetFolder); err != nil {
+		return apperror.NewAppError(err, "CommandHandlers.MoveFile:MoveTo")
 	}
-
-	info.MoveTo(cmd.FolderID)
 
 	err = h.repository.UpdateFileInfo(ctx, info)
 	if err != nil {
@@ -234,18 +232,18 @@ func (h *CommandHandlers) MoveFolder(ctx context.Context, cmd *MoveFolderCommand
 		return apperror.NewAppError(apperror.ErrCommonNoAccess, "CommandHandlers.MoveFolder:HasAccess")
 	}
 
+	var targetFolder *FolderInfo
 	if cmd.ParentFolderID != nil {
-		parentFolderInfo, err := h.repository.GetFolderInfo(ctx, *cmd.ParentFolderID)
+		var err error
+		targetFolder, err = h.repository.GetFolderInfo(ctx, *cmd.ParentFolderID)
 		if err != nil {
 			return apperror.NewAppError(err, "CommandHandlers.MoveFolder:GetParentFolderInfo")
 		}
-
-		if !parentFolderInfo.IsAccessibleBy(cmd.OwnerID) {
-			return apperror.NewAppError(apperror.ErrCommonNoAccess, "CommandHandlers.MoveFolder:ParentFolderHasAccess")
-		}
 	}
 
-	info.MoveTo(cmd.ParentFolderID)
+	if err := info.MoveTo(cmd.ParentFolderID, targetFolder); err != nil {
+		return apperror.NewAppError(err, "CommandHandlers.MoveFolder:MoveTo")
+	}
 
 	err = h.repository.UpdateFolderInfo(ctx, info)
 	if err != nil {

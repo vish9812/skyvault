@@ -145,15 +145,6 @@ func (f *FileInfo) ValidateAccess(ownerID int64) error {
 	return nil
 }
 
-func (f *FileInfo) ValidateMove(targetFolder *FolderInfo) error {
-	if targetFolder != nil {
-		if err := targetFolder.ValidateAccess(f.OwnerID); err != nil {
-			return apperror.NewAppError(err, "media.FileInfo.ValidateMove")
-		}
-	}
-	return nil
-}
-
 // App Errors:
 // - ErrCommonInvalidValue
 func (f *FileInfo) Rename(newName string) error {
@@ -166,7 +157,15 @@ func (f *FileInfo) Rename(newName string) error {
 	return nil
 }
 
-func (f *FileInfo) MoveTo(destFolderID *int64) {
+// App Errors:
+// - ErrCommonNoAccess
+func (f *FileInfo) MoveTo(destFolderID *int64, targetFolder *FolderInfo) error {
+	if targetFolder != nil {
+		if err := targetFolder.ValidateAccess(f.OwnerID); err != nil {
+			return apperror.NewAppError(err, "media.FileInfo.MoveTo")
+		}
+	}
 	f.FolderID = destFolderID
 	f.UpdatedAt = time.Now().UTC()
+	return nil
 }
