@@ -19,9 +19,16 @@ type FolderInfo struct {
 
 // App Errors:
 // - ErrCommonInvalidValue
-func NewFolderInfo(ownerID int64, name string, parentFolderID *int64) (*FolderInfo, error) {
+// - ErrCommonNoAccess
+func NewFolderInfo(ownerID int64, name string, parentFolderID *int64, parentFolder *FolderInfo) (*FolderInfo, error) {
 	if name == "" {
 		return nil, apperror.NewAppError(fmt.Errorf("empty folder name: %w", apperror.ErrCommonInvalidValue), "media.NewFolderInfo")
+	}
+
+	if parentFolder != nil {
+		if err := parentFolder.ValidateAccess(ownerID); err != nil {
+			return nil, apperror.NewAppError(err, "media.NewFolderInfo:ValidateParentAccess")
+		}
 	}
 
 	return &FolderInfo{
@@ -62,6 +69,15 @@ func (f *FolderInfo) MoveTo(destParentFolderID *int64, targetFolder *FolderInfo)
 	}
 	f.ParentFolderID = destParentFolderID
 	f.UpdatedAt = time.Now().UTC()
+	return nil
+}
+
+// App Errors:
+// - ErrCommonNoAccess
+func (f *FolderInfo) ValidateRestore(ownerID int64) error {
+	if f.OwnerID != ownerID {
+		return apperror.NewAppError(apperror.ErrCommonNoAccess, "media.FolderInfo.ValidateRestore")
+	}
 	return nil
 }
 

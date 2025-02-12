@@ -150,8 +150,8 @@ func (h *CommandHandlers) RestoreFile(ctx context.Context, cmd *RestoreFileComma
 		return apperror.NewAppError(err, "CommandHandlers.RestoreFile:GetFileInfo")
 	}
 
-	if !info.IsAccessibleBy(cmd.OwnerID) {
-		return apperror.NewAppError(apperror.ErrCommonNoAccess, "CommandHandlers.RestoreFile:HasAccess")
+	if err := info.ValidateRestore(cmd.OwnerID); err != nil {
+		return apperror.NewAppError(err, "CommandHandlers.RestoreFile:ValidateRestore")
 	}
 
 	isParentFolderTrashed, err := h.isParentFolderTrashed(ctx, info.FolderID)
@@ -174,19 +174,16 @@ func (h *CommandHandlers) RestoreFile(ctx context.Context, cmd *RestoreFileComma
 //--------------------------------
 
 func (h *CommandHandlers) CreateFolder(ctx context.Context, cmd *CreateFolderCommand) (*FolderInfo, error) {
-	// check if the owner has access to the folder
+	var parentFolder *FolderInfo
 	if cmd.ParentFolderID != nil {
-		parentFolderInfo, err := h.repository.GetFolderInfo(ctx, *cmd.ParentFolderID)
+		var err error
+		parentFolder, err = h.repository.GetFolderInfo(ctx, *cmd.ParentFolderID)
 		if err != nil {
 			return nil, apperror.NewAppError(err, "CommandHandlers.CreateFolder:GetParentFolderInfo")
 		}
-
-		if !parentFolderInfo.IsAccessibleBy(cmd.OwnerID) {
-			return nil, apperror.NewAppError(apperror.ErrCommonNoAccess, "CommandHandlers.CreateFolder:ParentFolderIsAccessibleBy")
-		}
 	}
 
-	info, err := NewFolderInfo(cmd.OwnerID, cmd.Name, cmd.ParentFolderID)
+	info, err := NewFolderInfo(cmd.OwnerID, cmd.Name, cmd.ParentFolderID, parentFolder)
 	if err != nil {
 		return nil, apperror.NewAppError(err, "CommandHandlers.CreateFolder:NewFolderInfo")
 	}
@@ -268,8 +265,8 @@ func (h *CommandHandlers) RestoreFolder(ctx context.Context, cmd *RestoreFolderC
 		return apperror.NewAppError(err, "CommandHandlers.RestoreFolder:GetFolderInfo")
 	}
 
-	if !info.IsAccessibleBy(cmd.OwnerID) {
-		return apperror.NewAppError(apperror.ErrCommonNoAccess, "CommandHandlers.RestoreFolder:HasAccess")
+	if err := info.ValidateRestore(cmd.OwnerID); err != nil {
+		return apperror.NewAppError(err, "CommandHandlers.RestoreFolder:ValidateRestore")
 	}
 
 	isParentFolderTrashed, err := h.isParentFolderTrashed(ctx, info.ParentFolderID)
