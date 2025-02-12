@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	"database/sql"
+	"slices"
 	"time"
 
 	"skyvault/internal/domain/media"
@@ -400,4 +401,21 @@ func (r *MediaRepository) getNestedFoldersCTE(ownerID int64, folderIDs []int64, 
 			),
 		),
 	)
+}
+
+func (r *MediaRepository) GetDescendantFolderIDs(ctx context.Context, ownerID, folderID int64) ([]int64, error) {
+	nestedFoldersCTE := r.getNestedFoldersCTE(ownerID, []int64{folderID}, false)
+
+	stmt := SELECT(FolderInfo.ID.From(nestedFoldersCTE)).
+		FROM(nestedFoldersCTE)
+
+	var folderIDs []int64
+	err := stmt.QueryContext(ctx, r.repository.dbTx, &folderIDs)
+	if err != nil {
+		return nil, apperror.NewAppError(err, "repository.GetDescendantFolderIDs:stmt.QueryContext")
+	}
+
+	return slices.DeleteFunc(folderIDs, func(id int64) bool {
+		return id == folderID
+	}), nil
 }

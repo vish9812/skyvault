@@ -37,7 +37,7 @@ type FileInfo struct {
 	Size          int64 // bytes
 	Extension     *string
 	MimeType      string
-	Category      string
+	Category      Category
 	Preview       []byte
 	CreatedAt     time.Time
 	UpdatedAt     time.Time
@@ -52,10 +52,10 @@ func NewFileInfo(config FileConfig, ownerID int64, folderID *int64, name string,
 		return nil, apperror.NewAppError(apperror.ErrCommonInvalidValue, "media.NewFileInfo:ownerID").WithMetadata("owner_id", ownerID)
 	}
 
-	name = utils.CleanFileName(name)
+	cleanedName := utils.CleanFileName(name)
 
-	if name == "" {
-		return nil, apperror.NewAppError(apperror.ErrCommonInvalidValue, "media.NewFileInfo:name").WithMetadata("cleaned_name", name)
+	if cleanedName == "" {
+		return nil, apperror.NewAppError(apperror.ErrCommonInvalidValue, "media.NewFileInfo:name").WithMetadata("file_name", name)
 	}
 
 	if size < 0 {
@@ -73,14 +73,14 @@ func NewFileInfo(config FileConfig, ownerID int64, folderID *int64, name string,
 	generatedName := utils.UUID()
 
 	var ext *string
-	if e := filepath.Ext(name); e != "" {
+	if e := filepath.Ext(cleanedName); e != "" {
 		ext = &e
 	}
 
 	return &FileInfo{
 		OwnerID:       ownerID,
 		FolderID:      folderID,
-		Name:          name,
+		Name:          cleanedName,
 		GeneratedName: generatedName,
 		Size:          size,
 		Extension:     ext,
@@ -91,8 +91,10 @@ func NewFileInfo(config FileConfig, ownerID int64, folderID *int64, name string,
 	}, nil
 }
 
-func getCategory(mimeType string) string {
-	var category string
+type Category string
+
+func getCategory(mimeType string) Category {
+	var category Category
 	baseMime := strings.Split(mimeType, "/")[0]
 	switch baseMime {
 	case "text":
@@ -129,25 +131,22 @@ func (f *FileInfo) WithPreview(file io.ReadSeeker) (*FileInfo, error) {
 	return f, nil
 }
 
-// App Errors:
-// - ErrCommonNoAccess
-func (f *FileInfo) Restore(ownerID int64, isParentFolderTrashed bool) error {
-	if f.OwnerID != ownerID {
-		return apperror.NewAppError(apperror.ErrCommonNoAccess, "media.FileInfo.Restore")
-	}
-
-	if isParentFolderTrashed {
+// Restore to original parent folder if it's not trashed.
+// Otherwise, restore to root folder.
+func (f *FileInfo) Restore(parentFolderIsTrashed bool) {
+	if parentFolderIsTrashed {
 		f.FolderID = nil
 	}
 
 	f.TrashedAt = nil
 	f.UpdatedAt = time.Now().UTC()
-	return nil
 }
 
+// App Errors:
+// - ErrCommonNoAccess
 func (f *FileInfo) ValidateAccess(ownerID int64) error {
 	if f.OwnerID != ownerID {
-		return apperror.NewAppError(apperror.ErrCommonNoAccess, "media.FileInfo.ValidateAccess")
+		return apperror.NewAppError(apperror.ErrCommonNoAccess, "media.FileInfo.ValidateAccess").WithMetadata("owner_id", ownerID).WithMetadata("file_owner_id", f.OwnerID)
 	}
 	return nil
 }
@@ -155,24 +154,37 @@ func (f *FileInfo) ValidateAccess(ownerID int64) error {
 // App Errors:
 // - ErrCommonInvalidValue
 func (f *FileInfo) Rename(newName string) error {
-	newName = utils.CleanFileName(newName)
-	if newName == "" {
-		return apperror.NewAppError(apperror.ErrCommonInvalidValue, "media.FileInfo.Rename").WithMetadata("cleaned_name", newName)
+	cleanedName := utils.CleanFileName(newName)
+	if cleanedName == "" {
+		return apperror.NewAppError(apperror.ErrCommonInvalidValue, "media.FileInfo.Rename").WithMetadata("file_name", newName)
 	}
-	f.Name = newName
+	f.Name = cleanedName
 	f.UpdatedAt = time.Now().UTC()
 	return nil
 }
 
 // App Errors:
 // - ErrCommonNoAccess
-func (f *FileInfo) MoveTo(destFolderID *int64, targetFolder *FolderInfo) error {
-	if targetFolder != nil {
-		if err := targetFolder.ValidateAccess(f.OwnerID); err != nil {
+// - ErrCommonInvalidValue
+func (f *FileInfo) MoveTo(destFolderInfo *FolderInfo) error {
+	if destFolderInfo != nil {
+		if err := destFolderInfo.ValidateAccess(f.OwnerID); err != nil {
 			return apperror.NewAppError(err, "media.FileInfo.MoveTo")
 		}
+
+		if f.FolderID != nil && *f.FolderID == destFolderInfo.ID {
+			return apperror.NewAppError(apperror.ErrCommonInvalidValue, "media.FileInfo.MoveTo:SameFolder")
+		}
+
+		f.FolderID = &destFolderInfo.ID
+	} else {
+		if f.FolderID == nil {
+			return apperror.NewAppError(apperror.ErrCommonInvalidValue, "media.FileInfo.MoveTo:SameRootFolder")
+		}
+
+		f.FolderID = nil
 	}
-	f.FolderID = destFolderID
+
 	f.UpdatedAt = time.Now().UTC()
 	return nil
 }

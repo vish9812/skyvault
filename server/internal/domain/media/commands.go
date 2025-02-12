@@ -61,12 +61,15 @@ type Commands interface {
 	// - ErrCommonNoAccess
 	MoveFolder(ctx context.Context, cmd *MoveFolderCommand) error
 
+	// TrashFolders trashes the folders and all its sub-folders and files.
+	//
 	// App Errors:
 	// - ErrCommonNoData
 	TrashFolders(ctx context.Context, cmd *TrashFoldersCommand) error
 
 	// RestoreFolder restores to original parent folder if it still exists.
 	// Otherwise, it restores to the root folder.
+	// It recursively restores all sub-folders and files.
 	//
 	// App Errors:
 	// - ErrCommonNoData

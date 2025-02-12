@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"skyvault/pkg/apperror"
 	"skyvault/pkg/utils"
+	"slices"
 	"time"
 )
 
@@ -20,29 +21,35 @@ type FolderInfo struct {
 // App Errors:
 // - ErrCommonInvalidValue
 // - ErrCommonNoAccess
-func NewFolderInfo(ownerID int64, name string, parentFolderID *int64, parentFolder *FolderInfo) (*FolderInfo, error) {
-	if name == "" {
-		return nil, apperror.NewAppError(fmt.Errorf("empty folder name: %w", apperror.ErrCommonInvalidValue), "media.NewFolderInfo")
+func NewFolderInfo(ownerID int64, name string, parentFolder *FolderInfo) (*FolderInfo, error) {
+	cleanedName := utils.CleanFileName(name)
+
+	if cleanedName == "" {
+		return nil, apperror.NewAppError(apperror.ErrCommonInvalidValue, "media.NewFolderInfo:name")
 	}
 
+	var parentFolderID *int64
 	if parentFolder != nil {
 		if err := parentFolder.ValidateAccess(ownerID); err != nil {
 			return nil, apperror.NewAppError(err, "media.NewFolderInfo:ValidateParentAccess")
 		}
+		parentFolderID = &parentFolder.ID
 	}
 
 	return &FolderInfo{
 		OwnerID:        ownerID,
-		Name:           name,
+		Name:           cleanedName,
 		ParentFolderID: parentFolderID,
 		CreatedAt:      time.Now().UTC(),
 		UpdatedAt:      time.Now().UTC(),
 	}, nil
 }
 
+// App Errors:
+// - ErrCommonNoAccess
 func (f *FolderInfo) ValidateAccess(ownerID int64) error {
 	if f.OwnerID != ownerID {
-		return apperror.NewAppError(apperror.ErrCommonNoAccess, "media.FolderInfo.ValidateAccess")
+		return apperror.NewAppError(apperror.ErrCommonNoAccess, "media.FolderInfo.ValidateAccess").WithMetadata("owner_id", ownerID).WithMetadata("folder_owner_id", f.OwnerID)
 	}
 	return nil
 }
@@ -60,18 +67,38 @@ func (f *FolderInfo) Rename(newName string) error {
 }
 
 // App Errors:
-// - ErrCommonNoAccess 
-func (f *FolderInfo) MoveTo(destParentFolderID *int64, targetFolder *FolderInfo) error {
-	if targetFolder != nil {
-		if err := targetFolder.ValidateAccess(f.OwnerID); err != nil {
+// - ErrCommonNoAccess
+// - ErrCommonInvalidValue
+func (f *FolderInfo) MoveTo(destFolderInfo *FolderInfo, descendantFolderIDs []int64) error {
+	if destFolderInfo != nil {
+		if err := destFolderInfo.ValidateAccess(f.OwnerID); err != nil {
 			return apperror.NewAppError(err, "media.FolderInfo.MoveTo")
 		}
+
+		if f.ID == destFolderInfo.ID {
+			return apperror.NewAppError(apperror.ErrCommonInvalidValue, "media.FolderInfo.MoveTo:itself")
+		}
+
+		if f.ParentFolderID != nil && *f.ParentFolderID == destFolderInfo.ID {
+			return apperror.NewAppError(apperror.ErrCommonInvalidValue, "media.FolderInfo.MoveTo:sameParent")
+		}
+
+		if slices.Contains(descendantFolderIDs, destFolderInfo.ID) {
+			return apperror.NewAppError(apperror.ErrCommonInvalidValue, "media.FolderInfo.MoveTo:descendant").WithMetadata("descendant_folder_ids", descendantFolderIDs)
+		}
+
+		f.ParentFolderID = &destFolderInfo.ID
+	} else {
+		if f.ParentFolderID == nil {
+			return apperror.NewAppError(apperror.ErrCommonInvalidValue, "media.FolderInfo.MoveTo:SameRootFolder")
+		}
+
+		f.ParentFolderID = nil
 	}
-	f.ParentFolderID = destParentFolderID
+
 	f.UpdatedAt = time.Now().UTC()
 	return nil
 }
-
 
 type FolderContent struct {
 	FolderInfos []*FolderInfo

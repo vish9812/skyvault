@@ -80,5 +80,11 @@ type Repository interface {
 	//
 	// App Errors:
 	// - ErrCommonNoData
-	RestoreFolderInfo(ctx context.Context, ownerID int64, folderID int64) error
+	RestoreFolderInfo(ctx context.Context, ownerID, folderID int64) error
+
+	// GetDescendantFolderIDs returns all descendant folder IDs of the given folder ID, excluding the folder itself.
+	//
+	// App Errors:
+	// - ErrCommonNoData
+	GetDescendantFolderIDs(ctx context.Context, ownerID, folderID int64) ([]int64, error)
 }
