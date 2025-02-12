@@ -131,20 +131,18 @@ func (f *FileInfo) WithPreview(file io.ReadSeeker) (*FileInfo, error) {
 
 // App Errors:
 // - ErrCommonNoAccess
-func (f *FileInfo) ValidateRestore(ownerID int64) error {
+func (f *FileInfo) Restore(ownerID int64, isParentFolderTrashed bool) error {
 	if f.OwnerID != ownerID {
-		return apperror.NewAppError(apperror.ErrCommonNoAccess, "media.FileInfo.ValidateRestore")
+		return apperror.NewAppError(apperror.ErrCommonNoAccess, "media.FileInfo.Restore")
 	}
-	return nil
-}
 
-func (f *FileInfo) Restore(isParentFolderTrashed bool) {
 	if isParentFolderTrashed {
 		f.FolderID = nil
 	}
 
 	f.TrashedAt = nil
 	f.UpdatedAt = time.Now().UTC()
+	return nil
 }
 
 func (f *FileInfo) ValidateAccess(ownerID int64) error {

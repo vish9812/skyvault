@@ -150,16 +150,14 @@ func (h *CommandHandlers) RestoreFile(ctx context.Context, cmd *RestoreFileComma
 		return apperror.NewAppError(err, "CommandHandlers.RestoreFile:GetFileInfo")
 	}
 
-	if err := info.ValidateRestore(cmd.OwnerID); err != nil {
-		return apperror.NewAppError(err, "CommandHandlers.RestoreFile:ValidateRestore")
-	}
-
 	isParentFolderTrashed, err := h.isParentFolderTrashed(ctx, info.FolderID)
 	if err != nil {
 		return apperror.NewAppError(err, "CommandHandlers.RestoreFile:IsParentFolderTrashed")
 	}
 
-	info.Restore(isParentFolderTrashed)
+	if err := info.Restore(cmd.OwnerID, isParentFolderTrashed); err != nil {
+		return apperror.NewAppError(err, "CommandHandlers.RestoreFile:Restore")
+	}
 
 	err = h.repository.UpdateFileInfo(ctx, info)
 	if err != nil {
@@ -263,10 +261,6 @@ func (h *CommandHandlers) RestoreFolder(ctx context.Context, cmd *RestoreFolderC
 	info, err := h.repository.GetFolderInfoTrashed(ctx, cmd.FolderID)
 	if err != nil {
 		return apperror.NewAppError(err, "CommandHandlers.RestoreFolder:GetFolderInfo")
-	}
-
-	if err := info.ValidateRestore(cmd.OwnerID); err != nil {
-		return apperror.NewAppError(err, "CommandHandlers.RestoreFolder:ValidateRestore")
 	}
 
 	isParentFolderTrashed, err := h.isParentFolderTrashed(ctx, info.ParentFolderID)

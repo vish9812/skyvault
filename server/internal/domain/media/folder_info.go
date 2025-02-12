@@ -72,14 +72,6 @@ func (f *FolderInfo) MoveTo(destParentFolderID *int64, targetFolder *FolderInfo)
 	return nil
 }
 
-// App Errors:
-// - ErrCommonNoAccess
-func (f *FolderInfo) ValidateRestore(ownerID int64) error {
-	if f.OwnerID != ownerID {
-		return apperror.NewAppError(apperror.ErrCommonNoAccess, "media.FolderInfo.ValidateRestore")
-	}
-	return nil
-}
 
 type FolderContent struct {
 	FolderInfos []*FolderInfo
