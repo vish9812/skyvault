@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"net/http"
 	"net/http/httptest"
 	"os"
 	"path/filepath"
@@ -11,6 +12,7 @@ import (
 	"skyvault/internal/domain/auth"
 	"skyvault/internal/domain/profile"
 	"skyvault/internal/infrastructure"
+	"skyvault/internal/workflows"
 	"skyvault/pkg/appconfig"
 	"skyvault/pkg/applog"
 	"skyvault/pkg/utils"
@@ -74,7 +76,7 @@ func setupTestEnv(t *testing.T) *testEnv {
 			DataDir: tempDir,
 		},
 		Media: appconfig.MediaConfig{
-			MaxSizeMB: 10,
+			MaxSizeMB: 1,
 		},
 		Log: appconfig.LogConfig{
 			Level: "debug",
@@ -89,8 +91,7 @@ func setupTestEnv(t *testing.T) *testEnv {
 	infra := infrastructure.NewInfrastructure(app)
 
 	// Initialize API server
-	apiServer := api.NewAPI(app)
-	apiServer.InitRoutes(infra)
+	apiServer := api.NewAPI(app).InitRoutes(infra)
 
 	// Create test HTTP server
 	server := httptest.NewServer(apiServer.Router)
@@ -127,46 +128,47 @@ func setupTestEnv(t *testing.T) *testEnv {
 	}
 }
 
+// executeRequest, creates a new ResponseRecorder
+// then executes the request by calling ServeHTTP in the router
+// after which the handler writes the response to the response recorder
+// which we can then inspect.
+// func executeRequest(req *http.Request, apiServer *api.API) *httptest.ResponseRecorder {
+// 	rr := httptest.NewRecorder()
+// 	apiServer.Router.ServeHTTP(rr, req)
+
+// 	return rr
+// }
+
 // Helper to create a test user and get auth token
-func createTestUser(t *testing.T, env *testEnv) (profile.Profile, string) {
+func createTestUser(t *testing.T, env *testEnv) (*profile.Profile, string) {
 	ctx := context.Background()
 
-	// Create profile
-	pro, err := profile.NewProfile(utils.RandomEmail(), utils.RandomName())
+	authCommands := auth.NewCommandHandlers(env.infra.Repository.Auth, env.infra.Auth)
+	profileCommands := profile.NewCommandHandlers(env.infra.Repository.Profile)
+	signUpFlow := workflows.NewSignUpFlow(env.app, authCommands, env.infra.Repository.Auth, profileCommands, env.infra.Repository.Profile)
+
+	// Create test user
+	req := &workflows.SignUpReq{
+		Email:    utils.RandomEmail(),
+		FullName: utils.RandomName(),
+		Password: utils.Ptr(utils.RandomName()),
+		Provider: auth.ProviderEmail,
+	}
+	req.ProviderUserID = req.Email
+
+	res, err := signUpFlow.Run(ctx, req)
 	if err != nil {
-		t.Fatalf("failed to create profile: %v", err)
+		t.Fatalf("failed to create test user: %v", err)
 	}
 
-	pro, err = env.infra.Repository.Profile.Create(ctx, pro)
-	if err != nil {
-		t.Fatalf("failed to save profile: %v", err)
-	}
-
-	// Create auth
-	au, err := auth.NewAuth(pro.ID, auth.ProviderEmail, pro.Email, utils.RandomStringPtr(12))
-	if err != nil {
-		t.Fatalf("failed to create auth: %v", err)
-	}
-
-	_, err = env.infra.Repository.Auth.Create(ctx, au)
-	if err != nil {
-		t.Fatalf("failed to save auth: %v", err)
-	}
-
-	// Generate token
-	token, err := env.infra.Auth.GenerateToken(ctx, pro.ID, pro.Email)
-	if err != nil {
-		t.Fatalf("failed to generate token: %v", err)
-	}
-
-	return *pro, token
+	return res.Profile, res.Token
 }
 
 // Helper to create test file in testdata
-func createTestFile(t *testing.T, name string, size int64) string {
+func createTestFile(t *testing.T, env *testEnv, name string, size int64) string {
 	// Create testdata directory if it doesn't exist
-	testdataDir := filepath.Join("testdata")
-	if err := os.MkdirAll(testdataDir, 0755); err != nil {
+	testdataDir := filepath.Join(env.app.Config.Server.DataDir, "testdata")
+	if err := os.MkdirAll(testdataDir, 0750); err != nil {
 		t.Fatalf("failed to create testdata directory: %v", err)
 	}
 

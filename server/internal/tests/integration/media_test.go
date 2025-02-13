@@ -8,8 +8,9 @@ import (
 	"mime/multipart"
 	"net/http"
 	"os"
-	"path/filepath"
-	"skyvault/internal/api/internal/dtos"
+	"skyvault/internal/api/helper/dtos"
+	"skyvault/internal/domain/media"
+	"skyvault/pkg/utils"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -20,14 +21,15 @@ func TestUploadFile(t *testing.T) {
 	_, token := createTestUser(t, env)
 
 	// Create test file
-	fileName := "test.txt"
-	fileSize := int64(1024) // 1KB
-	filePath := createTestFile(t, fileName, fileSize)
+	fileName := fmt.Sprintf("test-%s.txt", utils.RandomName())
+	fileSize := int64(media.BytesPerKB) // 1 KB
+	filePath := createTestFile(t, env, fileName, fileSize)
 
 	t.Run("successful upload", func(t *testing.T) {
 		// Create multipart form
 		body := &bytes.Buffer{}
 		writer := multipart.NewWriter(body)
+		defer writer.Close()
 
 		file, err := os.Open(filePath)
 		require.NoError(t, err)
@@ -38,23 +40,22 @@ func TestUploadFile(t *testing.T) {
 
 		_, err = io.Copy(part, file)
 		require.NoError(t, err)
-		writer.Close()
 
 		// Make request
-		req, err := http.NewRequest(http.MethodPost, fmt.Sprintf("%s/api/v1/media/folders/0/files", env.server.URL), body)
+		req, err := http.NewRequest(http.MethodPost, "/api/v1/media/folders/0/files", body)
 		require.NoError(t, err)
 
 		req.Header.Set("Content-Type", writer.FormDataContentType())
 		req.Header.Set("Authorization", "Bearer "+token)
 
-		resp, err := http.DefaultClient.Do(req)
+		// resp, err := http.DefaultClient.Do(req)
+		// res := executeRequest(req, env.api)
 		require.NoError(t, err)
-		defer resp.Body.Close()
 
-		require.Equal(t, http.StatusCreated, resp.StatusCode)
+		require.Equal(t, http.StatusCreated, res.Code)
 
 		var fileInfo dtos.GetFileInfoRes
-		err = json.NewDecoder(resp.Body).Decode(&fileInfo)
+		err = json.NewDecoder(res.Body).Decode(&fileInfo)
 		require.NoError(t, err)
 		require.Equal(t, fileName, fileInfo.Name)
 		require.Equal(t, fileSize, fileInfo.Size)
@@ -62,9 +63,9 @@ func TestUploadFile(t *testing.T) {
 
 	t.Run("file too large", func(t *testing.T) {
 		// Create a file larger than max size
-		largeFileName := "large.txt"
-		largeFileSize := int64((env.app.Config.Media.MaxSizeMB + 1) * 1024 * 1024)
-		largeFilePath := createTestFile(t, largeFileName, largeFileSize)
+		largeFileName := fmt.Sprintf("large-%s.txt", utils.RandomName())
+		largeFileSize := int64((env.app.Config.Media.MaxSizeMB + 1) * media.BytesPerMB)
+		largeFilePath := createTestFile(t, env, largeFileName, largeFileSize)
 
 		body := &bytes.Buffer{}
 		writer := multipart.NewWriter(body)
@@ -80,7 +81,8 @@ func TestUploadFile(t *testing.T) {
 		require.NoError(t, err)
 		writer.Close()
 
-		req, err := http.NewRequest(http.MethodPost, fmt.Sprintf("%s/api/v1/media/folders/0/files", env.server.URL), body)
+		// req, err := http.NewRequest(http.MethodPost, fmt.Sprintf("%s/api/v1/media/folders/0/files", env.server.URL), body)
+		req, err := http.NewRequest(http.MethodPost, "/api/v1/media/folders/0/files", body)
 		require.NoError(t, err)
 
 		req.Header.Set("Content-Type", writer.FormDataContentType())
