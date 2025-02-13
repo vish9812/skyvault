@@ -2,11 +2,13 @@ package integration
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
 	"mime/multipart"
 	"net/http"
+	"net/http/httptest"
 	"os"
 	"skyvault/internal/api/helper/dtos"
 	"skyvault/internal/domain/media"
@@ -17,8 +19,11 @@ import (
 )
 
 func TestUploadFile(t *testing.T) {
+	t.Parallel()
 	env := setupTestEnv(t)
 	_, token := createTestUser(t, env)
+	ctx := context.Background()
+	ctx = enhancedReqContext(t, ctx, env, token)
 
 	// Create test file
 	fileName := fmt.Sprintf("test-%s.txt", utils.RandomName())
@@ -42,13 +47,10 @@ func TestUploadFile(t *testing.T) {
 		require.NoError(t, err)
 
 		// Make request
-		req, err := http.NewRequest(http.MethodPost, "/api/v1/media/folders/0/files", body)
+		req, err := http.NewRequestWithContext(ctx, http.MethodPost, "/api/v1/media/folders/0/files", body)
 		require.NoError(t, err)
-
-		req.Header.Set("Content-Type", writer.FormDataContentType())
-		req.Header.Set("Authorization", "Bearer "+token)
-
 		w := httptest.NewRecorder()
+
 		env.mediaAPI.UploadFile(w, req)
 		require.Equal(t, http.StatusCreated, w.Code)
 
@@ -92,6 +94,7 @@ func TestUploadFile(t *testing.T) {
 }
 
 func TestCreateFolder(t *testing.T) {
+	t.Parallel()
 	env := setupTestEnv(t)
 	_, token := createTestUser(t, env)
 
