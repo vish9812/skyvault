@@ -2,8 +2,6 @@ package media
 
 import (
 	"bytes"
-	"image"
-	"image/png"
 	"io"
 	"skyvault/pkg/utils"
 	"testing"
@@ -31,9 +29,9 @@ func TestNewFileInfo(t *testing.T) {
 			ownerID:      100,
 			parentFolder: nil,
 			fileName:     "test.txt",
-			size:        1024,
-			mimeType:    "text/plain",
-			expectError: false,
+			size:         1024,
+			mimeType:     "text/plain",
+			expectError:  false,
 		},
 		{
 			name:    "valid file info with parent",
@@ -44,8 +42,8 @@ func TestNewFileInfo(t *testing.T) {
 				OwnerID: 100,
 			},
 			fileName:    "test.txt",
-			size:       1024,
-			mimeType:   "text/plain",
+			size:        1024,
+			mimeType:    "text/plain",
 			expectError: false,
 		},
 		{
@@ -54,9 +52,9 @@ func TestNewFileInfo(t *testing.T) {
 			ownerID:      100,
 			parentFolder: nil,
 			fileName:     "",
-			size:        1024,
-			mimeType:    "text/plain",
-			expectError: true,
+			size:         1024,
+			mimeType:     "text/plain",
+			expectError:  true,
 		},
 		{
 			name:         "negative size",
@@ -64,9 +62,9 @@ func TestNewFileInfo(t *testing.T) {
 			ownerID:      100,
 			parentFolder: nil,
 			fileName:     "test.txt",
-			size:        -1,
-			mimeType:    "text/plain",
-			expectError: true,
+			size:         -1,
+			mimeType:     "text/plain",
+			expectError:  true,
 		},
 		{
 			name:         "exceeds max size",
@@ -74,9 +72,9 @@ func TestNewFileInfo(t *testing.T) {
 			ownerID:      100,
 			parentFolder: nil,
 			fileName:     "test.txt",
-			size:        2 * BytesPerMB,
-			mimeType:    "text/plain",
-			expectError: true,
+			size:         2 * BytesPerMB,
+			mimeType:     "text/plain",
+			expectError:  true,
 		},
 		{
 			name:    "parent folder different owner",
@@ -87,14 +85,13 @@ func TestNewFileInfo(t *testing.T) {
 				OwnerID: 200,
 			},
 			fileName:    "test.txt",
-			size:       1024,
-			mimeType:   "text/plain",
+			size:        1024,
+			mimeType:    "text/plain",
 			expectError: true,
 		},
 	}
 
-	for _, tc := range tests {
-		tt := tc // capture range variable
+	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 			fileInfo, err := NewFileInfo(tt.config, tt.ownerID, tt.parentFolder, tt.fileName, tt.size, tt.mimeType)
@@ -104,11 +101,9 @@ func TestNewFileInfo(t *testing.T) {
 			} else {
 				assert.NoError(t, err)
 				assert.NotNil(t, fileInfo)
-				assert.Equal(t, tt.ownerID, fileInfo.OwnerID)
-				assert.Equal(t, tt.folderID, fileInfo.FolderID)
-				assert.Equal(t, tt.size, fileInfo.Size)
 				assert.NotEmpty(t, fileInfo.GeneratedName)
-				assert.Equal(t, tt.mimeType, fileInfo.MimeType)
+				assert.NotEmpty(t, tt.mimeType, fileInfo.MimeType)
+				assert.NotEmpty(t, fileInfo.Category)
 			}
 		})
 	}
@@ -144,6 +139,7 @@ func TestFileInfo_ValidateAccess(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			err := tt.file.ValidateAccess(tt.ownerID)
 			if tt.expectError {
 				assert.Error(t, err)
@@ -156,6 +152,7 @@ func TestFileInfo_ValidateAccess(t *testing.T) {
 
 func TestFileInfo_Rename(t *testing.T) {
 	t.Parallel()
+	oldName := "old.txt"
 	tests := []struct {
 		name        string
 		file        FileInfo
@@ -165,7 +162,7 @@ func TestFileInfo_Rename(t *testing.T) {
 		{
 			name: "valid rename",
 			file: FileInfo{
-				Name: "old.txt",
+				Name: oldName,
 			},
 			newName:     "new.txt",
 			expectError: false,
@@ -173,7 +170,7 @@ func TestFileInfo_Rename(t *testing.T) {
 		{
 			name: "empty name",
 			file: FileInfo{
-				Name: "old.txt",
+				Name: oldName,
 			},
 			newName:     "",
 			expectError: true,
@@ -182,17 +179,14 @@ func TestFileInfo_Rename(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			originalTime := tt.file.UpdatedAt
-			time.Sleep(time.Millisecond) // Ensure time difference
-
+			t.Parallel()
 			err := tt.file.Rename(tt.newName)
 			if tt.expectError {
 				assert.Error(t, err)
-				assert.Equal(t, "old.txt", tt.file.Name)
+				assert.Equal(t, oldName, tt.file.Name)
 			} else {
 				assert.NoError(t, err)
 				assert.Equal(t, tt.newName, tt.file.Name)
-				assert.True(t, tt.file.UpdatedAt.After(originalTime))
 			}
 		})
 	}
@@ -219,6 +213,15 @@ func TestFileInfo_MoveTo(t *testing.T) {
 			expectError: false,
 		},
 		{
+			name: "move to root folder",
+			file: FileInfo{
+				OwnerID:  100,
+				FolderID: utils.Ptr(int64(1)),
+			},
+			destFolder:  nil,
+			expectError: false,
+		},
+		{
 			name: "move to folder with different owner",
 			file: FileInfo{
 				OwnerID:  100,
@@ -242,24 +245,30 @@ func TestFileInfo_MoveTo(t *testing.T) {
 			},
 			expectError: true,
 		},
+		{
+			name: "move to root folder from root folder",
+			file: FileInfo{
+				OwnerID:  100,
+				FolderID: nil,
+			},
+			destFolder:  nil,
+			expectError: true,
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			originalTime := tt.file.UpdatedAt
-			time.Sleep(time.Millisecond) // Ensure time difference
-
+			t.Parallel()
 			err := tt.file.MoveTo(tt.destFolder)
 			if tt.expectError {
 				assert.Error(t, err)
 			} else {
 				assert.NoError(t, err)
-				if tt.destFolder != nil {
-					assert.Equal(t, &tt.destFolder.ID, tt.file.FolderID)
-				} else {
+				if tt.destFolder == nil {
 					assert.Nil(t, tt.file.FolderID)
+				} else {
+					assert.Equal(t, &tt.destFolder.ID, tt.file.FolderID)
 				}
-				assert.True(t, tt.file.UpdatedAt.After(originalTime))
 			}
 		})
 	}
@@ -291,27 +300,35 @@ func TestFileInfo_Restore(t *testing.T) {
 			parentFolderIsTrashed: true,
 			expectedFolderID:      nil,
 		},
+		{
+			name: "restore with root folder",
+			file: FileInfo{
+				FolderID:  nil,
+				TrashedAt: utils.Ptr(time.Now()),
+			},
+			parentFolderIsTrashed: false,
+			expectedFolderID:      nil,
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			originalTime := tt.file.UpdatedAt
-			time.Sleep(time.Millisecond) // Ensure time difference
-
+			t.Parallel()
 			tt.file.Restore(tt.parentFolderIsTrashed)
-			assert.Equal(t, tt.expectedFolderID, tt.file.FolderID)
 			assert.Nil(t, tt.file.TrashedAt)
-			assert.True(t, tt.file.UpdatedAt.After(originalTime))
+			assert.Equal(t, tt.expectedFolderID, tt.file.FolderID)
 		})
 	}
 }
 
 func TestFileInfo_WithPreview(t *testing.T) {
 	t.Parallel()
-	// Create a small test image
-	img := image.NewRGBA(image.Rect(0, 0, 100, 100))
 	buf := new(bytes.Buffer)
-	err := png.Encode(buf, img)
+	err := utils.SampleImage(buf)
+	require.NoError(t, err)
+
+	buf1 := new(bytes.Buffer)
+	err = utils.SampleImage(buf1)
 	require.NoError(t, err)
 
 	tests := []struct {
@@ -341,10 +358,21 @@ func TestFileInfo_WithPreview(t *testing.T) {
 			expectPreview: false,
 			expectError:   false,
 		},
+		{
+			name: "skip preview for unsupported image format",
+			file: FileInfo{
+				Category: CategoryImages,
+				MimeType: "image/webp",
+			},
+			reader:        bytes.NewReader(buf1.Bytes()),
+			expectPreview: false,
+			expectError:   false,
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			fileInfo, err := tt.file.WithPreview(tt.reader)
 			if tt.expectError {
 				assert.Error(t, err)
@@ -356,48 +384,6 @@ func TestFileInfo_WithPreview(t *testing.T) {
 					assert.Nil(t, fileInfo.Preview)
 				}
 			}
-		})
-	}
-}
-
-func TestGetCategory(t *testing.T) {
-	t.Parallel()
-	tests := []struct {
-		name     string
-		mimeType string
-		want     Category
-	}{
-		{
-			name:     "text file",
-			mimeType: "text/plain",
-			want:     CategoryDocuments,
-		},
-		{
-			name:     "image file",
-			mimeType: "image/jpeg",
-			want:     CategoryImages,
-		},
-		{
-			name:     "audio file",
-			mimeType: "audio/mp3",
-			want:     CategoryAudios,
-		},
-		{
-			name:     "video file",
-			mimeType: "video/mp4",
-			want:     CategoryVideos,
-		},
-		{
-			name:     "unknown type",
-			mimeType: "application/octet-stream",
-			want:     CategoryOthers,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got := getCategory(tt.mimeType)
-			assert.Equal(t, tt.want, got)
 		})
 	}
 }

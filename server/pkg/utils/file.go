@@ -76,3 +76,10 @@ func ScaleDownImageTo(format string, reader io.ReadSeeker, maxWidth, maxHeight i
 
 	return buf.Bytes(), nil
 }
+
+// SampleImage generates a small test image
+func SampleImage(buf *bytes.Buffer) error {
+	img := image.NewRGBA(image.Rect(0, 0, 100, 100))
+	err := png.Encode(buf, img)
+	return err
+}

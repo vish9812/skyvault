@@ -36,12 +36,13 @@ func NewFolderInfo(ownerID int64, name string, parentFolder *FolderInfo) (*Folde
 		parentFolderID = &parentFolder.ID
 	}
 
+	now := time.Now().UTC()
 	return &FolderInfo{
 		OwnerID:        ownerID,
 		Name:           cleanedName,
 		ParentFolderID: parentFolderID,
-		CreatedAt:      time.Now().UTC(),
-		UpdatedAt:      time.Now().UTC(),
+		CreatedAt:      now,
+		UpdatedAt:      now,
 	}, nil
 }
 

@@ -25,16 +25,12 @@ func NewCommandHandlers(app *appconfig.App, repository Repository, storage Stora
 //--------------------------------
 
 func (h *CommandHandlers) UploadFile(ctx context.Context, cmd *UploadFileCommand) (*FileInfo, error) {
-	var targetFolderInfo *FolderInfo
+	var parentFolderInfo *FolderInfo
 	if cmd.FolderID != nil {
 		var err error
-		targetFolderInfo, err = h.repository.GetFolderInfo(ctx, *cmd.FolderID)
+		parentFolderInfo, err = h.repository.GetFolderInfo(ctx, *cmd.FolderID)
 		if err != nil {
 			return nil, apperror.NewAppError(err, "media.CommandHandlers.UploadFile:GetFolderInfo")
-		}
-
-		if err := targetFolderInfo.ValidateAccess(cmd.OwnerID); err != nil {
-			return nil, apperror.NewAppError(err, "media.CommandHandlers.UploadFile:ValidateAccess")
 		}
 	}
 
@@ -42,7 +38,7 @@ func (h *CommandHandlers) UploadFile(ctx context.Context, cmd *UploadFileCommand
 		MaxSizeMB: h.app.Config.Media.MaxSizeMB,
 	}
 
-	info, err := NewFileInfo(fileConfig, cmd.OwnerID, cmd.FolderID, cmd.Name, cmd.Size, cmd.MimeType)
+	info, err := NewFileInfo(fileConfig, cmd.OwnerID, parentFolderInfo, cmd.Name, cmd.Size, cmd.MimeType)
 	if err != nil {
 		return nil, apperror.NewAppError(err, "media.CommandHandlers.UploadFile:NewFileInfo")
 	}
@@ -54,7 +50,7 @@ func (h *CommandHandlers) UploadFile(ctx context.Context, cmd *UploadFileCommand
 	}
 	defer tx.Rollback()
 
-	// Saving to storage first to validate the file size
+	// Saving to storage first to validate the file size once again, when actually reading and writing the file
 	err = h.storage.SaveFile(ctx, cmd.File, info.GeneratedName, cmd.OwnerID)
 	if err != nil {
 		return nil, apperror.NewAppError(err, "media.CommandHandlers.UploadFile:SaveFile").WithMetadata("generated_name", info.GeneratedName)

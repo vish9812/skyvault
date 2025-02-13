@@ -45,11 +45,16 @@ type FileInfo struct {
 }
 
 // App Errors:
+// - ErrCommonNoAccess
 // - ErrCommonInvalidValue
 // - ErrMediaFileSizeLimitExceeded
-func NewFileInfo(config FileConfig, ownerID int64, folderID *int64, name string, size int64, mimeType string) (*FileInfo, error) {
-	if ownerID < 1 {
-		return nil, apperror.NewAppError(apperror.ErrCommonInvalidValue, "media.NewFileInfo:ownerID").WithMetadata("owner_id", ownerID)
+func NewFileInfo(config FileConfig, ownerID int64, parentFolder *FolderInfo, name string, size int64, mimeType string) (*FileInfo, error) {
+	var folderID *int64
+	if parentFolder != nil {
+		if err := parentFolder.ValidateAccess(ownerID); err != nil {
+			return nil, apperror.NewAppError(err, "media.NewFileInfo:ValidateParentAccess")
+		}
+		folderID = &parentFolder.ID
 	}
 
 	cleanedName := utils.CleanFileName(name)
@@ -77,6 +82,7 @@ func NewFileInfo(config FileConfig, ownerID int64, folderID *int64, name string,
 		ext = &e
 	}
 
+	now := time.Now().UTC()
 	return &FileInfo{
 		OwnerID:       ownerID,
 		FolderID:      folderID,
@@ -86,8 +92,8 @@ func NewFileInfo(config FileConfig, ownerID int64, folderID *int64, name string,
 		Extension:     ext,
 		MimeType:      mimeType,
 		Category:      getCategory(mimeType),
-		CreatedAt:     time.Now().UTC(),
-		UpdatedAt:     time.Now().UTC(),
+		CreatedAt:     now,
+		UpdatedAt:     now,
 	}, nil
 }
 
