@@ -128,16 +128,15 @@ func setupTestEnv(t *testing.T) *testEnv {
 	}
 }
 
-// executeRequest, creates a new ResponseRecorder
+// executeRequest creates a new ResponseRecorder
 // then executes the request by calling ServeHTTP in the router
 // after which the handler writes the response to the response recorder
 // which we can then inspect.
-// func executeRequest(req *http.Request, apiServer *api.API) *httptest.ResponseRecorder {
-// 	rr := httptest.NewRecorder()
-// 	apiServer.Router.ServeHTTP(rr, req)
-
-// 	return rr
-// }
+func executeRequest(req *http.Request, apiServer *api.API) *httptest.ResponseRecorder {
+	rr := httptest.NewRecorder()
+	apiServer.Router.ServeHTTP(rr, req)
+	return rr
+}
 
 // Helper to create a test user and get auth token
 func createTestUser(t *testing.T, env *testEnv) (*profile.Profile, string) {
