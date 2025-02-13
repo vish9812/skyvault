@@ -34,7 +34,6 @@ func TestUploadFile(t *testing.T) {
 		// Create multipart form
 		body := &bytes.Buffer{}
 		writer := multipart.NewWriter(body)
-		defer writer.Close()
 
 		file, err := os.Open(filePath)
 		require.NoError(t, err)
@@ -44,6 +43,10 @@ func TestUploadFile(t *testing.T) {
 		require.NoError(t, err)
 
 		_, err = io.Copy(part, file)
+		require.NoError(t, err)
+
+		// Close writer before creating request
+		err = writer.Close()
 		require.NoError(t, err)
 
 		// Make request
