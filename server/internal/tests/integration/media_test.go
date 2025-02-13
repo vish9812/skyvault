@@ -138,7 +138,7 @@ func TestGetFolderContent(t *testing.T) {
 	// Then upload a file to it
 	fileName := "test.txt"
 	fileSize := int64(1024)
-	filePath := createTestFile(t, fileName, fileSize)
+	filePath := createTestFile(t, env, fileName, fileSize)
 
 	body2 := &bytes.Buffer{}
 	writer := multipart.NewWriter(body2)
