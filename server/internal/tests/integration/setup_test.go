@@ -49,6 +49,9 @@ type testEnv struct {
 	server *httptest.Server
 	api    *api.API
 	dbName string
+	
+	// API handlers
+	mediaAPI *api.MediaAPI
 }
 
 func setupTestEnv(t *testing.T) *testEnv {
@@ -82,8 +85,10 @@ func setupTestEnv(t *testing.T) *testEnv {
 	// Initialize infrastructure
 	infra := infrastructure.NewInfrastructure(app)
 
-	// Initialize API server
+	// Initialize API server and handlers
 	apiServer := api.NewAPI(app).InitRoutes(infra)
+	mediaAPI := api.NewMediaAPI(apiServer, app, media.NewCommandHandlers(app, infra.Repository.Media, infra.Storage.LocalStorage), 
+		media.NewQueryHandlers(infra.Repository.Media, infra.Storage.LocalStorage))
 
 	// Create test HTTP server
 	server := httptest.NewServer(apiServer.Router)
@@ -112,23 +117,15 @@ func setupTestEnv(t *testing.T) *testEnv {
 	})
 
 	return &testEnv{
-		app:    app,
-		infra:  infra,
-		server: server,
-		api:    apiServer,
-		dbName: dbName,
+		app:      app,
+		infra:    infra,
+		server:   server,
+		api:      apiServer,
+		dbName:   dbName,
+		mediaAPI: mediaAPI,
 	}
 }
 
-// executeRequest creates a new ResponseRecorder
-// then executes the request by calling ServeHTTP in the router
-// after which the handler writes the response to the response recorder
-// which we can then inspect.
-func executeRequest(req *http.Request, apiServer *api.API) *httptest.ResponseRecorder {
-	rr := httptest.NewRecorder()
-	apiServer.Router.ServeHTTP(rr, req)
-	return rr
-}
 
 // Helper to create a test user and get auth token
 func createTestUser(t *testing.T, env *testEnv) (*profile.Profile, string) {

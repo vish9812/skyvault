@@ -48,11 +48,12 @@ func TestUploadFile(t *testing.T) {
 		req.Header.Set("Content-Type", writer.FormDataContentType())
 		req.Header.Set("Authorization", "Bearer "+token)
 
-		res := executeRequest(req, env.api)
-		require.Equal(t, http.StatusCreated, res.Code)
+		w := httptest.NewRecorder()
+		env.mediaAPI.UploadFile(w, req)
+		require.Equal(t, http.StatusCreated, w.Code)
 
 		var fileInfo dtos.GetFileInfoRes
-		err = json.NewDecoder(res.Body).Decode(&fileInfo)
+		err = json.NewDecoder(w.Body).Decode(&fileInfo)
 		require.NoError(t, err)
 		require.Equal(t, fileName, fileInfo.Name)
 		require.Equal(t, fileSize, fileInfo.Size)
@@ -84,8 +85,9 @@ func TestUploadFile(t *testing.T) {
 		req.Header.Set("Content-Type", writer.FormDataContentType())
 		req.Header.Set("Authorization", "Bearer "+token)
 
-		res := executeRequest(req, env.api)
-		require.Equal(t, http.StatusBadRequest, res.Code)
+		w := httptest.NewRecorder()
+		env.mediaAPI.UploadFile(w, req)
+		require.Equal(t, http.StatusBadRequest, w.Code)
 	})
 }
 
@@ -105,11 +107,12 @@ func TestCreateFolder(t *testing.T) {
 		req.Header.Set("Content-Type", "application/json")
 		req.Header.Set("Authorization", "Bearer "+token)
 
-		res := executeRequest(req, env.api)
-		require.Equal(t, http.StatusCreated, res.Code)
+		w := httptest.NewRecorder()
+		env.mediaAPI.CreateFolder(w, req)
+		require.Equal(t, http.StatusCreated, w.Code)
 
 		var folderInfo dtos.GetFolderInfoRes
-		err = json.NewDecoder(res.Body).Decode(&folderInfo)
+		err = json.NewDecoder(w.Body).Decode(&folderInfo)
 		require.NoError(t, err)
 		require.Equal(t, folderName, folderInfo.Name)
 	})
@@ -130,9 +133,10 @@ func TestGetFolderContent(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Authorization", "Bearer "+token)
 
-	res := executeRequest(req, env.api)
+	w := httptest.NewRecorder()
+	env.mediaAPI.CreateFolder(w, req)
 	var folderInfo dtos.GetFolderInfoRes
-	err = json.NewDecoder(res.Body).Decode(&folderInfo)
+	err = json.NewDecoder(w.Body).Decode(&folderInfo)
 	require.NoError(t, err)
 
 	// Then upload a file to it
@@ -157,8 +161,9 @@ func TestGetFolderContent(t *testing.T) {
 	req.Header.Set("Content-Type", writer.FormDataContentType())
 	req.Header.Set("Authorization", "Bearer "+token)
 
-	res = executeRequest(req, env.api)
-	require.Equal(t, http.StatusCreated, res.Code)
+	w = httptest.NewRecorder()
+	env.mediaAPI.UploadFile(w, req)
+	require.Equal(t, http.StatusCreated, w.Code)
 
 	// Now test getting folder contents
 	t.Run("get folder contents", func(t *testing.T) {
@@ -166,11 +171,12 @@ func TestGetFolderContent(t *testing.T) {
 		require.NoError(t, err)
 		req.Header.Set("Authorization", "Bearer "+token)
 
-		res := executeRequest(req, env.api)
-		require.Equal(t, http.StatusOK, res.Code)
+		w := httptest.NewRecorder()
+		env.mediaAPI.GetFolderContent(w, req)
+		require.Equal(t, http.StatusOK, w.Code)
 
 		var content dtos.GetFolderContentQueryRes
-		err = json.NewDecoder(res.Body).Decode(&content)
+		err = json.NewDecoder(w.Body).Decode(&content)
 		require.NoError(t, err)
 
 		require.Len(t, content.FilePage.Items, 1)
