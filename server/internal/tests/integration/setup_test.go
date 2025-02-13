@@ -30,7 +30,7 @@ func TestMain(m *testing.M) {
 	// The actual test DB will be created in the test.
 	testLogger := applog.NewLogger(nil)
 	var err error
-	testDB, err = sql.Open("pgx", "postgres://skyvault:skyvault@localhost:5432/postgres?sslmode=disable&connect_timeout=30")
+	testDB, err = sql.Open("pgx", "postgres://skyvault:skyvault@localhost:15433/postgres?sslmode=disable&connect_timeout=30")
 	if err != nil {
 		testLogger.Fatal().Err(err).Msg("failed to connect to postgres db")
 	}
@@ -68,20 +68,12 @@ func setupTestEnv(t *testing.T) *testEnv {
 	}
 
 	// Create test config
-	config := &appconfig.Config{
-		DB: appconfig.DBConfig{
-			DSN: fmt.Sprintf("postgres://skyvault:skyvault@localhost:5432/%s?sslmode=disable", dbName),
-		},
-		Server: appconfig.ServerConfig{
-			DataDir: tempDir,
-		},
-		Media: appconfig.MediaConfig{
-			MaxSizeMB: 1,
-		},
-		Log: appconfig.LogConfig{
-			Level: "debug",
-		},
-	}
+	config := appconfig.LoadConfig("../../../test.env", true)
+
+	// Override with runtime random values
+	config.DB.Name = dbName
+	config.DB.DSN = fmt.Sprintf("postgres://skyvault:skyvault@localhost:15433/%s?sslmode=disable", dbName)
+	config.Server.DataDir = tempDir
 
 	// Initialize test app
 	logger := applog.NewLogger(&applog.Config{Level: "debug", Console: true})
