@@ -16,68 +16,88 @@ import (
 func TestNewFileInfo(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
-		testName    string
-		config      FileConfig
-		ownerID     int64
-		folderID    *int64
-		fileName    string
-		size        int64
-		mimeType    string
-		expectError bool
+		name         string
+		config       FileConfig
+		ownerID      int64
+		parentFolder *FolderInfo
+		fileName     string
+		size         int64
+		mimeType     string
+		expectError  bool
 	}{
 		{
-			testName:    "valid file info",
-			config:      FileConfig{MaxSizeMB: 10},
-			ownerID:     100,
-			folderID:    nil,
-			fileName:    "test.txt",
+			name:         "valid file info without parent",
+			config:       FileConfig{MaxSizeMB: 10},
+			ownerID:      100,
+			parentFolder: nil,
+			fileName:     "test.txt",
 			size:        1024,
 			mimeType:    "text/plain",
 			expectError: false,
 		},
 		{
-			testName:    "invalid owner ID",
-			config:      FileConfig{MaxSizeMB: 10},
-			ownerID:     0,
+			name:    "valid file info with parent",
+			config:  FileConfig{MaxSizeMB: 10},
+			ownerID: 100,
+			parentFolder: &FolderInfo{
+				ID:      1,
+				OwnerID: 100,
+			},
 			fileName:    "test.txt",
+			size:       1024,
+			mimeType:   "text/plain",
+			expectError: false,
+		},
+		{
+			name:         "empty filename",
+			config:       FileConfig{MaxSizeMB: 10},
+			ownerID:      100,
+			parentFolder: nil,
+			fileName:     "",
 			size:        1024,
 			mimeType:    "text/plain",
 			expectError: true,
 		},
 		{
-			testName:    "empty filename",
-			config:      FileConfig{MaxSizeMB: 10},
-			ownerID:     100,
-			fileName:    "",
-			size:        1024,
-			mimeType:    "text/plain",
-			expectError: true,
-		},
-		{
-			testName:    "negative size",
-			config:      FileConfig{MaxSizeMB: 10},
-			ownerID:     100,
-			fileName:    "test.txt",
+			name:         "negative size",
+			config:       FileConfig{MaxSizeMB: 10},
+			ownerID:      100,
+			parentFolder: nil,
+			fileName:     "test.txt",
 			size:        -1,
 			mimeType:    "text/plain",
 			expectError: true,
 		},
 		{
-			testName:    "exceeds max size",
-			config:      FileConfig{MaxSizeMB: 1},
-			ownerID:     100,
-			fileName:    "test.txt",
+			name:         "exceeds max size",
+			config:       FileConfig{MaxSizeMB: 1},
+			ownerID:      100,
+			parentFolder: nil,
+			fileName:     "test.txt",
 			size:        2 * BytesPerMB,
 			mimeType:    "text/plain",
+			expectError: true,
+		},
+		{
+			name:    "parent folder different owner",
+			config:  FileConfig{MaxSizeMB: 10},
+			ownerID: 100,
+			parentFolder: &FolderInfo{
+				ID:      1,
+				OwnerID: 200,
+			},
+			fileName:    "test.txt",
+			size:       1024,
+			mimeType:   "text/plain",
 			expectError: true,
 		},
 	}
 
 	for _, tc := range tests {
 		tt := tc // capture range variable
-		t.Run(tt.testName, func(t *testing.T) {
+		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			fileInfo, err := NewFileInfo(tt.config, tt.ownerID, tt.folderID, tt.fileName, tt.size, tt.mimeType)
+			fileInfo, err := NewFileInfo(tt.config, tt.ownerID, tt.parentFolder, tt.fileName, tt.size, tt.mimeType)
 			if tt.expectError {
 				assert.Error(t, err)
 				assert.Nil(t, fileInfo)
