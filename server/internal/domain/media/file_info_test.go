@@ -16,7 +16,7 @@ import (
 func TestNewFileInfo(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
-		name        string
+		testName    string
 		config      FileConfig
 		ownerID     int64
 		folderID    *int64
@@ -26,7 +26,7 @@ func TestNewFileInfo(t *testing.T) {
 		expectError bool
 	}{
 		{
-			name:        "valid file info",
+			testName:    "valid file info",
 			config:      FileConfig{MaxSizeMB: 10},
 			ownerID:     100,
 			folderID:    nil,
@@ -36,7 +36,7 @@ func TestNewFileInfo(t *testing.T) {
 			expectError: false,
 		},
 		{
-			name:        "invalid owner ID",
+			testName:    "invalid owner ID",
 			config:      FileConfig{MaxSizeMB: 10},
 			ownerID:     0,
 			fileName:    "test.txt",
@@ -45,7 +45,7 @@ func TestNewFileInfo(t *testing.T) {
 			expectError: true,
 		},
 		{
-			name:        "empty filename",
+			testName:    "empty filename",
 			config:      FileConfig{MaxSizeMB: 10},
 			ownerID:     100,
 			fileName:    "",
@@ -54,7 +54,7 @@ func TestNewFileInfo(t *testing.T) {
 			expectError: true,
 		},
 		{
-			name:        "negative size",
+			testName:    "negative size",
 			config:      FileConfig{MaxSizeMB: 10},
 			ownerID:     100,
 			fileName:    "test.txt",
@@ -63,7 +63,7 @@ func TestNewFileInfo(t *testing.T) {
 			expectError: true,
 		},
 		{
-			name:        "exceeds max size",
+			testName:    "exceeds max size",
 			config:      FileConfig{MaxSizeMB: 1},
 			ownerID:     100,
 			fileName:    "test.txt",
@@ -75,7 +75,7 @@ func TestNewFileInfo(t *testing.T) {
 
 	for _, tc := range tests {
 		tt := tc // capture range variable
-		t.Run(tt.name, func(t *testing.T) {
+		t.Run(tt.testName, func(t *testing.T) {
 			t.Parallel()
 			fileInfo, err := NewFileInfo(tt.config, tt.ownerID, tt.folderID, tt.fileName, tt.size, tt.mimeType)
 			if tt.expectError {
