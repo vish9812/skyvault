@@ -49,6 +49,7 @@ func TestUploadFile(t *testing.T) {
 		// Make request
 		req, err := http.NewRequestWithContext(ctx, http.MethodPost, "/api/v1/media/folders/0/files", body)
 		require.NoError(t, err)
+		req.Header.Set("Content-Type", writer.FormDataContentType())
 		w := httptest.NewRecorder()
 
 		env.mediaAPI.UploadFile(w, req)
