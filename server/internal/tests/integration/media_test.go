@@ -10,12 +10,15 @@ import (
 	"os"
 	"skyvault/internal/api/helper/dtos"
 	"skyvault/internal/domain/media"
-	"skyvault/pkg/utils"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 )
 
+// TestMediaManagementFlow tests the complete media management functionality
+// through realistic user workflows. It focuses on positive cases and integration
+// between different operations. Edge cases and error conditions are covered
+// in unit tests (see: file_info_test.go and folder_info_test.go)
 func TestMediaManagementFlow(t *testing.T) {
 	env := setupTestEnv(t)
 	_, token := createTestUser(t, env)
@@ -130,7 +133,7 @@ func TestMediaManagementFlow(t *testing.T) {
 		return &fileInfo
 	}
 
-	t.Run("complete file management flow", func(t *testing.T) {
+	t.Run("basic file management workflow", func(t *testing.T) {
 		// 1. Create initial folder
 		folder1 := createFolder(t, 0, "Documents")
 		require.Equal(t, "Documents", folder1.Name)
@@ -166,30 +169,59 @@ func TestMediaManagementFlow(t *testing.T) {
 		require.Equal(t, "renamed.txt", contents2.FilePage.Items[0].Name)
 	})
 
-	t.Run("file size limit", func(t *testing.T) {
-		// Create a file larger than max size
-		largeFileName := fmt.Sprintf("large-%s.txt", utils.RandomName())
-		largeFileSize := int64((env.app.Config.Media.MaxSizeMB + 1) * media.BytesPerMB)
-		largeFilePath := createTestFile(t, env, largeFileName, largeFileSize)
+	t.Run("nested folder structure workflow", func(t *testing.T) {
+		// 1. Create parent folder
+		parentFolder := createFolder(t, 0, "Parent")
+		require.Equal(t, "Parent", parentFolder.Name)
 
-		body := &bytes.Buffer{}
-		writer := multipart.NewWriter(body)
-		file, err := os.Open(largeFilePath)
-		require.NoError(t, err)
-		defer file.Close()
+		// 2. Create child folder inside parent
+		childFolder := createFolder(t, parentFolder.ID, "Child")
+		require.Equal(t, "Child", childFolder.Name)
+		require.Equal(t, &parentFolder.ID, childFolder.ParentFolderID)
 
-		part, err := writer.CreateFormFile("file", largeFileName)
-		require.NoError(t, err)
-		_, err = io.Copy(part, file)
-		require.NoError(t, err)
-		writer.Close()
+		// 3. Upload files to both folders
+		parentFile := uploadFile(t, parentFolder.ID, "parent.txt", media.BytesPerKB)
+		childFile := uploadFile(t, childFolder.ID, "child.txt", media.BytesPerKB)
 
-		req, err := http.NewRequest(http.MethodPost, "/api/v1/media/folders/0/files", body)
-		require.NoError(t, err)
-		req.Header.Set("Content-Type", writer.FormDataContentType())
-		req.Header.Set("Authorization", "Bearer "+token)
+		// 4. Verify parent folder contents
+		parentContents := getFolderContents(t, parentFolder.ID)
+		require.Len(t, parentContents.FilePage.Items, 1)
+		require.Len(t, parentContents.FolderPage.Items, 1)
+		require.Equal(t, "parent.txt", parentContents.FilePage.Items[0].Name)
+		require.Equal(t, "Child", parentContents.FolderPage.Items[0].Name)
 
-		resp := executeRequest(t, env, req)
-		require.Equal(t, http.StatusBadRequest, resp.Code)
+		// 5. Verify child folder contents
+		childContents := getFolderContents(t, childFolder.ID)
+		require.Len(t, childContents.FilePage.Items, 1)
+		require.Len(t, childContents.FolderPage.Items, 0)
+		require.Equal(t, "child.txt", childContents.FilePage.Items[0].Name)
+	})
+
+	t.Run("file organization workflow", func(t *testing.T) {
+		// 1. Create multiple folders
+		docsFolder := createFolder(t, 0, "Documents")
+		imagesFolder := createFolder(t, 0, "Images")
+		archiveFolder := createFolder(t, 0, "Archive")
+
+		// 2. Upload multiple files
+		doc1 := uploadFile(t, docsFolder.ID, "document1.txt", media.BytesPerKB)
+		doc2 := uploadFile(t, docsFolder.ID, "document2.txt", media.BytesPerKB)
+
+		// 3. Verify initial state
+		docsContents := getFolderContents(t, docsFolder.ID)
+		require.Len(t, docsContents.FilePage.Items, 2)
+
+		// 4. Move files between folders
+		movedDoc := moveFile(t, doc1.ID, archiveFolder.ID)
+		require.Equal(t, archiveFolder.ID, *movedDoc.FolderID)
+
+		// 5. Verify final state
+		docsContentsAfter := getFolderContents(t, docsFolder.ID)
+		require.Len(t, docsContentsAfter.FilePage.Items, 1)
+		require.Equal(t, "document2.txt", docsContentsAfter.FilePage.Items[0].Name)
+
+		archiveContents := getFolderContents(t, archiveFolder.ID)
+		require.Len(t, archiveContents.FilePage.Items, 1)
+		require.Equal(t, "document1.txt", archiveContents.FilePage.Items[0].Name)
 	})
 }
