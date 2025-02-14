@@ -122,16 +122,12 @@ func setupTestEnv(t *testing.T) *testEnv {
 	}
 }
 
-func enhancedReqContext(t *testing.T, ctx context.Context, env *testEnv, token string) context.Context {
+// executeRequest executes a request through the router and returns the response
+func executeRequest(t *testing.T, env *testEnv, req *http.Request) *httptest.ResponseRecorder {
 	t.Helper()
-
-	claims, err := env.infra.Auth.JWT.ValidateToken(context.Background(), token)
-	require.NoError(t, err)
-
-	return context.WithValue(
-		context.WithValue(ctx, common.CtxKeyClaims, claims),
-		common.CtxKeyLogger, env.app.Logger,
-	)
+	rr := httptest.NewRecorder()
+	env.api.Router.ServeHTTP(rr, req)
+	return rr
 }
 
 // Helper to create a test user and get auth token
