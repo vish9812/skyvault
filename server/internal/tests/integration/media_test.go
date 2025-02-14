@@ -30,7 +30,7 @@ func TestMediaManagementFlow(t *testing.T) {
 		jsonBody, err := json.Marshal(body)
 		require.NoError(t, err, "should marshal folder creation request")
 
-		req, err := http.NewRequest(http.MethodPost, fmt.Sprintf("/api/v1/media/folders/%d", parentID), bytes.NewBuffer(jsonBody))
+		req, err := http.NewRequest(http.MethodPost, folderURL(parentID), bytes.NewBuffer(jsonBody))
 		require.NoError(t, err, "should create new request for folder creation")
 		req.Header.Set("Content-Type", "application/json")
 		req.Header.Set("Authorization", "Bearer "+token)
@@ -61,7 +61,7 @@ func TestMediaManagementFlow(t *testing.T) {
 		require.NoError(t, err, "should decode file info response")
 		writer.Close()
 
-		req, err := http.NewRequest(http.MethodPost, fmt.Sprintf("/api/v1/media/folders/%d/files", folderID), body)
+		req, err := http.NewRequest(http.MethodPost, folderURL(folderID)+"/files", body)
 		require.NoError(t, err, "should create new request for file upload")
 		req.Header.Set("Content-Type", writer.FormDataContentType())
 		req.Header.Set("Authorization", "Bearer "+token)
@@ -78,7 +78,7 @@ func TestMediaManagementFlow(t *testing.T) {
 	// Helper function to get folder contents
 	getFolderContents := func(t *testing.T, folderID int64) *dtos.GetFolderContentQueryRes {
 		t.Helper()
-		req, err := http.NewRequest(http.MethodGet, fmt.Sprintf("/api/v1/media/folders/%d/content", folderID), nil)
+		req, err := http.NewRequest(http.MethodGet, folderURL(folderID)+"/content", nil)
 		require.NoError(t, err, "should create new request for folder contents")
 		req.Header.Set("Authorization", "Bearer "+token)
 
@@ -98,7 +98,7 @@ func TestMediaManagementFlow(t *testing.T) {
 		jsonBody, err := json.Marshal(body)
 		require.NoError(t, err)
 
-		req, err := http.NewRequest(http.MethodPatch, fmt.Sprintf("/api/v1/media/files/%d/rename", fileID), bytes.NewBuffer(jsonBody))
+		req, err := http.NewRequest(http.MethodPatch, fileURL(fileID)+"/rename", bytes.NewBuffer(jsonBody))
 		require.NoError(t, err, "should create new request for file rename")
 		req.Header.Set("Content-Type", "application/json")
 		req.Header.Set("Authorization", "Bearer "+token)
@@ -114,7 +114,7 @@ func TestMediaManagementFlow(t *testing.T) {
 		jsonBody, err := json.Marshal(body)
 		require.NoError(t, err)
 
-		req, err := http.NewRequest(http.MethodPatch, fmt.Sprintf("/api/v1/media/files/%d/move", fileID), bytes.NewBuffer(jsonBody))
+		req, err := http.NewRequest(http.MethodPatch, fileURL(fileID)+"/move", bytes.NewBuffer(jsonBody))
 		require.NoError(t, err, "should create new request for file move")
 		req.Header.Set("Content-Type", "application/json")
 		req.Header.Set("Authorization", "Bearer "+token)
@@ -130,7 +130,7 @@ func TestMediaManagementFlow(t *testing.T) {
 		jsonBody, err := json.Marshal(body)
 		require.NoError(t, err)
 
-		req, err := http.NewRequest(http.MethodDelete, "/api/v1/media/folders", bytes.NewBuffer(jsonBody))
+		req, err := http.NewRequest(http.MethodDelete, foldersURL(), bytes.NewBuffer(jsonBody))
 		require.NoError(t, err, "should create new request for folder trash")
 		req.Header.Set("Content-Type", "application/json")
 		req.Header.Set("Authorization", "Bearer "+token)
@@ -143,7 +143,7 @@ func TestMediaManagementFlow(t *testing.T) {
 	restoreFolder := func(t *testing.T, folderID int64) {
 		t.Helper()
 
-		req, err := http.NewRequest(http.MethodPatch, fmt.Sprintf("/api/v1/media/folders/%d/restore", folderID), nil)
+		req, err := http.NewRequest(http.MethodPatch, folderURL(folderID)+"/restore", nil)
 		require.NoError(t, err, "should create new request for folder restore")
 		req.Header.Set("Authorization", "Bearer "+token)
 
