@@ -31,12 +31,12 @@ func TestMediaManagementFlow(t *testing.T) {
 		require.NoError(t, err, "should marshal folder creation request")
 
 		req, err := http.NewRequest(http.MethodPost, fmt.Sprintf("/api/v1/media/folders/%d", parentID), bytes.NewBuffer(jsonBody))
-		require.NoError(t, err, "should decode folder info response")
+		require.NoError(t, err, "should create new request for folder creation")
 		req.Header.Set("Content-Type", "application/json")
 		req.Header.Set("Authorization", "Bearer "+token)
 
 		resp := executeRequest(t, env, req)
-		require.Equal(t, http.StatusCreated, resp.Code)
+		require.Equal(t, http.StatusCreated, resp.Code, "should return status created for folder creation")
 
 		var folderInfo dtos.GetFolderInfoRes
 		err = json.NewDecoder(resp.Body).Decode(&folderInfo)
@@ -62,12 +62,12 @@ func TestMediaManagementFlow(t *testing.T) {
 		writer.Close()
 
 		req, err := http.NewRequest(http.MethodPost, fmt.Sprintf("/api/v1/media/folders/%d/files", folderID), body)
-		require.NoError(t, err, "should decode folder contents response")
+		require.NoError(t, err, "should create new request for file upload")
 		req.Header.Set("Content-Type", writer.FormDataContentType())
 		req.Header.Set("Authorization", "Bearer "+token)
 
 		resp := executeRequest(t, env, req)
-		require.Equal(t, http.StatusCreated, resp.Code)
+		require.Equal(t, http.StatusCreated, resp.Code, "should return status created for file upload")
 
 		var fileInfo dtos.GetFileInfoRes
 		err = json.NewDecoder(resp.Body).Decode(&fileInfo)
@@ -79,11 +79,11 @@ func TestMediaManagementFlow(t *testing.T) {
 	getFolderContents := func(t *testing.T, folderID int64) *dtos.GetFolderContentQueryRes {
 		t.Helper()
 		req, err := http.NewRequest(http.MethodGet, fmt.Sprintf("/api/v1/media/folders/%d/content", folderID), nil)
-		require.NoError(t, err, "should marshal file move request")
+		require.NoError(t, err, "should create new request for folder contents")
 		req.Header.Set("Authorization", "Bearer "+token)
 
 		resp := executeRequest(t, env, req)
-		require.Equal(t, http.StatusOK, resp.Code)
+		require.Equal(t, http.StatusOK, resp.Code, "should return status ok for folder contents")
 
 		var content dtos.GetFolderContentQueryRes
 		err = json.NewDecoder(resp.Body).Decode(&content)
@@ -99,12 +99,12 @@ func TestMediaManagementFlow(t *testing.T) {
 		require.NoError(t, err)
 
 		req, err := http.NewRequest(http.MethodPatch, fmt.Sprintf("/api/v1/media/files/%d/rename", fileID), bytes.NewBuffer(jsonBody))
-		require.NoError(t, err)
+		require.NoError(t, err, "should create new request for file rename")
 		req.Header.Set("Content-Type", "application/json")
 		req.Header.Set("Authorization", "Bearer "+token)
 
 		resp := executeRequest(t, env, req)
-		require.Equal(t, http.StatusNoContent, resp.Code)
+		require.Equal(t, http.StatusNoContent, resp.Code, "should return status no content for file rename")
 	}
 
 	// Helper function to move a file
@@ -115,12 +115,12 @@ func TestMediaManagementFlow(t *testing.T) {
 		require.NoError(t, err)
 
 		req, err := http.NewRequest(http.MethodPatch, fmt.Sprintf("/api/v1/media/files/%d/move", fileID), bytes.NewBuffer(jsonBody))
-		require.NoError(t, err)
+		require.NoError(t, err, "should create new request for file move")
 		req.Header.Set("Content-Type", "application/json")
 		req.Header.Set("Authorization", "Bearer "+token)
 
 		resp := executeRequest(t, env, req)
-		require.Equal(t, http.StatusNoContent, resp.Code)
+		require.Equal(t, http.StatusNoContent, resp.Code, "should return status no content for file move")
 	}
 
 	t.Run("basic file management workflow", func(t *testing.T) {
