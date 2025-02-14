@@ -4,22 +4,24 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	"net/http"
 	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"skyvault/internal/api"
 	"skyvault/internal/domain/auth"
+	"skyvault/internal/domain/media"
 	"skyvault/internal/domain/profile"
 	"skyvault/internal/infrastructure"
 	"skyvault/internal/workflows"
 	"skyvault/pkg/appconfig"
 	"skyvault/pkg/applog"
+	"skyvault/pkg/common"
 	"skyvault/pkg/utils"
 	"testing"
 	"time"
 
 	_ "github.com/jackc/pgx/v5/stdlib"
+	"github.com/stretchr/testify/require"
 )
 
 // testDB just to be used to create and drop test databases
@@ -49,7 +51,7 @@ type testEnv struct {
 	server *httptest.Server
 	api    *api.API
 	dbName string
-	
+
 	// API handlers
 	mediaAPI *api.MediaAPI
 }
@@ -85,10 +87,21 @@ func setupTestEnv(t *testing.T) *testEnv {
 	// Initialize infrastructure
 	infra := infrastructure.NewInfrastructure(app)
 
-	// Initialize API server and handlers
+	// Init workFlows, commands and queries
+	profileCommands := profile.NewCommandHandlers(infra.Repository.Profile)
+	profileQueries := profile.NewQueryHandlers(infra.Repository.Profile)
+	authCommands := auth.NewCommandHandlers(infra.Repository.Auth, infra.Auth)
+	authQueries := auth.NewQueryHandlers(infra.Repository.Auth, infra.Auth)
+	signUpFlow := workflows.NewSignUpFlow(app, authCommands, infra.Repository.Auth, profileCommands, infra.Repository.Profile)
+	signInFlow := workflows.NewSignInFlow(authCommands, authQueries, profileCommands, profileQueries)
+	mediaCommands := media.NewCommandHandlers(app, infra.Repository.Media, infra.Storage.LocalStorage)
+	mediaQueries := media.NewQueryHandlers(infra.Repository.Media, infra.Storage.LocalStorage)
+
+	// Init API
 	apiServer := api.NewAPI(app).InitRoutes(infra)
-	mediaAPI := api.NewMediaAPI(apiServer, app, media.NewCommandHandlers(app, infra.Repository.Media, infra.Storage.LocalStorage), 
-		media.NewQueryHandlers(infra.Repository.Media, infra.Storage.LocalStorage))
+	api.NewAuthAPI(apiServer, signUpFlow, signInFlow).InitRoutes()
+	mediaAPI := api.NewMediaAPI(apiServer, app, mediaCommands, mediaQueries).InitRoutes()
+	api.NewProfileAPI(apiServer, profileCommands, profileQueries).InitRoutes()
 
 	// Create test HTTP server
 	server := httptest.NewServer(apiServer.Router)
@@ -126,6 +139,17 @@ func setupTestEnv(t *testing.T) *testEnv {
 	}
 }
 
+func enhancedReqContext(t *testing.T, ctx context.Context, env *testEnv, token string) context.Context {
+	t.Helper()
+
+	claims, err := env.infra.Auth.JWT.ValidateToken(context.Background(), token)
+	require.NoError(t, err)
+
+	return context.WithValue(
+		context.WithValue(ctx, common.CtxKeyClaims, claims),
+		common.CtxKeyLogger, env.app.Logger,
+	)
+}
 
 // Helper to create a test user and get auth token
 func createTestUser(t *testing.T, env *testEnv) (*profile.Profile, string) {
