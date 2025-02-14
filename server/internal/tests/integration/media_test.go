@@ -124,31 +124,38 @@ func TestMediaManagementFlow(t *testing.T) {
 	}
 
 	t.Run("basic file management workflow", func(t *testing.T) {
-		// 1. Create initial folder
+		// Create initial folder
 		folder1 := createFolder(t, 0, "Documents")
 		require.Equal(t, "Documents", folder1.Name)
 
-		// 2. Upload a file to the folder
+		// Upload a file to the folder
 		file1 := uploadFile(t, folder1.ID, "test.txt", media.BytesPerKB)
 		require.Equal(t, "test.txt", file1.Name)
 		require.Equal(t, int64(media.BytesPerKB), file1.Size)
 
-		// 3. Verify folder contents
+		// Verify folder contents
 		contents1 := getFolderContents(t, folder1.ID)
 		require.Len(t, contents1.FilePage.Items, 1)
 		require.Equal(t, file1.Name, contents1.FilePage.Items[0].Name)
+		require.Len(t, contents1.FolderPage.Items, 0)
 
-		// 4. Rename the file
+		// Verify root folder contents
+		rootContents := getFolderContents(t, 0)
+		require.Len(t, rootContents.FolderPage.Items, 1)
+		require.Equal(t, folder1.Name, rootContents.FolderPage.Items[0].Name)
+		require.Len(t, rootContents.FilePage.Items, 0)
+
+		// Rename the file
 		renameFile(t, file1.ID, "renamed.txt")
 
-		// 5. Create another folder
+		// Create another folder
 		folder2 := createFolder(t, 0, "Archive")
 		require.Equal(t, "Archive", folder2.Name)
 
-		// 6. Move file to new folder
+		// Move file to new folder
 		moveFile(t, file1.ID, folder2.ID)
 
-		// 7. Verify contents of both folders
+		// Verify contents of both folders
 		contents1Again := getFolderContents(t, folder1.ID)
 		require.Len(t, contents1Again.FilePage.Items, 0)
 
