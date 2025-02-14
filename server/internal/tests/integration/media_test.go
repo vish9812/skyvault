@@ -92,7 +92,7 @@ func TestMediaManagementFlow(t *testing.T) {
 	}
 
 	// Helper function to rename a file
-	renameFile := func(t *testing.T, fileID int64, newName string) *dtos.GetFileInfoRes {
+	renameFile := func(t *testing.T, fileID int64, newName string) {
 		t.Helper()
 		body := map[string]string{"name": newName}
 		jsonBody, err := json.Marshal(body)
@@ -105,15 +105,10 @@ func TestMediaManagementFlow(t *testing.T) {
 
 		resp := executeRequest(t, env, req)
 		require.Equal(t, http.StatusNoContent, resp.Code)
-
-		var fileInfo dtos.GetFileInfoRes
-		err = json.NewDecoder(resp.Body).Decode(&fileInfo)
-		require.NoError(t, err)
-		return &fileInfo
 	}
 
 	// Helper function to move a file
-	moveFile := func(t *testing.T, fileID int64, newFolderID int64) *dtos.GetFileInfoRes {
+	moveFile := func(t *testing.T, fileID int64, newFolderID int64) {
 		t.Helper()
 		body := map[string]int64{"folderId": newFolderID}
 		jsonBody, err := json.Marshal(body)
@@ -125,12 +120,7 @@ func TestMediaManagementFlow(t *testing.T) {
 		req.Header.Set("Authorization", "Bearer "+token)
 
 		resp := executeRequest(t, env, req)
-		require.Equal(t, http.StatusOK, resp.Code)
-
-		var fileInfo dtos.GetFileInfoRes
-		err = json.NewDecoder(resp.Body).Decode(&fileInfo)
-		require.NoError(t, err)
-		return &fileInfo
+		require.Equal(t, http.StatusNoContent, resp.Code)
 	}
 
 	t.Run("basic file management workflow", func(t *testing.T) {
@@ -149,16 +139,14 @@ func TestMediaManagementFlow(t *testing.T) {
 		require.Equal(t, file1.Name, contents1.FilePage.Items[0].Name)
 
 		// 4. Rename the file
-		renamedFile := renameFile(t, file1.ID, "renamed.txt")
-		require.Equal(t, "renamed.txt", renamedFile.Name)
+		renameFile(t, file1.ID, "renamed.txt")
 
 		// 5. Create another folder
 		folder2 := createFolder(t, 0, "Archive")
 		require.Equal(t, "Archive", folder2.Name)
 
 		// 6. Move file to new folder
-		movedFile := moveFile(t, file1.ID, folder2.ID)
-		require.Equal(t, folder2.ID, *movedFile.FolderID)
+		moveFile(t, file1.ID, folder2.ID)
 
 		// 7. Verify contents of both folders
 		contents1Again := getFolderContents(t, folder1.ID)
