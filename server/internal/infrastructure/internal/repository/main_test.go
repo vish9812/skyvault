@@ -26,7 +26,7 @@ func TestMain(m *testing.M) {
 	// Use an existing database, just to connect to it.
 	// The actual test DB will be created in the test.
 	testLogger := applog.NewLogger(nil)
-	testDB = connectDatabase(testLogger, "postgres://skyvault:skyvault@localhost:5432/postgres?sslmode=disable&connect_timeout=30")
+	testDB = connectDatabase(testLogger, "postgres://skyvault:skyvault@localhost:15433/postgres?sslmode=disable&connect_timeout=30")
 
 	code := m.Run()
 
@@ -39,7 +39,7 @@ func TestMain(m *testing.M) {
 func newTestConfig(dbName string) *appconfig.Config {
 	config := appconfig.Config{
 		DB: appconfig.DBConfig{
-			DSN: fmt.Sprintf("postgres://skyvault:skyvault@localhost:5432/%s?sslmode=disable&connect_timeout=30", dbName),
+			DSN: fmt.Sprintf("postgres://skyvault:skyvault@localhost:15433/%s?sslmode=disable&connect_timeout=30", dbName),
 		},
 	}
 

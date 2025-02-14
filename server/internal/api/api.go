@@ -2,7 +2,7 @@ package api
 
 import (
 	"net/http"
-	"skyvault/internal/api/internal"
+	"skyvault/internal/api/helper"
 	"skyvault/internal/api/middlewares"
 	"skyvault/internal/infrastructure"
 	"skyvault/pkg/appconfig"
@@ -18,6 +18,11 @@ type API struct {
 	Router chi.Router
 	v1Pub  chi.Router
 	v1Pvt  chi.Router
+
+	// apis
+	Auth    *AuthAPI
+	Profile *ProfileAPI
+	Media   *MediaAPI
 }
 
 func NewAPI(app *appconfig.App) *API {
@@ -54,10 +59,10 @@ func (a *API) InitRoutes(infra *infrastructure.Infrastructure) *API {
 	v1Pub.Get("/health", func(w http.ResponseWriter, r *http.Request) {
 		err := infra.Health(r.Context())
 		if err != nil {
-			internal.RespondError(w, r, apperror.NewAppError(err, "API.InitRoutes:Health"))
+			helper.RespondError(w, r, apperror.NewAppError(err, "API.InitRoutes:Health"))
 			return
 		}
-		internal.RespondJSON(w, http.StatusOK, map[string]string{"status": "healthy"})
+		helper.RespondJSON(w, http.StatusOK, map[string]string{"status": "healthy"})
 	})
 
 	a.v1Pub = v1Pub

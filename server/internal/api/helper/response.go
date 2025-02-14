@@ -1,4 +1,4 @@
-package internal
+package helper
 
 import (
 	"encoding/json"

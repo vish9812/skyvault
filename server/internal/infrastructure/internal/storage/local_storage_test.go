@@ -23,18 +23,21 @@ func setupTestApp() *appconfig.App {
 			Server: appconfig.ServerConfig{
 				DataDir: testBasePath,
 			},
+			Media: appconfig.MediaConfig{
+				MaxSizeMB: 1,
+			},
 		},
 	}
 }
 
 func createTestFile(t *testing.T, baseDir string, ownerID int64, fileName string, fileContent []byte) string {
 	ownerDir := getOwnerDir(baseDir, ownerID)
-	err := os.MkdirAll(ownerDir, os.ModePerm)
+	err := os.MkdirAll(ownerDir, 0750)
 	if err != nil {
 		t.Fatalf("Failed to create test owner directory at %s: %v", ownerDir, err)
 	}
 	savePath := getFilePath(ownerDir, fileName)
-	err = os.WriteFile(savePath, fileContent, os.ModePerm)
+	err = os.WriteFile(savePath, fileContent, 0640)
 	if err != nil {
 		t.Fatalf("Failed to create test file at %s: %v", savePath, err)
 	}

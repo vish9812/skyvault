@@ -4,8 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"skyvault/internal/api/internal"
-	"skyvault/internal/api/internal/dtos"
+	"skyvault/internal/api/helper"
+	"skyvault/internal/api/helper/dtos"
 	"skyvault/internal/domain/auth"
 	"skyvault/internal/domain/media"
 	"skyvault/pkg/appconfig"
@@ -22,18 +22,18 @@ const (
 	urlParamFolderID = "folderID"
 )
 
-type mediaAPI struct {
+type MediaAPI struct {
 	api      *API
 	app      *appconfig.App
 	commands media.Commands
 	queries  media.Queries
 }
 
-func NewMediaAPI(a *API, app *appconfig.App, commands media.Commands, queries media.Queries) *mediaAPI {
-	return &mediaAPI{api: a, app: app, commands: commands, queries: queries}
+func NewMediaAPI(a *API, app *appconfig.App, commands media.Commands, queries media.Queries) *MediaAPI {
+	return &MediaAPI{api: a, app: app, commands: commands, queries: queries}
 }
 
-func (a *mediaAPI) InitRoutes() {
+func (a *MediaAPI) InitRoutes() *MediaAPI {
 	pvtRouter := a.api.v1Pvt
 
 	pvtRouter.Route("/media", func(r chi.Router) {
@@ -69,25 +69,27 @@ func (a *mediaAPI) InitRoutes() {
 			})
 		})
 	})
+
+	return a
 }
 
 //--------------------------------
 // Files
 //--------------------------------
 
-func (a *mediaAPI) UploadFile(w http.ResponseWriter, r *http.Request) {
+func (a *MediaAPI) UploadFile(w http.ResponseWriter, r *http.Request) {
 	profileID := auth.GetProfileIDFromContext(r.Context())
 
 	// Allocate max. 15MB for in-memory parsing.
 	err := r.ParseMultipartForm(15 * media.BytesPerMB)
 	if err != nil {
-		internal.RespondError(w, r, apperror.NewAppError(fmt.Errorf("%w: %w", apperror.ErrCommonInvalidValue, err), "mediaAPI.UploadFile:ParseMultipartForm"))
+		helper.RespondError(w, r, apperror.NewAppError(fmt.Errorf("%w: %w", apperror.ErrCommonInvalidValue, err), "mediaAPI.UploadFile:ParseMultipartForm"))
 		return
 	}
 
 	file, handler, err := r.FormFile("file")
 	if err != nil {
-		internal.RespondError(w, r, apperror.NewAppError(fmt.Errorf("%w: %w", apperror.ErrCommonInvalidValue, err), "mediaAPI.UploadFile:FormFile"))
+		helper.RespondError(w, r, apperror.NewAppError(fmt.Errorf("%w: %w", apperror.ErrCommonInvalidValue, err), "mediaAPI.UploadFile:FormFile"))
 		return
 	}
 	defer file.Close()
@@ -108,25 +110,25 @@ func (a *mediaAPI) UploadFile(w http.ResponseWriter, r *http.Request) {
 
 	fileInfo, err := a.commands.UploadFile(r.Context(), cmd)
 	if err != nil {
-		internal.RespondError(w, r, apperror.NewAppError(err, "mediaAPI.UploadFile:UploadFile").WithMetadata("file_name", handler.Filename).WithMetadata("folder_id", folderID))
+		helper.RespondError(w, r, apperror.NewAppError(err, "mediaAPI.UploadFile:UploadFile").WithMetadata("file_name", handler.Filename).WithMetadata("folder_id", folderID))
 		return
 	}
 
 	var dto dtos.GetFileInfoRes
 	err = copier.Copy(&dto, &fileInfo)
 	if err != nil {
-		internal.RespondError(w, r, apperror.NewAppError(err, "mediaAPI.UploadFile:Copy"))
+		helper.RespondError(w, r, apperror.NewAppError(err, "mediaAPI.UploadFile:Copy"))
 		return
 	}
 
-	internal.RespondJSON(w, http.StatusCreated, &dto)
+	helper.RespondJSON(w, http.StatusCreated, &dto)
 }
 
 func folderIDFromParam(w http.ResponseWriter, r *http.Request) (*int64, bool) {
 	folderIDStr := chi.URLParam(r, urlParamFolderID)
 	folderIDInt, err := strconv.ParseInt(folderIDStr, 10, 64)
 	if err != nil {
-		internal.RespondError(w, r, apperror.NewAppError(fmt.Errorf("%w: %w", apperror.ErrCommonInvalidValue, err), "api.folderIDFromParam:ParseInt").WithMetadata("folder_id_str", folderIDStr))
+		helper.RespondError(w, r, apperror.NewAppError(fmt.Errorf("%w: %w", apperror.ErrCommonInvalidValue, err), "api.folderIDFromParam:ParseInt").WithMetadata("folder_id_str", folderIDStr))
 		return nil, true
 	}
 
@@ -150,7 +152,7 @@ func pagingOptionsFromQuery(w http.ResponseWriter, r *http.Request, prefix strin
 	if limitStr != "" {
 		limit, err := strconv.Atoi(limitStr)
 		if err != nil {
-			internal.RespondError(w, r, apperror.NewAppError(fmt.Errorf("%w: %w", apperror.ErrCommonInvalidValue, err), "api.pagingOptionsFromQuery:ParseInt").WithMetadata("limit_str", limitStr))
+			helper.RespondError(w, r, apperror.NewAppError(fmt.Errorf("%w: %w", apperror.ErrCommonInvalidValue, err), "api.pagingOptionsFromQuery:ParseInt").WithMetadata("limit_str", limitStr))
 			return nil, true
 		}
 		opt.Limit = limit
@@ -159,7 +161,7 @@ func pagingOptionsFromQuery(w http.ResponseWriter, r *http.Request, prefix strin
 	return opt, false
 }
 
-func (a *mediaAPI) GetFileInfosByCategory(w http.ResponseWriter, r *http.Request) {
+func (a *MediaAPI) GetFileInfosByCategory(w http.ResponseWriter, r *http.Request) {
 	profileID := auth.GetProfileIDFromContext(r.Context())
 	pagingOpt, gotErr := pagingOptionsFromQuery(w, r, "")
 	if gotErr {
@@ -174,24 +176,24 @@ func (a *mediaAPI) GetFileInfosByCategory(w http.ResponseWriter, r *http.Request
 
 	page, err := a.queries.GetFileInfosByCategory(r.Context(), query)
 	if err != nil {
-		internal.RespondError(w, r, apperror.NewAppError(err, "mediaAPI.GetFileInfosByCategory:GetFileInfosByCategory"))
+		helper.RespondError(w, r, apperror.NewAppError(err, "mediaAPI.GetFileInfosByCategory:GetFileInfosByCategory"))
 		return
 	}
 
 	var dto paging.Page[*dtos.GetFileInfoRes]
 	err = copier.Copy(&dto, &page)
 	if err != nil {
-		internal.RespondError(w, r, apperror.NewAppError(err, "mediaAPI.GetFileInfosByCategory:Copy"))
+		helper.RespondError(w, r, apperror.NewAppError(err, "mediaAPI.GetFileInfosByCategory:Copy"))
 		return
 	}
 
-	internal.RespondJSON(w, http.StatusOK, &dto)
+	helper.RespondJSON(w, http.StatusOK, &dto)
 }
 
-func (a *mediaAPI) DownloadFile(w http.ResponseWriter, r *http.Request) {
+func (a *MediaAPI) DownloadFile(w http.ResponseWriter, r *http.Request) {
 	fileID, err := strconv.ParseInt(chi.URLParam(r, urlParamFileID), 10, 64)
 	if err != nil {
-		internal.RespondError(w, r, apperror.NewAppError(fmt.Errorf("%w: %w", apperror.ErrCommonInvalidValue, err), "mediaAPI.DownloadFile:ParseInt"))
+		helper.RespondError(w, r, apperror.NewAppError(fmt.Errorf("%w: %w", apperror.ErrCommonInvalidValue, err), "mediaAPI.DownloadFile:ParseInt"))
 		return
 	}
 
@@ -203,7 +205,7 @@ func (a *mediaAPI) DownloadFile(w http.ResponseWriter, r *http.Request) {
 
 	res, err := a.queries.GetFile(r.Context(), query)
 	if err != nil {
-		internal.RespondError(w, r, apperror.NewAppError(err, "mediaAPI.DownloadFile:GetFileB"))
+		helper.RespondError(w, r, apperror.NewAppError(err, "mediaAPI.DownloadFile:GetFileB"))
 		return
 	}
 	defer res.File.Close()
@@ -213,12 +215,12 @@ func (a *mediaAPI) DownloadFile(w http.ResponseWriter, r *http.Request) {
 	http.ServeContent(w, r, info.Name, info.UpdatedAt, file)
 }
 
-func (a *mediaAPI) TrashFiles(w http.ResponseWriter, r *http.Request) {
+func (a *MediaAPI) TrashFiles(w http.ResponseWriter, r *http.Request) {
 	var req struct {
 		FileIDs []int64 `json:"fileIds"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		internal.RespondError(w, r, apperror.NewAppError(fmt.Errorf("%w: %w", apperror.ErrCommonInvalidValue, err), "mediaAPI.TrashFile:DecodeJSON"))
+		helper.RespondError(w, r, apperror.NewAppError(fmt.Errorf("%w: %w", apperror.ErrCommonInvalidValue, err), "mediaAPI.TrashFile:DecodeJSON"))
 		return
 	}
 
@@ -229,17 +231,17 @@ func (a *mediaAPI) TrashFiles(w http.ResponseWriter, r *http.Request) {
 	}
 	err := a.commands.TrashFiles(r.Context(), cmd)
 	if err != nil {
-		internal.RespondError(w, r, apperror.NewAppError(err, "mediaAPI.TrashFile:TrashFiles").WithMetadata("file_ids", req.FileIDs))
+		helper.RespondError(w, r, apperror.NewAppError(err, "mediaAPI.TrashFile:TrashFiles").WithMetadata("file_ids", req.FileIDs))
 		return
 	}
 
-	internal.RespondEmpty(w, http.StatusNoContent)
+	helper.RespondEmpty(w, http.StatusNoContent)
 }
 
-func (a *mediaAPI) RenameFile(w http.ResponseWriter, r *http.Request) {
+func (a *MediaAPI) RenameFile(w http.ResponseWriter, r *http.Request) {
 	fileID, err := strconv.ParseInt(chi.URLParam(r, urlParamFileID), 10, 64)
 	if err != nil {
-		internal.RespondError(w, r, apperror.NewAppError(fmt.Errorf("%w: %w", apperror.ErrCommonInvalidValue, err), "mediaAPI.RenameFile:ParseInt"))
+		helper.RespondError(w, r, apperror.NewAppError(fmt.Errorf("%w: %w", apperror.ErrCommonInvalidValue, err), "mediaAPI.RenameFile:ParseInt"))
 		return
 	}
 
@@ -248,7 +250,7 @@ func (a *mediaAPI) RenameFile(w http.ResponseWriter, r *http.Request) {
 	var req dtos.RenameReq
 	err = json.NewDecoder(r.Body).Decode(&req)
 	if err != nil {
-		internal.RespondError(w, r, apperror.NewAppError(fmt.Errorf("%w: %w", apperror.ErrCommonInvalidValue, err), "mediaAPI.RenameFile:DecodeJSON"))
+		helper.RespondError(w, r, apperror.NewAppError(fmt.Errorf("%w: %w", apperror.ErrCommonInvalidValue, err), "mediaAPI.RenameFile:DecodeJSON"))
 		return
 	}
 
@@ -260,17 +262,17 @@ func (a *mediaAPI) RenameFile(w http.ResponseWriter, r *http.Request) {
 
 	err = a.commands.RenameFile(r.Context(), &cmd)
 	if err != nil {
-		internal.RespondError(w, r, apperror.NewAppError(err, "mediaAPI.RenameFile:RenameFile").WithMetadata("new_name", req.Name))
+		helper.RespondError(w, r, apperror.NewAppError(err, "mediaAPI.RenameFile:RenameFile").WithMetadata("new_name", req.Name))
 		return
 	}
 
-	internal.RespondEmpty(w, http.StatusNoContent)
+	helper.RespondEmpty(w, http.StatusNoContent)
 }
 
-func (a *mediaAPI) MoveFile(w http.ResponseWriter, r *http.Request) {
+func (a *MediaAPI) MoveFile(w http.ResponseWriter, r *http.Request) {
 	fileID, err := strconv.ParseInt(chi.URLParam(r, urlParamFileID), 10, 64)
 	if err != nil {
-		internal.RespondError(w, r, apperror.NewAppError(fmt.Errorf("%w: %w", apperror.ErrCommonInvalidValue, err), "mediaAPI.MoveFile:ParseInt"))
+		helper.RespondError(w, r, apperror.NewAppError(fmt.Errorf("%w: %w", apperror.ErrCommonInvalidValue, err), "mediaAPI.MoveFile:ParseInt"))
 		return
 	}
 
@@ -278,7 +280,7 @@ func (a *mediaAPI) MoveFile(w http.ResponseWriter, r *http.Request) {
 
 	var req dtos.MoveReq
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		internal.RespondError(w, r, apperror.NewAppError(fmt.Errorf("%w: %w", apperror.ErrCommonInvalidValue, err), "mediaAPI.MoveFile:DecodeJSON"))
+		helper.RespondError(w, r, apperror.NewAppError(fmt.Errorf("%w: %w", apperror.ErrCommonInvalidValue, err), "mediaAPI.MoveFile:DecodeJSON"))
 		return
 	}
 
@@ -295,17 +297,17 @@ func (a *mediaAPI) MoveFile(w http.ResponseWriter, r *http.Request) {
 
 	err = a.commands.MoveFile(r.Context(), cmd)
 	if err != nil {
-		internal.RespondError(w, r, apperror.NewAppError(err, "mediaAPI.MoveFile:MoveFile").WithMetadata("new_folder_id", req.FolderID))
+		helper.RespondError(w, r, apperror.NewAppError(err, "mediaAPI.MoveFile:MoveFile").WithMetadata("new_folder_id", req.FolderID))
 		return
 	}
 
-	internal.RespondEmpty(w, http.StatusNoContent)
+	helper.RespondEmpty(w, http.StatusNoContent)
 }
 
-func (a *mediaAPI) RestoreFile(w http.ResponseWriter, r *http.Request) {
+func (a *MediaAPI) RestoreFile(w http.ResponseWriter, r *http.Request) {
 	fileID, err := strconv.ParseInt(chi.URLParam(r, urlParamFileID), 10, 64)
 	if err != nil {
-		internal.RespondError(w, r, apperror.NewAppError(fmt.Errorf("%w: %w", apperror.ErrCommonInvalidValue, err), "mediaAPI.RestoreFile:ParseInt"))
+		helper.RespondError(w, r, apperror.NewAppError(fmt.Errorf("%w: %w", apperror.ErrCommonInvalidValue, err), "mediaAPI.RestoreFile:ParseInt"))
 		return
 	}
 
@@ -317,18 +319,18 @@ func (a *mediaAPI) RestoreFile(w http.ResponseWriter, r *http.Request) {
 
 	err = a.commands.RestoreFile(r.Context(), cmd)
 	if err != nil {
-		internal.RespondError(w, r, apperror.NewAppError(err, "mediaAPI.RestoreFile:RestoreFile"))
+		helper.RespondError(w, r, apperror.NewAppError(err, "mediaAPI.RestoreFile:RestoreFile"))
 		return
 	}
 
-	internal.RespondEmpty(w, http.StatusNoContent)
+	helper.RespondEmpty(w, http.StatusNoContent)
 }
 
 //--------------------------------
 // Folders
 //--------------------------------
 
-func (a *mediaAPI) CreateFolder(w http.ResponseWriter, r *http.Request) {
+func (a *MediaAPI) CreateFolder(w http.ResponseWriter, r *http.Request) {
 	profileID := auth.GetProfileIDFromContext(r.Context())
 	parentFolderID, gotErr := folderIDFromParam(w, r)
 	if gotErr {
@@ -337,7 +339,7 @@ func (a *mediaAPI) CreateFolder(w http.ResponseWriter, r *http.Request) {
 
 	var req dtos.CreateFolderReq
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		internal.RespondError(w, r, apperror.NewAppError(fmt.Errorf("%w: %w", apperror.ErrCommonInvalidValue, err), "mediaAPI.CreateFolder:DecodeJSON"))
+		helper.RespondError(w, r, apperror.NewAppError(fmt.Errorf("%w: %w", apperror.ErrCommonInvalidValue, err), "mediaAPI.CreateFolder:DecodeJSON"))
 		return
 	}
 
@@ -349,26 +351,26 @@ func (a *mediaAPI) CreateFolder(w http.ResponseWriter, r *http.Request) {
 
 	folder, err := a.commands.CreateFolder(r.Context(), cmd)
 	if err != nil {
-		internal.RespondError(w, r, apperror.NewAppError(err, "mediaAPI.CreateFolder:CreateFolder"))
+		helper.RespondError(w, r, apperror.NewAppError(err, "mediaAPI.CreateFolder:CreateFolder"))
 		return
 	}
 
 	var dto dtos.GetFolderInfoRes
 	err = copier.Copy(&dto, &folder)
 	if err != nil {
-		internal.RespondError(w, r, apperror.NewAppError(err, "mediaAPI.CreateFolder:Copy"))
+		helper.RespondError(w, r, apperror.NewAppError(err, "mediaAPI.CreateFolder:Copy"))
 		return
 	}
 
-	internal.RespondJSON(w, http.StatusCreated, &dto)
+	helper.RespondJSON(w, http.StatusCreated, &dto)
 }
 
-func (a *mediaAPI) TrashFolders(w http.ResponseWriter, r *http.Request) {
+func (a *MediaAPI) TrashFolders(w http.ResponseWriter, r *http.Request) {
 	var req struct {
 		FolderIDs []int64 `json:"folderIds"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		internal.RespondError(w, r, apperror.NewAppError(fmt.Errorf("%w: %w", apperror.ErrCommonInvalidValue, err), "mediaAPI.TrashFolder:DecodeJSON"))
+		helper.RespondError(w, r, apperror.NewAppError(fmt.Errorf("%w: %w", apperror.ErrCommonInvalidValue, err), "mediaAPI.TrashFolder:DecodeJSON"))
 		return
 	}
 
@@ -380,17 +382,17 @@ func (a *mediaAPI) TrashFolders(w http.ResponseWriter, r *http.Request) {
 
 	err := a.commands.TrashFolders(r.Context(), cmd)
 	if err != nil {
-		internal.RespondError(w, r, apperror.NewAppError(err, "mediaAPI.TrashFolder:TrashFolders").WithMetadata("folder_ids", req.FolderIDs))
+		helper.RespondError(w, r, apperror.NewAppError(err, "mediaAPI.TrashFolder:TrashFolders").WithMetadata("folder_ids", req.FolderIDs))
 		return
 	}
 
-	internal.RespondEmpty(w, http.StatusNoContent)
+	helper.RespondEmpty(w, http.StatusNoContent)
 }
 
-func (a *mediaAPI) RenameFolder(w http.ResponseWriter, r *http.Request) {
+func (a *MediaAPI) RenameFolder(w http.ResponseWriter, r *http.Request) {
 	folderID, err := strconv.ParseInt(chi.URLParam(r, urlParamFolderID), 10, 64)
 	if err != nil {
-		internal.RespondError(w, r, apperror.NewAppError(fmt.Errorf("%w: %w", apperror.ErrCommonInvalidValue, err), "mediaAPI.RenameFolder:ParseInt"))
+		helper.RespondError(w, r, apperror.NewAppError(fmt.Errorf("%w: %w", apperror.ErrCommonInvalidValue, err), "mediaAPI.RenameFolder:ParseInt"))
 		return
 	}
 
@@ -399,7 +401,7 @@ func (a *mediaAPI) RenameFolder(w http.ResponseWriter, r *http.Request) {
 	var req dtos.RenameReq
 	err = json.NewDecoder(r.Body).Decode(&req)
 	if err != nil {
-		internal.RespondError(w, r, apperror.NewAppError(err, "mediaAPI.RenameFolder:DecodeJSON"))
+		helper.RespondError(w, r, apperror.NewAppError(err, "mediaAPI.RenameFolder:DecodeJSON"))
 		return
 	}
 
@@ -411,17 +413,17 @@ func (a *mediaAPI) RenameFolder(w http.ResponseWriter, r *http.Request) {
 
 	err = a.commands.RenameFolder(r.Context(), cmd)
 	if err != nil {
-		internal.RespondError(w, r, apperror.NewAppError(err, "mediaAPI.RenameFolder:RenameFolder").WithMetadata("new_name", req.Name))
+		helper.RespondError(w, r, apperror.NewAppError(err, "mediaAPI.RenameFolder:RenameFolder").WithMetadata("new_name", req.Name))
 		return
 	}
 
-	internal.RespondEmpty(w, http.StatusNoContent)
+	helper.RespondEmpty(w, http.StatusNoContent)
 }
 
-func (a *mediaAPI) MoveFolder(w http.ResponseWriter, r *http.Request) {
+func (a *MediaAPI) MoveFolder(w http.ResponseWriter, r *http.Request) {
 	folderID, err := strconv.ParseInt(chi.URLParam(r, urlParamFolderID), 10, 64)
 	if err != nil {
-		internal.RespondError(w, r, apperror.NewAppError(fmt.Errorf("%w: %w", apperror.ErrCommonInvalidValue, err), "mediaAPI.MoveFolder:ParseInt"))
+		helper.RespondError(w, r, apperror.NewAppError(fmt.Errorf("%w: %w", apperror.ErrCommonInvalidValue, err), "mediaAPI.MoveFolder:ParseInt"))
 		return
 	}
 
@@ -430,7 +432,7 @@ func (a *mediaAPI) MoveFolder(w http.ResponseWriter, r *http.Request) {
 	var req dtos.MoveReq
 	err = json.NewDecoder(r.Body).Decode(&req)
 	if err != nil {
-		internal.RespondError(w, r, apperror.NewAppError(err, "mediaAPI.MoveFolder:DecodeJSON"))
+		helper.RespondError(w, r, apperror.NewAppError(err, "mediaAPI.MoveFolder:DecodeJSON"))
 		return
 	}
 	var moveToFolder *int64
@@ -446,17 +448,17 @@ func (a *mediaAPI) MoveFolder(w http.ResponseWriter, r *http.Request) {
 
 	err = a.commands.MoveFolder(r.Context(), cmd)
 	if err != nil {
-		internal.RespondError(w, r, apperror.NewAppError(err, "mediaAPI.MoveFolder:MoveFolder").WithMetadata("new_folder_id", req.FolderID))
+		helper.RespondError(w, r, apperror.NewAppError(err, "mediaAPI.MoveFolder:MoveFolder").WithMetadata("new_folder_id", req.FolderID))
 		return
 	}
 
-	internal.RespondEmpty(w, http.StatusNoContent)
+	helper.RespondEmpty(w, http.StatusNoContent)
 }
 
-func (a *mediaAPI) RestoreFolder(w http.ResponseWriter, r *http.Request) {
+func (a *MediaAPI) RestoreFolder(w http.ResponseWriter, r *http.Request) {
 	folderID, err := strconv.ParseInt(chi.URLParam(r, urlParamFolderID), 10, 64)
 	if err != nil {
-		internal.RespondError(w, r, apperror.NewAppError(fmt.Errorf("%w: %w", apperror.ErrCommonInvalidValue, err), "mediaAPI.RestoreFolder:ParseInt"))
+		helper.RespondError(w, r, apperror.NewAppError(fmt.Errorf("%w: %w", apperror.ErrCommonInvalidValue, err), "mediaAPI.RestoreFolder:ParseInt"))
 		return
 	}
 
@@ -468,14 +470,14 @@ func (a *mediaAPI) RestoreFolder(w http.ResponseWriter, r *http.Request) {
 
 	err = a.commands.RestoreFolder(r.Context(), cmd)
 	if err != nil {
-		internal.RespondError(w, r, apperror.NewAppError(err, "mediaAPI.RestoreFolder:RestoreFolder"))
+		helper.RespondError(w, r, apperror.NewAppError(err, "mediaAPI.RestoreFolder:RestoreFolder"))
 		return
 	}
 
-	internal.RespondEmpty(w, http.StatusNoContent)
+	helper.RespondEmpty(w, http.StatusNoContent)
 }
 
-func (a *mediaAPI) GetFolderContent(w http.ResponseWriter, r *http.Request) {
+func (a *MediaAPI) GetFolderContent(w http.ResponseWriter, r *http.Request) {
 	profileID := auth.GetProfileIDFromContext(r.Context())
 	folderID, gotErr := folderIDFromParam(w, r)
 	if gotErr {
@@ -501,16 +503,16 @@ func (a *mediaAPI) GetFolderContent(w http.ResponseWriter, r *http.Request) {
 
 	res, err := a.queries.GetFolderContent(r.Context(), query)
 	if err != nil {
-		internal.RespondError(w, r, apperror.NewAppError(err, "mediaAPI.GetFolderContent:GetFolderContent"))
+		helper.RespondError(w, r, apperror.NewAppError(err, "mediaAPI.GetFolderContent:GetFolderContent"))
 		return
 	}
 
 	var dto dtos.GetFolderContentQueryRes
 	err = copier.Copy(&dto, res)
 	if err != nil {
-		internal.RespondError(w, r, apperror.NewAppError(err, "mediaAPI.GetFolderContent:Copy"))
+		helper.RespondError(w, r, apperror.NewAppError(err, "mediaAPI.GetFolderContent:Copy"))
 		return
 	}
 
-	internal.RespondJSON(w, http.StatusOK, &dto)
+	helper.RespondJSON(w, http.StatusOK, &dto)
 }

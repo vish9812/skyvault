@@ -1,7 +1,6 @@
 package bootstrap
 
 import (
-	"context"
 	"skyvault/internal/api"
 	"skyvault/internal/domain/auth"
 	"skyvault/internal/domain/media"
@@ -30,9 +29,9 @@ func InitAPI(app *appconfig.App, infra *infrastructure.Infrastructure) *api.API 
 
 	// Init API
 	apiServer := api.NewAPI(app).InitRoutes(infra)
-	api.NewAuthAPI(apiServer, signUpFlow, signInFlow).InitRoutes()
-	mediaAPI := api.NewMediaAPI(apiServer, app, mediaCommands, mediaQueries).InitRoutes()
-	api.NewProfileAPI(apiServer, profileCommands, profileQueries).InitRoutes()
+	apiServer.Auth = api.NewAuthAPI(apiServer, signUpFlow, signInFlow).InitRoutes()
+	apiServer.Media = api.NewMediaAPI(apiServer, app, mediaCommands, mediaQueries).InitRoutes()
+	apiServer.Profile = api.NewProfileAPI(apiServer, profileCommands, profileQueries).InitRoutes()
 
 	return apiServer
 }

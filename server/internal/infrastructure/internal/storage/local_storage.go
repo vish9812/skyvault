@@ -25,7 +25,7 @@ type LocalStorage struct {
 func NewLocalStorage(app *appconfig.App) *LocalStorage {
 	// Ensure the base directory exists
 	baseDir := filepath.Join(app.Config.Server.DataDir, localStorageBaseDir)
-	err := os.MkdirAll(baseDir, os.ModePerm)
+	err := os.MkdirAll(baseDir, 0750)
 	if err != nil {
 		app.Logger.Fatal().Err(err).Str("base_dir", baseDir).Msg("Failed to create base directory for local storage")
 	}
@@ -36,7 +36,7 @@ func NewLocalStorage(app *appconfig.App) *LocalStorage {
 func (s *LocalStorage) SaveFile(ctx context.Context, file io.ReadSeeker, name string, ownerID int64) error {
 	// Create the owner directory
 	ownerDir := getOwnerDir(s.baseDir, ownerID)
-	err := os.MkdirAll(ownerDir, os.ModePerm)
+	err := os.MkdirAll(ownerDir, 0750)
 	if err != nil {
 		return apperror.NewAppError(err, "LocalStorage.SaveFile:MkdirAll").WithMetadata("owner_dir", ownerDir)
 	}
@@ -51,7 +51,8 @@ func (s *LocalStorage) SaveFile(ctx context.Context, file io.ReadSeeker, name st
 	}
 
 	// Create the destination file
-	f, err := os.Create(savePath)
+	// f, err := os.Create(savePath)
+	f, err := os.OpenFile(savePath, os.O_CREATE|os.O_WRONLY, 0640)
 	if err != nil {
 		return apperror.NewAppError(err, "LocalStorage.SaveFile:Create").WithMetadata("save_path", savePath)
 	}

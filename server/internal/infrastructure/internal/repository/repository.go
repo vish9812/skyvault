@@ -97,11 +97,7 @@ func (r *Repository) withTx(ctx context.Context, tx *sql.Tx) *Repository {
 }
 
 func (r *Repository) migrateUp() {
-	// Assuming the code is run from the main.go inside the cmd folder.
-	migrationPath, err := filepath.Abs("../internal/infrastructure/internal/repository/internal/migrations")
-	if err != nil {
-		r.app.Logger.Fatal().Err(err).Msg("failed to get the absolute migration path")
-	}
+	migrationPath := filepath.Join(r.app.Config.Server.Path, "internal/infrastructure/internal/repository/internal/migrations")
 	migrationDirURL := fmt.Sprintf("file://%s", migrationPath)
 	logger := r.app.Logger.With().Str("where", "migrateUp").Str("migration_path", migrationDirURL).Logger()
 

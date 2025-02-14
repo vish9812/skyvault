@@ -55,7 +55,7 @@ func TestUploadFile(t *testing.T) {
 		req.Header.Set("Content-Type", writer.FormDataContentType())
 		w := httptest.NewRecorder()
 
-		env.mediaAPI.UploadFile(w, req)
+		env.api.Media.UploadFile(w, req)
 		require.Equal(t, http.StatusCreated, w.Code)
 
 		var fileInfo dtos.GetFileInfoRes
@@ -92,7 +92,7 @@ func TestUploadFile(t *testing.T) {
 		req.Header.Set("Authorization", "Bearer "+token)
 
 		w := httptest.NewRecorder()
-		env.mediaAPI.UploadFile(w, req)
+		env.api.Media.UploadFile(w, req)
 		require.Equal(t, http.StatusBadRequest, w.Code)
 	})
 }
@@ -115,7 +115,7 @@ func TestCreateFolder(t *testing.T) {
 		req.Header.Set("Authorization", "Bearer "+token)
 
 		w := httptest.NewRecorder()
-		env.mediaAPI.CreateFolder(w, req)
+		env.api.Media.CreateFolder(w, req)
 		require.Equal(t, http.StatusCreated, w.Code)
 
 		var folderInfo dtos.GetFolderInfoRes
@@ -141,7 +141,7 @@ func TestGetFolderContent(t *testing.T) {
 	req.Header.Set("Authorization", "Bearer "+token)
 
 	w := httptest.NewRecorder()
-	env.mediaAPI.CreateFolder(w, req)
+	env.api.Media.CreateFolder(w, req)
 	var folderInfo dtos.GetFolderInfoRes
 	err = json.NewDecoder(w.Body).Decode(&folderInfo)
 	require.NoError(t, err)
@@ -169,7 +169,7 @@ func TestGetFolderContent(t *testing.T) {
 	req.Header.Set("Authorization", "Bearer "+token)
 
 	w = httptest.NewRecorder()
-	env.mediaAPI.UploadFile(w, req)
+	env.api.Media.UploadFile(w, req)
 	require.Equal(t, http.StatusCreated, w.Code)
 
 	// Now test getting folder contents
@@ -179,7 +179,7 @@ func TestGetFolderContent(t *testing.T) {
 		req.Header.Set("Authorization", "Bearer "+token)
 
 		w := httptest.NewRecorder()
-		env.mediaAPI.GetFolderContent(w, req)
+		env.api.Media.GetFolderContent(w, req)
 		require.Equal(t, http.StatusOK, w.Code)
 
 		var content dtos.GetFolderContentQueryRes

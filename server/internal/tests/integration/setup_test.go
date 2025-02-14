@@ -8,8 +8,8 @@ import (
 	"os"
 	"path/filepath"
 	"skyvault/internal/api"
+	"skyvault/internal/bootstrap"
 	"skyvault/internal/domain/auth"
-	"skyvault/internal/domain/media"
 	"skyvault/internal/domain/profile"
 	"skyvault/internal/infrastructure"
 	"skyvault/internal/workflows"
@@ -51,9 +51,6 @@ type testEnv struct {
 	server *httptest.Server
 	api    *api.API
 	dbName string
-
-	// API handlers
-	mediaAPI *api.MediaAPI
 }
 
 func setupTestEnv(t *testing.T) *testEnv {
@@ -117,12 +114,11 @@ func setupTestEnv(t *testing.T) *testEnv {
 	})
 
 	return &testEnv{
-		app:      app,
-		infra:    infra,
-		server:   server,
-		api:      apiServer,
-		dbName:   dbName,
-		mediaAPI: mediaAPI,
+		app:    app,
+		infra:  infra,
+		server: server,
+		api:    apiServer,
+		dbName: dbName,
 	}
 }
 
