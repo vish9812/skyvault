@@ -151,6 +151,21 @@ func TestMediaManagementFlow(t *testing.T) {
 		require.Equal(t, http.StatusNoContent, resp.Code, "should return status no content for folder restore")
 	}
 
+	// Helper function to download a file
+	downloadFile := func(t *testing.T, fileID int64, buf []byte) {
+		t.Helper()
+
+		req, err := http.NewRequest(http.MethodGet, fileURL(fileID)+"/download", nil)
+		require.NoError(t, err, "should create new request for file download")
+		req.Header.Set("Authorization", "Bearer "+token)
+
+		resp := executeRequest(t, env, req)
+		require.Equal(t, http.StatusOK, resp.Code, "should return status ok for file download")
+
+		_, err = resp.Body.Read(buf)
+		require.NoError(t, err, "should read file content")
+	}
+
 	t.Run("basic file management workflow", func(t *testing.T) {
 		// Create initial folder
 		folder1 := createFolder(t, 0, "Documents")
@@ -172,6 +187,11 @@ func TestMediaManagementFlow(t *testing.T) {
 		require.Len(t, rootContents.FolderPage.Items, 1, "root should contain exactly one folder")
 		require.Equal(t, folder1.Name, rootContents.FolderPage.Items[0].Name, "folder in root should have correct name")
 		require.Len(t, rootContents.FilePage.Items, 0, "root should not contain any files")
+
+		// Download the file
+		buf := make([]byte, media.BytesPerKB)
+		downloadFile(t, file1.ID, buf)
+		require.Len(t, buf, media.BytesPerKB, "downloaded file should have correct size")
 
 		// Rename the file
 		renameFile(t, file1.ID, "renamed.txt")

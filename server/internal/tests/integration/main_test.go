@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"net/http"
 	"net/http/httptest"
 	"os"
 	"path/filepath"
@@ -15,13 +16,15 @@ import (
 	"skyvault/internal/workflows"
 	"skyvault/pkg/appconfig"
 	"skyvault/pkg/applog"
-	"skyvault/pkg/common"
 	"skyvault/pkg/utils"
 	"testing"
 	"time"
 
 	_ "github.com/jackc/pgx/v5/stdlib"
-	"github.com/stretchr/testify/require"
+)
+
+const (
+	baseURL = "/api/v1"
 )
 
 // testDB just to be used to create and drop test databases

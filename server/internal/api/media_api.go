@@ -64,8 +64,10 @@ func (a *MediaAPI) InitRoutes() *MediaAPI {
 				r.Patch("/move", a.MoveFolder)
 				r.Patch("/restore", a.RestoreFolder)
 
-				// Files routes that need both folderID and fileID
-				r.Post("/files", a.UploadFile)
+				// Files routes that need folderID
+				r.Route("/files", func(r chi.Router) {
+					r.Post("/", a.UploadFile)
+				})
 			})
 		})
 	})
