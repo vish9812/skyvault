@@ -8,7 +8,6 @@ import (
 	"io"
 	"mime/multipart"
 	"net/http"
-	"net/http/httptest"
 	"os"
 	"skyvault/internal/api/helper/dtos"
 	"skyvault/internal/domain/media"
@@ -23,7 +22,7 @@ func TestUploadFile(t *testing.T) {
 	env := setupTestEnv(t)
 	_, token := createTestUser(t, env)
 	ctx := context.Background()
-	ctx = enhancedReqContext(t, ctx, env, token)
+	// ctx = enhancedReqContext(t, ctx, env, token)
 
 	// Create test file
 	fileName := fmt.Sprintf("test-%s.txt", utils.RandomName())
@@ -31,6 +30,7 @@ func TestUploadFile(t *testing.T) {
 	filePath := createTestFile(t, env, fileName, fileSize)
 
 	t.Run("successful upload", func(t *testing.T) {
+		t.Parallel()
 		// Create multipart form
 		body := &bytes.Buffer{}
 		writer := multipart.NewWriter(body)
@@ -53,6 +53,8 @@ func TestUploadFile(t *testing.T) {
 		req, err := http.NewRequestWithContext(ctx, http.MethodPost, "/api/v1/media/folders/0/files", body)
 		require.NoError(t, err)
 		req.Header.Set("Content-Type", writer.FormDataContentType())
+		req.Header.Set("Authorization", "Bearer "+token)
+
 		resp := executeRequest(t, env, req)
 		require.Equal(t, http.StatusCreated, resp.Code)
 
@@ -64,6 +66,7 @@ func TestUploadFile(t *testing.T) {
 	})
 
 	t.Run("file too large", func(t *testing.T) {
+		t.Parallel()
 		// Create a file larger than max size
 		largeFileName := fmt.Sprintf("large-%s.txt", utils.RandomName())
 		largeFileSize := int64((env.app.Config.Media.MaxSizeMB + 1) * media.BytesPerMB)
