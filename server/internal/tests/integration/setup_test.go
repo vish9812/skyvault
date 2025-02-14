@@ -85,23 +85,10 @@ func setupTestEnv(t *testing.T) *testEnv {
 	app := appconfig.NewApp(config, logger)
 
 	// Initialize infrastructure
-	infra := infrastructure.NewInfrastructure(app)
+	infra := bootstrap.InitInfrastructure(app)
 
-	// Init workFlows, commands and queries
-	profileCommands := profile.NewCommandHandlers(infra.Repository.Profile)
-	profileQueries := profile.NewQueryHandlers(infra.Repository.Profile)
-	authCommands := auth.NewCommandHandlers(infra.Repository.Auth, infra.Auth)
-	authQueries := auth.NewQueryHandlers(infra.Repository.Auth, infra.Auth)
-	signUpFlow := workflows.NewSignUpFlow(app, authCommands, infra.Repository.Auth, profileCommands, infra.Repository.Profile)
-	signInFlow := workflows.NewSignInFlow(authCommands, authQueries, profileCommands, profileQueries)
-	mediaCommands := media.NewCommandHandlers(app, infra.Repository.Media, infra.Storage.LocalStorage)
-	mediaQueries := media.NewQueryHandlers(infra.Repository.Media, infra.Storage.LocalStorage)
-
-	// Init API
-	apiServer := api.NewAPI(app).InitRoutes(infra)
-	api.NewAuthAPI(apiServer, signUpFlow, signInFlow).InitRoutes()
-	mediaAPI := api.NewMediaAPI(apiServer, app, mediaCommands, mediaQueries).InitRoutes()
-	api.NewProfileAPI(apiServer, profileCommands, profileQueries).InitRoutes()
+	// Initialize API server
+	apiServer := bootstrap.InitAPI(app, infra)
 
 	// Create test HTTP server
 	server := httptest.NewServer(apiServer.Router)
@@ -155,9 +142,7 @@ func enhancedReqContext(t *testing.T, ctx context.Context, env *testEnv, token s
 func createTestUser(t *testing.T, env *testEnv) (*profile.Profile, string) {
 	ctx := context.Background()
 
-	authCommands := auth.NewCommandHandlers(env.infra.Repository.Auth, env.infra.Auth)
-	profileCommands := profile.NewCommandHandlers(env.infra.Repository.Profile)
-	signUpFlow := workflows.NewSignUpFlow(env.app, authCommands, env.infra.Repository.Auth, profileCommands, env.infra.Repository.Profile)
+	signUpFlow := bootstrap.InitSignUpFlow(env.app, env.infra)
 
 	// Create test user
 	req := &workflows.SignUpReq{
