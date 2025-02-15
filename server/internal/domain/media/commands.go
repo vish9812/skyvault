@@ -5,6 +5,10 @@ import (
 	"io"
 )
 
+// TODO: Allow bulk Move for both files and folders.
+// Allow moving at max. 50 files and folders synchronously in a single request.
+// For more than 50, use a background job.
+
 type Commands interface {
 	//--------------------------------
 	// Files

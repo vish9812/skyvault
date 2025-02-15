@@ -86,10 +86,7 @@ func (h *CommandHandlers) RenameFile(ctx context.Context, cmd *RenameFileCommand
 		return apperror.NewAppError(err, "media.CommandHandlers.RenameFile:ValidateAccess")
 	}
 
-	err = info.Rename(cmd.Name)
-	if err != nil {
-		return apperror.NewAppError(err, "media.CommandHandlers.RenameFile:Rename")
-	}
+	info.Rename(cmd.Name)
 
 	err = h.repository.UpdateFileInfo(ctx, info)
 	if err != nil {
@@ -201,10 +198,7 @@ func (h *CommandHandlers) RenameFolder(ctx context.Context, cmd *RenameFolderCom
 		return apperror.NewAppError(err, "media.CommandHandlers.RenameFolder:ValidateAccess")
 	}
 
-	err = info.Rename(cmd.Name)
-	if err != nil {
-		return apperror.NewAppError(err, "media.CommandHandlers.RenameFolder:Rename")
-	}
+	info.Rename(cmd.Name)
 
 	err = h.repository.UpdateFolderInfo(ctx, info)
 	if err != nil {

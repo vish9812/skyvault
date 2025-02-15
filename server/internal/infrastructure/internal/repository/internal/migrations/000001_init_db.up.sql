@@ -17,6 +17,7 @@ create table if not exists auth (
 	updated_at timestamp not null default (timezone('utc', now()))
 );
 
+create index if not exists auth_idx_profile_id on auth(profile_id);
 create unique index if not exists auth_idx_unq_provider_user on auth(provider, provider_user_id);
 
 create table if not exists folder_info (

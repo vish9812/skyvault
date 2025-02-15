@@ -3,6 +3,7 @@ package auth
 import (
 	"context"
 	"skyvault/pkg/apperror"
+	"skyvault/pkg/common"
 )
 
 var _ Commands = (*CommandHandlers)(nil)
@@ -29,22 +30,22 @@ func (h *CommandHandlers) WithTxRepository(ctx context.Context, repository Repos
 func (h *CommandHandlers) SignUp(ctx context.Context, cmd *SignUpCommand) (token string, err error) {
 	au, err := NewAuth(cmd.ProfileID, cmd.Provider, cmd.ProviderUserID, cmd.Password)
 	if err != nil {
-		return "", apperror.NewAppError(err, "CommandHandlers.SignUp:NewAuth")
+		return "", apperror.NewAppError(err, "auth.CommandHandlers.SignUp:NewAuth")
 	}
 
 	authenticator, err := h.authenticatorFactory.GetAuthenticator(au.Provider)
 	if err != nil {
-		return "", apperror.NewAppError(err, "CommandHandlers.SignUp:GetAuthenticator")
+		return "", apperror.NewAppError(err, "auth.CommandHandlers.SignUp:GetAuthenticator")
 	}
 
 	au, err = h.repository.Create(ctx, au)
 	if err != nil {
-		return "", apperror.NewAppError(err, "CommandHandlers.SignUp:Create")
+		return "", apperror.NewAppError(err, "auth.CommandHandlers.SignUp:Create")
 	}
 
-	token, err = authenticator.GenerateToken(ctx, au.ProfileID, cmd.Email)
+	token, err = authenticator.GenerateToken(ctx, au.ProfileID)
 	if err != nil {
-		return "", apperror.NewAppError(err, "CommandHandlers.SignUp:GenerateToken")
+		return "", apperror.NewAppError(err, "auth.CommandHandlers.SignUp:GenerateToken")
 	}
 
 	return token, nil
@@ -52,36 +53,51 @@ func (h *CommandHandlers) SignUp(ctx context.Context, cmd *SignUpCommand) (token
 
 func (h *CommandHandlers) SignIn(ctx context.Context, cmd *SignInCommand) (token string, err error) {
 	// TODO: Add support for other providers
-	if cmd.Auth.Provider != ProviderEmail {
-		return "", apperror.NewAppError(apperror.ErrAuthInvalidProvider, "CommandHandlers.SignIn")
+	if cmd.Provider != ProviderEmail {
+		return "", apperror.NewAppError(apperror.ErrAuthWrongProvider, "auth.CommandHandlers.SignIn")
 	}
 
-	authenticator, err := h.authenticatorFactory.GetAuthenticator(cmd.Auth.Provider)
+	authenticator, err := h.authenticatorFactory.GetAuthenticator(cmd.Provider)
 	if err != nil {
-		return "", apperror.NewAppError(err, "CommandHandlers.SignIn:GetAuthenticator")
+		return "", apperror.NewAppError(err, "auth.CommandHandlers.SignIn:GetAuthenticator")
 	}
 
-	credentials := map[CredsKeys]any{
-		CredsKeysPasswordHash: cmd.Auth.PasswordHash,
-		CredsKeysPassword:     cmd.Password,
+	// Credentials for email provider
+	credentials := map[CredKey]any{
+		CredKeyPasswordHash: cmd.PasswordHash,
+		CredKeyPassword:     cmd.Password,
 	}
 
 	err = authenticator.ValidateCredentials(ctx, credentials)
 	if err != nil {
-		return "", apperror.NewAppError(err, "CommandHandlers.SignIn:ValidateCredentials")
+		return "", apperror.NewAppError(err, "auth.CommandHandlers.SignIn:ValidateCredentials")
 	}
 
-	token, err = authenticator.GenerateToken(ctx, cmd.ProfileID, cmd.Email)
+	token, err = authenticator.GenerateToken(ctx, cmd.ProfileID)
 	if err != nil {
-		return "", apperror.NewAppError(err, "CommandHandlers.SignIn:GenerateToken")
+		return "", apperror.NewAppError(err, "auth.CommandHandlers.SignIn:GenerateToken")
 	}
+
 	return token, nil
 }
 
 func (h *CommandHandlers) Delete(ctx context.Context, cmd *DeleteCommand) error {
-	err := h.repository.Delete(ctx, cmd.ID)
+	loggedInProfileID := common.GetProfileIDFromContext(ctx)
+
+	au, err := h.repository.Get(ctx, cmd.ID)
 	if err != nil {
-		return apperror.NewAppError(err, "CommandHandlers.Delete:Delete")
+		return apperror.NewAppError(err, "auth.CommandHandlers.Delete:Get")
 	}
+
+	err = au.ValidateAccess(loggedInProfileID)
+	if err != nil {
+		return apperror.NewAppError(err, "auth.CommandHandlers.Delete:ValidateAccess")
+	}
+
+	err = h.repository.Delete(ctx, cmd.ID)
+	if err != nil {
+		return apperror.NewAppError(err, "auth.CommandHandlers.Delete:Delete")
+	}
+
 	return nil
 }

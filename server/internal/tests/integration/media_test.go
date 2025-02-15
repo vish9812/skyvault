@@ -1,17 +1,12 @@
 package integration
 
 import (
-	"bytes"
-	"encoding/json"
 	"fmt"
-	"io"
-	"mime/multipart"
-	"net/http"
-	"os"
-	"skyvault/internal/api/helper/dtos"
 	"skyvault/internal/domain/media"
+	"skyvault/pkg/paging"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -20,6 +15,7 @@ import (
 // between different operations. Edge cases and error conditions are covered
 // in unit tests (see: file_info_test.go and folder_info_test.go)
 func TestMediaManagementFlow(t *testing.T) {
+	t.Parallel()
 	env := setupTestEnv(t)
 	_, token := createTestUser(t, env)
 
@@ -93,153 +89,198 @@ func TestMediaManagementFlow(t *testing.T) {
 	require.Equal(t, file1.ID, contents2Restored.FilePage.Items[0].ID, "restored file should be the correct one")
 }
 
-func foldersURL() string {
-	return baseURL + "/media/folders"
-}
+func TestPagination(t *testing.T) {
+	t.Parallel()
+	env := setupTestEnv(t)
+	_, token := createTestUser(t, env)
 
-func filesURL() string {
-	return baseURL + "/media/files"
-}
+	fileName := func(i string) string {
+		return fmt.Sprintf("file_%s.txt", i)
+	}
 
-func folderURL(id int64) string {
-	return fmt.Sprintf("%s/%d", foldersURL(), id)
-}
+	testCases := []struct {
+		name     string
+		sort     string
+		expected []string // file names in expected order
+	}{
+		{
+			name:     "ASC",
+			sort:     paging.SortAsc,
+			expected: []string{"01", "02", "03", "04", "05", "06", "07", "08"},
+		},
+		{
+			name:     "DESC",
+			sort:     "desc",
+			expected: []string{"08", "07", "06", "05", "04", "03", "02", "01"},
+		},
+	}
 
-func fileURL(id int64) string {
-	return fmt.Sprintf("%s/%d", filesURL(), id)
-}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
 
-func createFolder(t *testing.T, env *testEnv, token string, parentID int64, name string) *dtos.GetFolderInfoRes {
-	t.Helper()
-	body := map[string]string{"name": name}
-	jsonBody, err := json.Marshal(body)
-	require.NoError(t, err, "should marshal folder creation request")
+			pagingOpt := func(direction, nextCursor, prevCursor string) *paging.Options {
+				return &paging.Options{
+					Direction:  direction,
+					NextCursor: nextCursor,
+					PrevCursor: prevCursor,
+					Limit:      3,
+					Sort:       tc.sort,
+					SortBy:     paging.SortByName,
+				}
+			}
 
-	req, err := http.NewRequest(http.MethodPost, folderURL(parentID), bytes.NewBuffer(jsonBody))
-	require.NoError(t, err, "should create new request for folder creation")
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Authorization", "Bearer "+token)
+			folder := createFolder(t, env, token, 0, tc.name)
 
-	resp := executeRequest(t, env, req)
-	require.Equal(t, http.StatusCreated, resp.Code, "should return status created for folder creation")
+			// Upload 8 files to root folder
+			for _, num := range tc.expected {
+				uploadFile(t, env, token, folder.ID, fileName(num), media.BytesPerKB)
+			}
 
-	var folderInfo dtos.GetFolderInfoRes
-	err = json.NewDecoder(resp.Body).Decode(&folderInfo)
-	require.NoError(t, err, "should open file for upload")
-	return &folderInfo
-}
+			// Get first page (3 items) going forward
+			contents := getFolderContentsWithPaging(t, env, token, folder.ID, pagingOpt(paging.DirectionForward, "", ""))
+			require.Len(t, contents.FilePage.Items, 3, "first page should contain exactly 3 files")
+			require.True(t, contents.FilePage.HasMore, "should have more pages")
+			require.NotEmpty(t, contents.FilePage.NextCursor, "first page should have next cursor")
 
-func uploadFile(t *testing.T, env *testEnv, token string, folderID int64, fileName string, fileSize int64) *dtos.GetFileInfoRes {
-	t.Helper()
-	filePath := createTestFile(t, env, fileName, fileSize)
+			// Verify first page files
+			for i := 0; i < 3; i++ {
+				assert.Equal(t, fileName(tc.expected[i]), contents.FilePage.Items[i].Name)
+			}
 
-	body := &bytes.Buffer{}
-	writer := multipart.NewWriter(body)
-	file, err := os.Open(filePath)
-	require.NoError(t, err, "should create form file part")
-	defer file.Close()
+			// Get second page (3 items) going forward
+			contents = getFolderContentsWithPaging(t, env, token, folder.ID, pagingOpt(
+				paging.DirectionForward,
+				contents.FilePage.NextCursor,
+				contents.FilePage.PrevCursor),
+			)
+			require.Len(t, contents.FilePage.Items, 3, "second page should contain exactly 3 files")
+			require.True(t, contents.FilePage.HasMore, "should have more pages")
+			require.NotEmpty(t, contents.FilePage.PrevCursor, "second page should have prev cursor")
+			require.NotEmpty(t, contents.FilePage.NextCursor, "second page should have next cursor")
 
-	part, err := writer.CreateFormFile("file", fileName)
-	require.NoError(t, err, "should copy file content to form")
-	_, err = io.Copy(part, file)
-	require.NoError(t, err, "should decode file info response")
-	writer.Close()
+			// Verify second page files
+			for i := 0; i < 3; i++ {
+				assert.Equal(t, fileName(tc.expected[i+3]), contents.FilePage.Items[i].Name)
+			}
 
-	req, err := http.NewRequest(http.MethodPost, folderURL(folderID)+"/files", body)
-	require.NoError(t, err, "should create new request for file upload")
-	req.Header.Set("Content-Type", writer.FormDataContentType())
-	req.Header.Set("Authorization", "Bearer "+token)
+			// Get last page (2 items) going forward
+			contents = getFolderContentsWithPaging(t, env, token, folder.ID, pagingOpt(
+				paging.DirectionForward,
+				contents.FilePage.NextCursor,
+				contents.FilePage.PrevCursor),
+			)
+			require.Len(t, contents.FilePage.Items, 2, "last page should contain exactly 2 files")
+			require.False(t, contents.FilePage.HasMore, "should not have more pages")
+			require.NotEmpty(t, contents.FilePage.PrevCursor, "last page should have prev cursor")
 
-	resp := executeRequest(t, env, req)
-	require.Equal(t, http.StatusCreated, resp.Code, "should return status created for file upload")
+			// Verify last page files
+			for i := 0; i < 2; i++ {
+				assert.Equal(t, fileName(tc.expected[i+6]), contents.FilePage.Items[i].Name)
+			}
 
-	var fileInfo dtos.GetFileInfoRes
-	err = json.NewDecoder(resp.Body).Decode(&fileInfo)
-	require.NoError(t, err, "should marshal file rename request")
-	return &fileInfo
-}
+			// Go back one page using prev cursor going backward
+			contents = getFolderContentsWithPaging(t, env, token, folder.ID, pagingOpt(
+				"backward",
+				contents.FilePage.NextCursor,
+				contents.FilePage.PrevCursor),
+			)
+			require.Len(t, contents.FilePage.Items, 3, "previous page should contain exactly 3 files")
+			require.True(t, contents.FilePage.HasMore, "should have more pages")
+			require.NotEmpty(t, contents.FilePage.PrevCursor, "second page should have prev cursor")
+			require.NotEmpty(t, contents.FilePage.NextCursor, "second page should have next cursor")
 
-func getFolderContents(t *testing.T, env *testEnv, token string, folderID int64) *dtos.GetFolderContentQueryRes {
-	t.Helper()
-	req, err := http.NewRequest(http.MethodGet, folderURL(folderID)+"/content", nil)
-	require.NoError(t, err, "should create new request for folder contents")
-	req.Header.Set("Authorization", "Bearer "+token)
+			// Verify we got back to the previous page
+			for i := 0; i < 3; i++ {
+				assert.Equal(t, fileName(tc.expected[i+3]), contents.FilePage.Items[i].Name)
+			}
 
-	resp := executeRequest(t, env, req)
-	require.Equal(t, http.StatusOK, resp.Code, "should return status ok for folder contents")
+			// Reached first page using prev cursor going backward
+			contents = getFolderContentsWithPaging(t, env, token, folder.ID, pagingOpt(
+				"backward",
+				contents.FilePage.NextCursor,
+				contents.FilePage.PrevCursor),
+			)
+			require.Len(t, contents.FilePage.Items, 3, "previous page should contain exactly 3 files")
+			require.False(t, contents.FilePage.HasMore, "should not have more pages")
+			require.NotEmpty(t, contents.FilePage.NextCursor, "first page should have next cursor")
 
-	var content dtos.GetFolderContentQueryRes
-	err = json.NewDecoder(resp.Body).Decode(&content)
-	require.NoError(t, err)
-	return &content
-}
+			// Verify we got back to the first page
+			for i := 0; i < 3; i++ {
+				assert.Equal(t, fileName(tc.expected[i]), contents.FilePage.Items[i].Name)
+			}
 
-func renameFile(t *testing.T, env *testEnv, token string, fileID int64, newName string) {
-	t.Helper()
-	body := map[string]string{"name": newName}
-	jsonBody, err := json.Marshal(body)
-	require.NoError(t, err)
+			// Reached to the beginning of the list
+			// Now, test forward and backward without reaching the end of the list
 
-	req, err := http.NewRequest(http.MethodPatch, fileURL(fileID)+"/rename", bytes.NewBuffer(jsonBody))
-	require.NoError(t, err, "should create new request for file rename")
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Authorization", "Bearer "+token)
+			// Again go forward from the first page to the second page
+			contents = getFolderContentsWithPaging(t, env, token, folder.ID, pagingOpt(
+				paging.DirectionForward,
+				contents.FilePage.NextCursor,
+				contents.FilePage.PrevCursor),
+			)
+			require.Len(t, contents.FilePage.Items, 3, "again second page should contain exactly 3 files")
+			require.True(t, contents.FilePage.HasMore, "should have more pages")
+			require.NotEmpty(t, contents.FilePage.PrevCursor, "second page should have prev cursor")
+			require.NotEmpty(t, contents.FilePage.NextCursor, "second page should have next cursor")
 
-	resp := executeRequest(t, env, req)
-	require.Equal(t, http.StatusNoContent, resp.Code, "should return status no content for file rename")
-}
+			// Verify we got back to the second page
+			for i := 0; i < 3; i++ {
+				assert.Equal(t, fileName(tc.expected[i+3]), contents.FilePage.Items[i].Name)
+			}
 
-func moveFile(t *testing.T, env *testEnv, token string, fileID int64, newFolderID int64) {
-	t.Helper()
-	body := map[string]int64{"folderId": newFolderID}
-	jsonBody, err := json.Marshal(body)
-	require.NoError(t, err)
+			// Come back from the second page to the first page
+			contents = getFolderContentsWithPaging(t, env, token, folder.ID, pagingOpt(
+				"backward",
+				contents.FilePage.NextCursor,
+				contents.FilePage.PrevCursor),
+			)
+			require.Len(t, contents.FilePage.Items, 3, "again first page should contain exactly 3 files")
+			require.False(t, contents.FilePage.HasMore, "should not have more pages")
+			require.NotEmpty(t, contents.FilePage.NextCursor, "first page should have next cursor")
 
-	req, err := http.NewRequest(http.MethodPatch, fileURL(fileID)+"/move", bytes.NewBuffer(jsonBody))
-	require.NoError(t, err, "should create new request for file move")
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Authorization", "Bearer "+token)
+			// Verify we got back to the first page
+			for i := 0; i < 3; i++ {
+				assert.Equal(t, fileName(tc.expected[i]), contents.FilePage.Items[i].Name)
+			}
 
-	resp := executeRequest(t, env, req)
-	require.Equal(t, http.StatusNoContent, resp.Code, "should return status no content for file move")
-}
+			// Reached to the beginning of the list
+			// Now test forward and backward in one jump with max. limit
 
-func trashFolders(t *testing.T, env *testEnv, token string, folderIDs []int64) {
-	t.Helper()
-	body := map[string][]int64{"folderIds": folderIDs}
-	jsonBody, err := json.Marshal(body)
-	require.NoError(t, err)
+			// Get all items with forward direction
+			contents = getFolderContentsWithPaging(t, env, token, folder.ID, &paging.Options{
+				Limit:     8,
+				Direction: paging.DirectionForward,
+				Sort:      tc.sort,
+				SortBy:    paging.SortByName,
+			})
+			require.Len(t, contents.FilePage.Items, 8, "all items should be returned with forward direction")
+			require.False(t, contents.FilePage.HasMore, "should not have more pages")
+			require.NotEmpty(t, contents.FilePage.NextCursor, "all items page should have next cursor")
+			require.NotEmpty(t, contents.FilePage.PrevCursor, "all items page should have prev cursor")
 
-	req, err := http.NewRequest(http.MethodDelete, foldersURL(), bytes.NewBuffer(jsonBody))
-	require.NoError(t, err, "should create new request for folder trash")
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Authorization", "Bearer "+token)
+			// Verify all items
+			for i := 0; i < 8; i++ {
+				assert.Equal(t, fileName(tc.expected[i]), contents.FilePage.Items[i].Name)
+			}
 
-	resp := executeRequest(t, env, req)
-	require.Equal(t, http.StatusNoContent, resp.Code, "should return status no content for folder trash")
-}
-
-func restoreFolder(t *testing.T, env *testEnv, token string, folderID int64) {
-	t.Helper()
-
-	req, err := http.NewRequest(http.MethodPatch, folderURL(folderID)+"/restore", nil)
-	require.NoError(t, err, "should create new request for folder restore")
-	req.Header.Set("Authorization", "Bearer "+token)
-
-	resp := executeRequest(t, env, req)
-	require.Equal(t, http.StatusNoContent, resp.Code, "should return status no content for folder restore")
-}
-
-func downloadFile(t *testing.T, env *testEnv, token string, fileID int64, buf []byte) {
-	t.Helper()
-
-	req, err := http.NewRequest(http.MethodGet, fileURL(fileID)+"/download", nil)
-	require.NoError(t, err, "should create new request for file download")
-	req.Header.Set("Authorization", "Bearer "+token)
-
-	resp := executeRequest(t, env, req)
-	require.Equal(t, http.StatusOK, resp.Code, "should return status ok for file download")
-
-	_, err = resp.Body.Read(buf)
-	require.NoError(t, err, "should read file content")
+			// In practical scenario, the following case should not be possible.
+			// Going backwards,
+			// when all items have been fetched without any pagination using the max. limit,
+			// using the prev cursor would return empty items.
+			// Since, the prev cursor already points to the beginning of the list.
+			contents = getFolderContentsWithPaging(t, env, token, folder.ID, &paging.Options{
+				Limit:      8,
+				Direction:  "backward",
+				NextCursor: contents.FilePage.NextCursor,
+				PrevCursor: contents.FilePage.PrevCursor,
+				Sort:       tc.sort,
+				SortBy:     paging.SortByName,
+			})
+			require.Len(t, contents.FilePage.Items, 0, "no item is returned with backward direction")
+			require.False(t, contents.FilePage.HasMore, "should not have more pages")
+			require.Empty(t, contents.FilePage.NextCursor, "empty items will have empty next cursor")
+			require.Empty(t, contents.FilePage.PrevCursor, "empty items will have empty prev cursor")
+		})
+	}
 }

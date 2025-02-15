@@ -29,6 +29,6 @@ func (a *AuthInfra) GetAuthenticator(provider auth.Provider) (auth.Authenticator
 	case auth.ProviderEmail:
 		return a.JWT, nil
 	default:
-		return nil, apperror.NewAppError(apperror.ErrAuthInvalidProvider, "authinfra.GetAuthenticator")
+		return nil, apperror.NewAppError(apperror.ErrAuthWrongProvider, "authinfra.GetAuthenticator")
 	}
 }

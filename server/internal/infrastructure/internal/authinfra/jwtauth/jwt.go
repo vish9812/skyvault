@@ -14,7 +14,7 @@ import (
 const (
 	issuer   = "skyvault"
 	audience = "skyvault"
-	leeway   = 2 * time.Minute
+	leeway   = time.Minute
 )
 
 var signingMethod = jwt.SigningMethodHS256
@@ -22,17 +22,12 @@ var signingMethod = jwt.SigningMethodHS256
 var _ auth.Claims = (*Claims)(nil)
 
 type Claims struct {
-	ProfileID int64  `json:"profileId"`
-	Email     string `json:"email"`
+	ProfileID int64 `json:"profileId"`
 	jwt.RegisteredClaims
 }
 
 func (c *Claims) GetProfileID() int64 {
 	return c.ProfileID
-}
-
-func (c *Claims) GetEmail() string {
-	return c.Email
 }
 
 type Config struct {
@@ -50,13 +45,12 @@ func NewJWTAuth(cfg Config) *JWTAuth {
 	return &JWTAuth{cfg: cfg}
 }
 
-func (a *JWTAuth) GenerateToken(ctx context.Context, profileID int64, email string) (string, error) {
+func (a *JWTAuth) GenerateToken(ctx context.Context, profileID int64) (string, error) {
 	now := time.Now().UTC()
 	expirationTime := time.Duration(a.cfg.TokenTimeoutMin) * time.Minute
 
 	claims := &Claims{
 		ProfileID: profileID,
-		Email:     email,
 		RegisteredClaims: jwt.RegisteredClaims{
 			Issuer:    issuer,
 			Audience:  []string{audience},
@@ -91,7 +85,7 @@ func (a *JWTAuth) ValidateToken(ctx context.Context, tokenStr string) (auth.Clai
 	)
 	if err != nil {
 		if errors.Is(err, jwt.ErrTokenExpired) {
-			return nil, apperror.NewAppError(apperror.ErrAuthTokenExpired, "JWTAuth.ValidateToken:ParseWithClaims:TokenExpired")
+			return nil, apperror.NewAppError(apperror.ErrAuthTokenExpired, "JWTAuth.ValidateToken:ParseWithClaims.TokenExpired")
 		}
 
 		return nil, apperror.NewAppError(apperror.ErrAuthInvalidToken, "JWTAuth.ValidateToken:ParseWithClaims")
@@ -102,28 +96,17 @@ func (a *JWTAuth) ValidateToken(ctx context.Context, tokenStr string) (auth.Clai
 	return claims, nil
 }
 
-func (a *JWTAuth) ValidateCredentials(ctx context.Context, credentials map[auth.CredsKeys]any) error {
-	passwordHashAny, ok := credentials[auth.CredsKeysPasswordHash]
-	if !ok {
-		return apperror.NewAppError(apperror.ErrCommonInvalidValue, "JWTAuth.ValidateCredentials:PasswordHash")
+func (a *JWTAuth) ValidateCredentials(ctx context.Context, credentials map[auth.CredKey]any) error {
+	passwordHash := *(credentials[auth.CredKeyPasswordHash].(*string))
+	password := *(credentials[auth.CredKeyPassword].(*string))
+
+	if p, err := auth.ValidatePasswordLen(password); err != nil {
+		return apperror.NewAppError(err, "JWTAuth.ValidateCredentials:ValidatePassword")
+	} else {
+		password = p
 	}
 
-	passwordHash, ok := passwordHashAny.(*string)
-	if !ok {
-		return apperror.NewAppError(apperror.ErrCommonInvalidValue, "JWTAuth.ValidateCredentials:PasswordHash:InvalidType")
-	}
-
-	passwordAny, ok := credentials[auth.CredsKeysPassword]
-	if !ok {
-		return apperror.NewAppError(apperror.ErrCommonInvalidValue, "JWTAuth.ValidateCredentials:Password")
-	}
-
-	password, ok := passwordAny.(*string)
-	if !ok {
-		return apperror.NewAppError(apperror.ErrCommonInvalidValue, "JWTAuth.ValidateCredentials:Password:InvalidType")
-	}
-
-	ok, err := utils.IsValidPassword(*passwordHash, *password)
+	ok, err := utils.IsValidPassword(passwordHash, password)
 	if err != nil {
 		return apperror.NewAppError(err, "JWTAuth.ValidateCredentials:IsValidPassword")
 	}

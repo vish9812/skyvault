@@ -1,3 +1,4 @@
+//lint:file-ignore ST1001 Using dot import to make SQL queries more readable
 package repository
 
 import (
@@ -137,8 +138,8 @@ func (r *MediaRepository) GetFileInfos(ctx context.Context, pagingOpt *paging.Op
 	return r.getFileInfos(ctx, nil, pagingOpt, ownerID, folderID, true)
 }
 
-func (r *MediaRepository) GetFileInfosByCategory(ctx context.Context, pagingOpt *paging.Options, ownerID int64, category string) (*paging.Page[*media.FileInfo], error) {
-	whereCond := FileInfo.Category.EQ(String(category))
+func (r *MediaRepository) GetFileInfosByCategory(ctx context.Context, pagingOpt *paging.Options, ownerID int64, category media.Category) (*paging.Page[*media.FileInfo], error) {
+	whereCond := FileInfo.Category.EQ(String(string(category)))
 	return r.getFileInfos(ctx, whereCond, pagingOpt, ownerID, nil, false)
 }
 

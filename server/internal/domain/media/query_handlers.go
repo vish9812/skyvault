@@ -17,7 +17,7 @@ func NewQueryHandlers(repository Repository, storage Storage) *QueryHandlers {
 	return &QueryHandlers{repository: repository, storage: storage}
 }
 
-func (h *QueryHandlers) GetFile(ctx context.Context, query *GetFileQuery) (*GetFileQueryRes, error) {
+func (h *QueryHandlers) GetFile(ctx context.Context, query *GetFileQuery) (*GetFileRes, error) {
 	info, err := h.repository.GetFileInfo(ctx, query.FileID)
 	if err != nil {
 		return nil, apperror.NewAppError(err, "QueryHandlers.GetFile:GetFileInfo")
@@ -32,7 +32,7 @@ func (h *QueryHandlers) GetFile(ctx context.Context, query *GetFileQuery) (*GetF
 	if err != nil {
 		return nil, apperror.NewAppError(err, "QueryHandlers.GetFile:OpenFile")
 	}
-	return &GetFileQueryRes{
+	return &GetFileRes{
 		Info: info,
 		File: file,
 	}, nil
@@ -47,7 +47,7 @@ func (h *QueryHandlers) GetFileInfosByCategory(ctx context.Context, query *GetFi
 	return files, nil
 }
 
-func (h *QueryHandlers) GetFolderContent(ctx context.Context, query *GetFolderContentQuery) (*GetFolderContentQueryRes, error) {
+func (h *QueryHandlers) GetFolderContent(ctx context.Context, query *GetFolderContentQuery) (*GetFolderContentRes, error) {
 	files, err := h.repository.GetFileInfos(ctx, query.FilePagingOpt, query.OwnerID, query.FolderID)
 	if err != nil {
 		return nil, apperror.NewAppError(err, "QueryHandlers.GetFolderContent:GetFileInfos")
@@ -58,7 +58,7 @@ func (h *QueryHandlers) GetFolderContent(ctx context.Context, query *GetFolderCo
 		return nil, apperror.NewAppError(err, "QueryHandlers.GetFolderContent:GetFolderInfos")
 	}
 
-	return &GetFolderContentQueryRes{
+	return &GetFolderContentRes{
 		FilePage:   files,
 		FolderPage: folders,
 	}, nil

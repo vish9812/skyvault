@@ -47,26 +47,6 @@ func TestNewFileInfo(t *testing.T) {
 			expectError: false,
 		},
 		{
-			name:         "empty filename",
-			config:       FileConfig{MaxSizeMB: 10},
-			ownerID:      100,
-			parentFolder: nil,
-			fileName:     "",
-			size:         1024,
-			mimeType:     "text/plain",
-			expectError:  true,
-		},
-		{
-			name:         "negative size",
-			config:       FileConfig{MaxSizeMB: 10},
-			ownerID:      100,
-			parentFolder: nil,
-			fileName:     "test.txt",
-			size:         -1,
-			mimeType:     "text/plain",
-			expectError:  true,
-		},
-		{
 			name:         "exceeds max size",
 			config:       FileConfig{MaxSizeMB: 1},
 			ownerID:      100,
@@ -145,48 +125,6 @@ func TestFileInfo_ValidateAccess(t *testing.T) {
 				assert.Error(t, err)
 			} else {
 				assert.NoError(t, err)
-			}
-		})
-	}
-}
-
-func TestFileInfo_Rename(t *testing.T) {
-	t.Parallel()
-	oldName := "old.txt"
-	tests := []struct {
-		name        string
-		file        FileInfo
-		newName     string
-		expectError bool
-	}{
-		{
-			name: "valid rename",
-			file: FileInfo{
-				Name: oldName,
-			},
-			newName:     "new.txt",
-			expectError: false,
-		},
-		{
-			name: "empty name",
-			file: FileInfo{
-				Name: oldName,
-			},
-			newName:     "",
-			expectError: true,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
-			err := tt.file.Rename(tt.newName)
-			if tt.expectError {
-				assert.Error(t, err)
-				assert.Equal(t, oldName, tt.file.Name)
-			} else {
-				assert.NoError(t, err)
-				assert.Equal(t, tt.newName, tt.file.Name)
 			}
 		})
 	}

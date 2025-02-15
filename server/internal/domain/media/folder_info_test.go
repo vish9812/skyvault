@@ -35,12 +35,6 @@ func TestNewFolderInfo(t *testing.T) {
 			expectError: false,
 		},
 		{
-			name:        "empty folder name",
-			ownerID:     100,
-			folderName:  "",
-			expectError: true,
-		},
-		{
 			name:       "parent folder different owner",
 			ownerID:    100,
 			folderName: "test folder",
@@ -110,48 +104,6 @@ func TestFolderInfo_ValidateAccess(t *testing.T) {
 				assert.Error(t, err)
 			} else {
 				assert.NoError(t, err)
-			}
-		})
-	}
-}
-
-func TestFolderInfo_Rename(t *testing.T) {
-	t.Parallel()
-	oldName := "old folder"
-	tests := []struct {
-		name        string
-		folder      FolderInfo
-		newName     string
-		expectError bool
-	}{
-		{
-			name: "valid rename",
-			folder: FolderInfo{
-				Name: oldName,
-			},
-			newName:     "new folder",
-			expectError: false,
-		},
-		{
-			name: "empty name",
-			folder: FolderInfo{
-				Name: oldName,
-			},
-			newName:     "",
-			expectError: true,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
-			err := tt.folder.Rename(tt.newName)
-			if tt.expectError {
-				assert.Error(t, err)
-				assert.Equal(t, oldName, tt.folder.Name)
-			} else {
-				assert.NoError(t, err)
-				assert.Equal(t, tt.newName, tt.folder.Name)
 			}
 		})
 	}

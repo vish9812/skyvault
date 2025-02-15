@@ -1,9 +1,7 @@
 package profile
 
 import (
-	"fmt"
 	"skyvault/pkg/apperror"
-	"skyvault/pkg/utils"
 	"time"
 )
 
@@ -16,20 +14,22 @@ type Profile struct {
 	UpdatedAt time.Time
 }
 
-func NewProfile(email, fullName string) (*Profile, error) {
-	if fullName == "" {
-		return nil, apperror.NewAppError(apperror.ErrCommonInvalidValue, "profile.NewProfile:FullName")
-	}
-
-	if err := utils.IsValidEmail(email); err != nil {
-		return nil, apperror.NewAppError(fmt.Errorf("%w: %w", apperror.ErrCommonInvalidValue, err), "profile.NewProfile:Email:Invalid")
-	}
-
+func NewProfile(email, fullName string) *Profile {
+	now := time.Now().UTC()
 	return &Profile{
 		Email:     email,
 		FullName:  fullName,
 		Avatar:    nil,
-		CreatedAt: time.Now(),
-		UpdatedAt: time.Now(),
-	}, nil
+		CreatedAt: now,
+		UpdatedAt: now,
+	}
+}
+
+// App Errors:
+// - ErrCommonNoAccess
+func (p *Profile) ValidateAccess(accessedByID int64) error {
+	if p.ID != accessedByID {
+		return apperror.ErrCommonNoAccess
+	}
+	return nil
 }

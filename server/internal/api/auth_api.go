@@ -39,7 +39,12 @@ func (a *AuthAPI) InitRoutes() *AuthAPI {
 }
 
 func (a *AuthAPI) SignUp(w http.ResponseWriter, r *http.Request) {
-	var req dtos.SignUpReq
+	var req struct {
+		Email    string  `json:"email"`
+		FullName string  `json:"fullName"`
+		Password *string `json:"password"`
+		Provider string  `json:"provider"`
+	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		helper.RespondError(w, r, apperror.NewAppError(fmt.Errorf("%w: %w", apperror.ErrCommonInvalidValue, err), "authAPI.SignUp:DecodeBody"))
 		return
@@ -60,7 +65,7 @@ func (a *AuthAPI) SignUp(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var dto dtos.SignUpRes
+	var dto dtos.SignUp
 	dto.Token = res.Token
 	dto.Profile = &dtos.GetProfileRes{}
 
@@ -74,7 +79,11 @@ func (a *AuthAPI) SignUp(w http.ResponseWriter, r *http.Request) {
 }
 
 func (a *AuthAPI) SignIn(w http.ResponseWriter, r *http.Request) {
-	var req dtos.SignInReq
+	var req struct {
+		Provider       string  `json:"provider"`
+		ProviderUserID string  `json:"providerUserId"`
+		Password       *string `json:"password"`
+	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		helper.RespondError(w, r, apperror.NewAppError(fmt.Errorf("%w: %w", apperror.ErrCommonInvalidValue, err), "authAPI.SignIn:DecodeBody"))
 		return
@@ -92,7 +101,7 @@ func (a *AuthAPI) SignIn(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var dto dtos.SignInRes
+	var dto dtos.SignUp
 	dto.Token = res.Token
 	dto.Profile = &dtos.GetProfileRes{}
 

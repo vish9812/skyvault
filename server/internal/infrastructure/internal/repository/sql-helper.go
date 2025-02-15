@@ -1,3 +1,4 @@
+//lint:file-ignore ST1001 Using dot import to make SQL queries more readable
 package repository
 
 import (
@@ -5,8 +6,8 @@ import (
 	"errors"
 	"fmt"
 	"skyvault/pkg/apperror"
-	"skyvault/pkg/applog"
 	"skyvault/pkg/paging"
+	"slices"
 
 	. "github.com/go-jet/jet/v2/postgres"
 	"github.com/go-jet/jet/v2/qrm"
@@ -78,108 +79,141 @@ func (o *cursorQuery) buildBackwardClauses(cursor *paging.Cursor) {
 
 func (o *cursorQuery) buildIDClauses(cursor *paging.Cursor, forward bool) {
 	if o.pagingOpt.Sort == paging.SortAsc {
-		o.orderBy = append(o.orderBy, o.ID.ASC())
-		if cursor != nil {
-			if forward {
-				o.where = o.where.AND(o.ID.GT(Int64(cursor.ID)))
-			} else {
-				o.where = o.where.AND(o.ID.LT(Int64(cursor.ID)))
-			}
+		if cursor == nil {
+			o.orderBy = append(o.orderBy, o.ID.ASC())
+			return
 		}
-	} else {
+
+		if forward {
+			o.orderBy = append(o.orderBy, o.ID.ASC())
+			o.where = o.where.AND(o.ID.GT(Int64(cursor.ID)))
+			return
+		}
+
 		o.orderBy = append(o.orderBy, o.ID.DESC())
-		if cursor != nil {
-			if forward {
-				o.where = o.where.AND(o.ID.LT(Int64(cursor.ID)))
-			} else {
-				o.where = o.where.AND(o.ID.GT(Int64(cursor.ID)))
-			}
-		}
+		o.where = o.where.AND(o.ID.LT(Int64(cursor.ID)))
+		return
 	}
+
+	if cursor == nil {
+		o.orderBy = append(o.orderBy, o.ID.DESC())
+		return
+	}
+
+	if forward {
+		o.orderBy = append(o.orderBy, o.ID.DESC())
+		o.where = o.where.AND(o.ID.LT(Int64(cursor.ID)))
+		return
+	}
+
+	o.orderBy = append(o.orderBy, o.ID.ASC())
+	o.where = o.where.AND(o.ID.GT(Int64(cursor.ID)))
 }
 
 func (o *cursorQuery) buildNameClauses(cursor *paging.Cursor, forward bool) {
 	if o.pagingOpt.Sort == paging.SortAsc {
-		o.orderBy = append(o.orderBy, o.Name.ASC(), o.ID.ASC())
-		if cursor != nil {
-			if forward {
-				o.where = o.where.AND(
-					o.Name.GT(String(cursor.Name)).
-						OR(o.Name.EQ(String(cursor.Name)).AND(
-							o.ID.GT(Int64(cursor.ID)),
-						)),
-				)
-			} else {
-				o.where = o.where.AND(
-					o.Name.LT(String(cursor.Name)).
-						OR(o.Name.EQ(String(cursor.Name)).AND(
-							o.ID.LT(Int64(cursor.ID)),
-						)),
-				)
-			}
+		if cursor == nil {
+			o.orderBy = append(o.orderBy, o.Name.ASC(), o.ID.ASC())
+			return
 		}
-	} else {
+
+		if forward {
+			o.orderBy = append(o.orderBy, o.Name.ASC(), o.ID.ASC())
+			o.where = o.where.AND(
+				o.Name.GT(String(cursor.Name)).
+					OR(o.Name.EQ(String(cursor.Name)).AND(
+						o.ID.GT(Int64(cursor.ID)),
+					)),
+			)
+			return
+		}
+
 		o.orderBy = append(o.orderBy, o.Name.DESC(), o.ID.DESC())
-		if cursor != nil {
-			if forward {
-				o.where = o.where.AND(
-					o.Name.LT(String(cursor.Name)).
-						OR(o.Name.EQ(String(cursor.Name)).AND(
-							o.ID.LT(Int64(cursor.ID)),
-						)),
-				)
-			} else {
-				o.where = o.where.AND(
-					o.Name.GT(String(cursor.Name)).
-						OR(o.Name.EQ(String(cursor.Name)).AND(
-							o.ID.GT(Int64(cursor.ID)),
-						)),
-				)
-			}
-		}
+		o.where = o.where.AND(
+			o.Name.LT(String(cursor.Name)).
+				OR(o.Name.EQ(String(cursor.Name)).AND(
+					o.ID.LT(Int64(cursor.ID)),
+				)),
+		)
+		return
 	}
+
+	if cursor == nil {
+		o.orderBy = append(o.orderBy, o.Name.DESC(), o.ID.DESC())
+		return
+	}
+
+	if forward {
+		o.orderBy = append(o.orderBy, o.Name.DESC(), o.ID.DESC())
+		o.where = o.where.AND(
+			o.Name.LT(String(cursor.Name)).
+				OR(o.Name.EQ(String(cursor.Name)).AND(
+					o.ID.LT(Int64(cursor.ID)),
+				)),
+		)
+		return
+	}
+
+	o.orderBy = append(o.orderBy, o.Name.ASC(), o.ID.ASC())
+	o.where = o.where.AND(
+		o.Name.GT(String(cursor.Name)).
+			OR(o.Name.EQ(String(cursor.Name)).AND(
+				o.ID.GT(Int64(cursor.ID)),
+			)),
+	)
 }
 
 func (o *cursorQuery) buildUpdatedClauses(cursor *paging.Cursor, forward bool) {
 	if o.pagingOpt.Sort == paging.SortAsc {
-		o.orderBy = append(o.orderBy, o.Updated.ASC(), o.ID.ASC())
-		if cursor != nil {
-			if forward {
-				o.where = o.where.AND(
-					o.Updated.GT(TimestampT(cursor.Updated)).
-						OR(o.Updated.EQ(TimestampT(cursor.Updated)).AND(
-							o.ID.GT(Int64(cursor.ID)),
-						)),
-				)
-			} else {
-				o.where = o.where.AND(
-					o.Updated.LT(TimestampT(cursor.Updated)).
-						OR(o.Updated.EQ(TimestampT(cursor.Updated)).AND(
-							o.ID.LT(Int64(cursor.ID)),
-						)),
-				)
-			}
+		if cursor == nil {
+			o.orderBy = append(o.orderBy, o.Updated.ASC(), o.ID.ASC())
+			return
 		}
-	} else {
+
+		if forward {
+			o.orderBy = append(o.orderBy, o.Updated.ASC(), o.ID.ASC())
+			o.where = o.where.AND(
+				o.Updated.GT(TimestampT(cursor.Updated)).
+					OR(o.Updated.EQ(TimestampT(cursor.Updated)).AND(
+						o.ID.GT(Int64(cursor.ID)),
+					)),
+			)
+			return
+		}
+
 		o.orderBy = append(o.orderBy, o.Updated.DESC(), o.ID.DESC())
-		if cursor != nil {
-			if forward {
-				o.where = o.where.AND(
-					o.Updated.LT(TimestampT(cursor.Updated)).
-						OR(o.Updated.EQ(TimestampT(cursor.Updated)).AND(
-							o.ID.LT(Int64(cursor.ID)),
-						)),
-				)
-			} else {
-				o.where = o.where.AND(
-					o.Updated.GT(TimestampT(cursor.Updated)).
-						OR(o.Updated.EQ(TimestampT(cursor.Updated)).AND(
-							o.ID.GT(Int64(cursor.ID)),
-						)),
-				)
-			}
-		}
+		o.where = o.where.AND(
+			o.Updated.LT(TimestampT(cursor.Updated)).
+				OR(o.Updated.EQ(TimestampT(cursor.Updated)).AND(
+					o.ID.LT(Int64(cursor.ID)),
+				)),
+		)
+		return
 	}
+
+	if cursor == nil {
+		o.orderBy = append(o.orderBy, o.Updated.DESC(), o.ID.DESC())
+		return
+	}
+
+	if forward {
+		o.orderBy = append(o.orderBy, o.Updated.DESC(), o.ID.DESC())
+		o.where = o.where.AND(
+			o.Updated.LT(TimestampT(cursor.Updated)).
+				OR(o.Updated.EQ(TimestampT(cursor.Updated)).AND(
+					o.ID.LT(Int64(cursor.ID)),
+				)),
+		)
+		return
+	}
+
+	o.orderBy = append(o.orderBy, o.Updated.ASC(), o.ID.ASC())
+	o.where = o.where.AND(
+		o.Updated.GT(TimestampT(cursor.Updated)).
+			OR(o.Updated.EQ(TimestampT(cursor.Updated)).AND(
+				o.ID.GT(Int64(cursor.ID)),
+			)),
+	)
 }
 
 // runSelect is to be used with Select statements that return a single row.
@@ -206,7 +240,7 @@ func runSelect[TDBModel any, TRes any](ctx context.Context, stmt Statement, dbTx
 	return &resModel, nil
 }
 
-// runSelectSlice is to be used with Select statements that return multiple rows.
+// runSelectSlice is to be used with Select statements that return multiple rows with pagination.
 // it returns empty items if no data is found.
 func runSelectSlice[TDBModel any, TRes any](ctx context.Context, cursorQuery *cursorQuery, stmt SelectStatement, dbTx qrm.DB) (*paging.Page[*TRes], error) {
 	err := cursorQuery.buildClauses()
@@ -218,8 +252,8 @@ func runSelectSlice[TDBModel any, TRes any](ctx context.Context, cursorQuery *cu
 		ORDER_BY(cursorQuery.orderBy...).
 		LIMIT(int64(cursorQuery.pagingOpt.Limit) + 1)
 
-	// TODO: Comment this once this function is tested.
-	applog.GetLoggerFromContext(ctx).Debug().Msg(stmt.DebugSql())
+	// Uncomment this when you need to debug the sql statement
+	// applog.GetLoggerFromContext(ctx).Debug().Msg(stmt.DebugSql())
 
 	page := &paging.Page[*TRes]{
 		Items: []*TRes{},
@@ -236,11 +270,11 @@ func runSelectSlice[TDBModel any, TRes any](ctx context.Context, cursorQuery *cu
 
 	if len(items) > cursorQuery.pagingOpt.Limit {
 		page.HasMore = true
-		if cursorQuery.pagingOpt.Direction == paging.DirectionForward {
-			items = items[:cursorQuery.pagingOpt.Limit]
-		} else {
-			items = items[1:]
-		}
+		items = items[:cursorQuery.pagingOpt.Limit]
+	}
+
+	if cursorQuery.pagingOpt.Direction != paging.DirectionForward {
+		slices.Reverse(items)
 	}
 
 	page.Items = items

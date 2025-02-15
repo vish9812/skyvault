@@ -1,24 +1,17 @@
 package auth
 
 import (
-	"fmt"
 	"skyvault/pkg/apperror"
 	"skyvault/pkg/utils"
-	"strings"
 	"time"
-)
-
-const (
-	passwordMinLen = 4
-	passwordMaxLen = 50
 )
 
 type Auth struct {
 	ID             int64
 	ProfileID      int64
 	Provider       Provider // E.g., "email", "oidc", "ldap"
-	ProviderUserID string   // External user ID for provider
-	PasswordHash   *string  // Optional if using external providers
+	ProviderUserID string   // userID provided by the provider
+	PasswordHash   *string  // Nil if not using email provider
 	CreatedAt      time.Time
 	UpdatedAt      time.Time
 }
@@ -31,45 +24,22 @@ const (
 	ProviderLDAP  Provider = "ldap"
 )
 
-func Providers() []Provider {
-	return []Provider{
-		ProviderEmail,
-		ProviderOIDC,
-		ProviderLDAP,
-	}
-}
-
 // App Errors:
-// - apperror.ErrInvalidValue
+// - ErrCommonInvalidValue
 func NewAuth(profileID int64, provider Provider, providerUserID string, password *string) (*Auth, error) {
-	if provider == "" {
-		return nil, apperror.NewAppError(apperror.ErrCommonInvalidValue, "auth.NewAuth:Provider")
-	}
-
-	if providerUserID == "" {
-		return nil, apperror.NewAppError(apperror.ErrCommonInvalidValue, "auth.NewAuth:ProviderUserID:Empty")
-	}
-
 	var passwordHash *string
 	if provider == ProviderEmail {
-		if err := utils.IsValidEmail(providerUserID); err != nil {
-			return nil, apperror.NewAppError(fmt.Errorf("%w: %w", apperror.ErrCommonInvalidValue, err), "auth.NewAuth:IsValidEmail")
-		}
-
 		if password == nil {
-			return nil, apperror.NewAppError(apperror.ErrCommonInvalidValue, "auth.NewAuth:Password:Empty")
+			return nil, apperror.NewAppError(apperror.ErrCommonInvalidValue, "auth.NewAuth:Password")
 		}
 
-		pwd := strings.TrimSpace(*password)
-		if len(pwd) < passwordMinLen {
-			return nil, apperror.NewAppError(apperror.ErrCommonInvalidValue, "auth.NewAuth:Password:MinLength")
+		if email, err := utils.ValidateEmail(providerUserID); err != nil {
+			return nil, apperror.NewAppError(apperror.ErrCommonInvalidValue, "auth.NewAuth:ValidateEmail")
+		} else {
+			providerUserID = email
 		}
 
-		if len(pwd) > passwordMaxLen {
-			return nil, apperror.NewAppError(apperror.ErrCommonInvalidValue, "auth.NewAuth:Password:MaxLength")
-		}
-
-		hash, err := utils.HashPassword(pwd)
+		hash, err := utils.HashPassword(*password)
 		if err != nil {
 			return nil, apperror.NewAppError(err, "auth.NewAuth:HashPassword")
 		}
@@ -77,12 +47,22 @@ func NewAuth(profileID int64, provider Provider, providerUserID string, password
 		passwordHash = &hash
 	}
 
+	now := time.Now().UTC()
 	return &Auth{
 		ProfileID:      profileID,
 		Provider:       provider,
 		ProviderUserID: providerUserID,
 		PasswordHash:   passwordHash,
-		CreatedAt:      time.Now(),
-		UpdatedAt:      time.Now(),
+		CreatedAt:      now,
+		UpdatedAt:      now,
 	}, nil
+}
+
+// App Errors:
+// - ErrCommonNoAccess
+func (a *Auth) ValidateAccess(accessedByID int64) error {
+	if a.ProfileID != accessedByID {
+		return apperror.ErrCommonNoAccess
+	}
+	return nil
 }

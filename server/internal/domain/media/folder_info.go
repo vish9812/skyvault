@@ -1,9 +1,7 @@
 package media
 
 import (
-	"fmt"
 	"skyvault/pkg/apperror"
-	"skyvault/pkg/utils"
 	"slices"
 	"time"
 )
@@ -22,12 +20,6 @@ type FolderInfo struct {
 // - ErrCommonInvalidValue
 // - ErrCommonNoAccess
 func NewFolderInfo(ownerID int64, name string, parentFolder *FolderInfo) (*FolderInfo, error) {
-	cleanedName := utils.CleanFileName(name)
-
-	if cleanedName == "" {
-		return nil, apperror.NewAppError(apperror.ErrCommonInvalidValue, "media.NewFolderInfo:name")
-	}
-
 	var parentFolderID *int64
 	if parentFolder != nil {
 		if err := parentFolder.ValidateAccess(ownerID); err != nil {
@@ -39,7 +31,7 @@ func NewFolderInfo(ownerID int64, name string, parentFolder *FolderInfo) (*Folde
 	now := time.Now().UTC()
 	return &FolderInfo{
 		OwnerID:        ownerID,
-		Name:           cleanedName,
+		Name:           name,
 		ParentFolderID: parentFolderID,
 		CreatedAt:      now,
 		UpdatedAt:      now,
@@ -50,21 +42,14 @@ func NewFolderInfo(ownerID int64, name string, parentFolder *FolderInfo) (*Folde
 // - ErrCommonNoAccess
 func (f *FolderInfo) ValidateAccess(ownerID int64) error {
 	if f.OwnerID != ownerID {
-		return apperror.NewAppError(apperror.ErrCommonNoAccess, "media.FolderInfo.ValidateAccess").WithMetadata("owner_id", ownerID).WithMetadata("folder_owner_id", f.OwnerID)
+		return apperror.ErrCommonNoAccess
 	}
 	return nil
 }
 
-// App Errors:
-// - ErrCommonInvalidValue
-func (f *FolderInfo) Rename(newName string) error {
-	newName = utils.CleanFileName(newName)
-	if newName == "" {
-		return apperror.NewAppError(fmt.Errorf("empty folder name: %w", apperror.ErrCommonInvalidValue), "media.FolderInfo.Rename")
-	}
+func (f *FolderInfo) Rename(newName string) {
 	f.Name = newName
 	f.UpdatedAt = time.Now().UTC()
-	return nil
 }
 
 // App Errors:
@@ -73,7 +58,7 @@ func (f *FolderInfo) Rename(newName string) error {
 func (f *FolderInfo) MoveTo(destFolderInfo *FolderInfo, descendantFolderIDs []int64) error {
 	if destFolderInfo != nil {
 		if err := destFolderInfo.ValidateAccess(f.OwnerID); err != nil {
-			return apperror.NewAppError(err, "media.FolderInfo.MoveTo")
+			return apperror.NewAppError(err, "media.FolderInfo.MoveTo:ValidateAccess")
 		}
 
 		if f.ID == destFolderInfo.ID {

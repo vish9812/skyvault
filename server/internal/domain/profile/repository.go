@@ -9,22 +9,22 @@ type Repository interface {
 	internal.RepositoryTx[Repository]
 
 	// App Errors:
-	// - apperror.ErrDuplicateData
+	// - ErrCommonDuplicateData
 	Create(ctx context.Context, pro *Profile) (*Profile, error)
 
 	// App Errors:
-	// - apperror.ErrNoData
+	// - ErrCommonNoData
 	Get(ctx context.Context, id int64) (*Profile, error)
 
 	// App Errors:
-	// - apperror.ErrNoData
+	// - ErrCommonNoData
 	GetByEmail(ctx context.Context, email string) (*Profile, error)
 
 	// App Errors:
-	// - apperror.ErrNoData
+	// - ErrCommonNoData
 	Update(ctx context.Context, pro *Profile) error
 
 	// App Errors:
-	// - apperror.ErrNoData
+	// - ErrCommonNoData
 	Delete(ctx context.Context, id int64) error
 }

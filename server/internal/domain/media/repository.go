@@ -27,7 +27,7 @@ type Repository interface {
 
 	GetFileInfos(ctx context.Context, pagingOpt *paging.Options, ownerID int64, folderID *int64) (*paging.Page[*FileInfo], error)
 
-	GetFileInfosByCategory(ctx context.Context, pagingOpt *paging.Options, ownerID int64, category string) (*paging.Page[*FileInfo], error)
+	GetFileInfosByCategory(ctx context.Context, pagingOpt *paging.Options, ownerID int64, category Category) (*paging.Page[*FileInfo], error)
 
 	// App Errors:
 	// - ErrCommonNoData

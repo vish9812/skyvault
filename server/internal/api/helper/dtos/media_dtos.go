@@ -6,7 +6,7 @@ import (
 	"time"
 )
 
-type GetFileInfoRes struct {
+type GetFileInfo struct {
 	ID            int64     `json:"id" copier:"must,nopanic"`
 	OwnerID       int64     `json:"ownerId" copier:"must,nopanic"`
 	FolderID      *int64    `json:"folderId,omitempty"`
@@ -20,35 +20,23 @@ type GetFileInfoRes struct {
 	UpdatedAt     time.Time `json:"updatedAt" copier:"must,nopanic"`
 }
 
-func (r *GetFileInfoRes) Preview(preview []byte) {
+func (r *GetFileInfo) Preview(preview []byte) {
 	if len(preview) > 0 {
 		previewBase64 := base64.StdEncoding.EncodeToString(preview)
 		r.PreviewBase64 = &previewBase64
 	}
 }
 
-type GetFolderContentQueryRes struct {
-	FilePage   *paging.Page[*GetFileInfoRes]
-	FolderPage *paging.Page[*GetFolderInfoRes]
+type GetFolderContent struct {
+	FilePage   *paging.Page[*GetFileInfo]   `json:"filePage" copier:"must,nopanic"`
+	FolderPage *paging.Page[*GetFolderInfo] `json:"folderPage" copier:"must,nopanic"`
 }
 
-type GetFolderInfoRes struct {
+type GetFolderInfo struct {
 	ID             int64     `json:"id" copier:"must,nopanic"`
 	OwnerID        int64     `json:"ownerId" copier:"must,nopanic"`
 	ParentFolderID *int64    `json:"parentFolderId,omitempty"`
 	Name           string    `json:"name" copier:"must,nopanic"`
 	CreatedAt      time.Time `json:"createdAt" copier:"must,nopanic"`
 	UpdatedAt      time.Time `json:"updatedAt" copier:"must,nopanic"`
-}
-
-type CreateFolderReq struct {
-	Name           string `json:"name"`
-}
-
-type RenameReq struct {
-	Name string `json:"name"`
-}
-
-type MoveReq struct {
-	FolderID int64 `json:"folderId"`
 }

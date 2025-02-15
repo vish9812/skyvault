@@ -51,11 +51,12 @@ func JWT(authenticator auth.Authenticator) func(http.Handler) http.Handler {
 				return
 			}
 
-			ctx := context.WithValue(r.Context(), common.CtxKeyClaims, claims)
+			profileID := claims.GetProfileID()
+			ctx := context.WithValue(r.Context(), common.CtxKeyProfileID, profileID)
 
 			logger = logger.
 				With().
-				Int64("session_profile_id", claims.GetProfileID()).
+				Int64("session_profile_id", profileID).
 				Logger()
 			ctx = context.WithValue(ctx, common.CtxKeyLogger, logger)
 

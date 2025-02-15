@@ -1,9 +1,14 @@
 package common
 
+import "context"
+
 type CtxKey string
 
 const (
-	CtxKeyApp    CtxKey = "app"
-	CtxKeyClaims CtxKey = "claims"
-	CtxKeyLogger CtxKey = "logger"
+	CtxKeyLogger    CtxKey = "logger"
+	CtxKeyProfileID CtxKey = "profile_id"
 )
+
+func GetProfileIDFromContext(ctx context.Context) int64 {
+	return ctx.Value(CtxKeyProfileID).(int64)
+}

@@ -92,7 +92,7 @@ func (r *Repository) close() error {
 	return nil
 }
 
-func (r *Repository) withTx(ctx context.Context, tx *sql.Tx) *Repository {
+func (r *Repository) withTx(_ context.Context, tx *sql.Tx) *Repository {
 	return &Repository{app: r.app, db: r.db, dbTx: tx}
 }
 

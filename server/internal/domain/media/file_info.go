@@ -57,16 +57,6 @@ func NewFileInfo(config FileConfig, ownerID int64, parentFolder *FolderInfo, nam
 		folderID = &parentFolder.ID
 	}
 
-	cleanedName := utils.CleanFileName(name)
-
-	if cleanedName == "" {
-		return nil, apperror.NewAppError(apperror.ErrCommonInvalidValue, "media.NewFileInfo:name").WithMetadata("file_name", name)
-	}
-
-	if size < 0 {
-		return nil, apperror.NewAppError(apperror.ErrCommonInvalidValue, "media.NewFileInfo:size").WithMetadata("file_size", size)
-	}
-
 	if size > (config.MaxSizeMB * BytesPerMB) {
 		return nil, apperror.NewAppError(apperror.ErrMediaFileSizeLimitExceeded, "media.NewFileInfo").WithMetadata("max_size_mb", config.MaxSizeMB).WithMetadata("file_size", size)
 	}
@@ -78,7 +68,7 @@ func NewFileInfo(config FileConfig, ownerID int64, parentFolder *FolderInfo, nam
 	generatedName := utils.UUID()
 
 	var ext *string
-	if e := filepath.Ext(cleanedName); e != "" {
+	if e := filepath.Ext(name); e != "" {
 		ext = &e
 	}
 
@@ -86,7 +76,7 @@ func NewFileInfo(config FileConfig, ownerID int64, parentFolder *FolderInfo, nam
 	return &FileInfo{
 		OwnerID:       ownerID,
 		FolderID:      folderID,
-		Name:          cleanedName,
+		Name:          name,
 		GeneratedName: generatedName,
 		Size:          size,
 		Extension:     ext,
@@ -157,16 +147,9 @@ func (f *FileInfo) ValidateAccess(ownerID int64) error {
 	return nil
 }
 
-// App Errors:
-// - ErrCommonInvalidValue
-func (f *FileInfo) Rename(newName string) error {
-	cleanedName := utils.CleanFileName(newName)
-	if cleanedName == "" {
-		return apperror.NewAppError(apperror.ErrCommonInvalidValue, "media.FileInfo.Rename").WithMetadata("file_name", newName)
-	}
-	f.Name = cleanedName
+func (f *FileInfo) Rename(newName string) {
+	f.Name = newName
 	f.UpdatedAt = time.Now().UTC()
-	return nil
 }
 
 // App Errors:
@@ -175,7 +158,7 @@ func (f *FileInfo) Rename(newName string) error {
 func (f *FileInfo) MoveTo(destFolderInfo *FolderInfo) error {
 	if destFolderInfo != nil {
 		if err := destFolderInfo.ValidateAccess(f.OwnerID); err != nil {
-			return apperror.NewAppError(err, "media.FileInfo.MoveTo")
+			return apperror.NewAppError(err, "media.FileInfo.MoveTo:ValidateAccess")
 		}
 
 		if f.FolderID != nil && *f.FolderID == destFolderInfo.ID {

@@ -7,7 +7,6 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
-	"path/filepath"
 	"skyvault/internal/api"
 	"skyvault/internal/bootstrap"
 	"skyvault/internal/domain/auth"
@@ -21,10 +20,8 @@ import (
 	"time"
 
 	_ "github.com/jackc/pgx/v5/stdlib"
-)
-
-const (
-	baseURL = "/api/v1"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 // testDB just to be used to create and drop test databases
@@ -57,20 +54,18 @@ type testEnv struct {
 }
 
 func setupTestEnv(t *testing.T) *testEnv {
+	t.Helper()
+
 	// Create temp data directory
 	tempDir, err := os.MkdirTemp("", "skyvault_integration_test_*")
-	if err != nil {
-		t.Fatalf("failed to create temp dir: %v", err)
-	}
+	require.NoError(t, err, "failed to create temp dir")
 
 	// Create new test DB
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 	dbName := fmt.Sprintf("skyvault_test_%s", utils.RandomName())
 	_, err = testDB.ExecContext(ctx, fmt.Sprintf("CREATE DATABASE %s", dbName))
-	if err != nil {
-		t.Fatalf("failed to create test db %s: %v", dbName, err)
-	}
+	require.NoError(t, err, "failed to create test db %s", dbName)
 
 	// Create test config
 	config := appconfig.LoadConfig("../../../test.env", true)
@@ -100,20 +95,16 @@ func setupTestEnv(t *testing.T) *testEnv {
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
 
-		if err := infra.Cleanup(ctx); err != nil {
-			t.Errorf("failed to cleanup infrastructure: %v", err)
-		}
+		err := infra.Cleanup(ctx)
+		assert.NoError(t, err, "failed to cleanup infrastructure")
 
 		// Remove temp directory
-		if err := os.RemoveAll(tempDir); err != nil {
-			t.Errorf("failed to cleanup temp dir: %v", err)
-		}
+		err = os.RemoveAll(tempDir)
+		assert.NoError(t, err, "failed to cleanup temp dir")
 
 		// Drop test database
-		_, err := testDB.ExecContext(ctx, fmt.Sprintf("DROP DATABASE %s", dbName))
-		if err != nil {
-			t.Errorf("failed to drop test db %s: %v", dbName, err)
-		}
+		_, err = testDB.ExecContext(ctx, fmt.Sprintf("DROP DATABASE %s", dbName))
+		assert.NoError(t, err, "failed to drop test db %s", dbName)
 	})
 
 	return &testEnv{
@@ -135,6 +126,7 @@ func executeRequest(t *testing.T, env *testEnv, req *http.Request) *httptest.Res
 
 // Helper to create a test user and get auth token
 func createTestUser(t *testing.T, env *testEnv) (*profile.Profile, string) {
+	t.Helper()
 	ctx := context.Background()
 
 	signUpFlow := bootstrap.InitSignUpFlow(env.app, env.infra)
@@ -149,32 +141,7 @@ func createTestUser(t *testing.T, env *testEnv) (*profile.Profile, string) {
 	req.ProviderUserID = req.Email
 
 	res, err := signUpFlow.Run(ctx, req)
-	if err != nil {
-		t.Fatalf("failed to create test user: %v", err)
-	}
+	require.NoError(t, err, "failed to create test user")
 
 	return res.Profile, res.Token
-}
-
-// Helper to create test file in testdata
-func createTestFile(t *testing.T, env *testEnv, name string, size int64) string {
-	// Create testdata directory if it doesn't exist
-	testdataDir := filepath.Join(env.app.Config.Server.DataDir, "testdata")
-	if err := os.MkdirAll(testdataDir, 0750); err != nil {
-		t.Fatalf("failed to create testdata directory: %v", err)
-	}
-
-	path := filepath.Join(testdataDir, name)
-	f, err := os.Create(path)
-	if err != nil {
-		t.Fatalf("failed to create test file: %v", err)
-	}
-	defer f.Close()
-
-	// Write random data
-	if err := f.Truncate(size); err != nil {
-		t.Fatalf("failed to write test file: %v", err)
-	}
-
-	return path
 }

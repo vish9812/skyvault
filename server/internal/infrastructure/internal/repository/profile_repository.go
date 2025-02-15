@@ -1,3 +1,4 @@
+//lint:file-ignore ST1001 Using dot import to make SQL queries more readable
 package repository
 
 import (

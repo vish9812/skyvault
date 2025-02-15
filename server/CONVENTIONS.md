@@ -36,6 +36,21 @@
 - Use separate DTO models for API responses in the api/dtos package
 - Domain interfaces (like Repository) should be defined in the domain layer
 
+### Workflows
+
+Workflows are to be used for cross-domain write operations. However, use them only when absolutely necessary; each domain should handle its own operations independently whenever possible
+
+- Define workflows in the `workflows` package to coordinate between different domains
+- Use domain handlers to encapsulate business logic within each domain
+- Ensure transactional integrity
+  - Use one of the domain's repository to initiate a transaction
+  - Then create command_handlers with that transaction
+  - Use the new transactional handlers to perform all the operations
+  - Commit or rollback accordingly
+  - Document each workflow with clear steps and involved domains for better maintainability
+- Example:
+  - User registration involving authentication and profile management domains
+
 ### Error Management
 
 - Use `AppError` for wrapping all domain errors

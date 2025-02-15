@@ -9,6 +9,9 @@ type PublicError struct {
 	Code string `json:"code"`
 }
 
+// Only provide specific errors which can be determined by the server only.
+// No need to provide specific errors, such as InvalidEmailFormat or EmptyNames or PasswordLength.
+// Clients should have caught those errors themselves.
 var (
 	// Common errors
 	ErrCommonGeneric       = PublicError{Code: "COMMON_GENERIC_ERROR"}
@@ -26,7 +29,7 @@ var (
 	ErrAuthInvalidCredentials = PublicError{Code: "AUTH_INVALID_CREDENTIALS"}
 	ErrAuthInvalidToken       = PublicError{Code: "AUTH_INVALID_TOKEN"}
 	ErrAuthTokenExpired       = PublicError{Code: "AUTH_TOKEN_EXPIRED"}
-	ErrAuthInvalidProvider    = PublicError{Code: "AUTH_INVALID_PROVIDER"}
+	ErrAuthWrongProvider      = PublicError{Code: "AUTH_WRONG_PROVIDER"}
 )
 
 func (e PublicError) Error() string {
@@ -38,7 +41,7 @@ func (e PublicError) Error() string {
 func GetPublicError(err error) PublicError {
 	var pubErr PublicError
 	if errors.As(err, &pubErr) {
-		// If the error is ErrCommonNoAccess, return ErrCommonNoData instead to avoid exposing the existence of the resource
+		// If the error is ErrCommonNoAccess, return ErrCommonNoData instead, to avoid exposing the existence of the resource
 		if pubErr == ErrCommonNoAccess {
 			return ErrCommonNoData
 		}
@@ -55,7 +58,7 @@ func (e PublicError) HTTPStatus() int {
 		return http.StatusNotFound
 	case ErrCommonDuplicateData:
 		return http.StatusConflict
-	case ErrCommonInvalidValue, ErrMediaFileSizeLimitExceeded, ErrAuthInvalidProvider:
+	case ErrCommonInvalidValue, ErrMediaFileSizeLimitExceeded, ErrAuthWrongProvider:
 		return http.StatusBadRequest
 	case ErrAuthInvalidCredentials, ErrAuthInvalidToken, ErrAuthTokenExpired:
 		return http.StatusUnauthorized

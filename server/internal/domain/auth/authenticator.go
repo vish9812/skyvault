@@ -2,49 +2,39 @@ package auth
 
 import (
 	"context"
-	"skyvault/pkg/common"
 )
 
 type Claims interface {
 	GetProfileID() int64
-	GetEmail() string
 }
 
-func GetClaimsFromContext(ctx context.Context) Claims {
-	return ctx.Value(common.CtxKeyClaims).(Claims)
-}
-
-func GetProfileIDFromContext(ctx context.Context) int64 {
-	return GetClaimsFromContext(ctx).GetProfileID()
-}
-
-func GetEmailFromContext(ctx context.Context) string {
-	return GetClaimsFromContext(ctx).GetEmail()
-}
-
-type CredsKeys string
+// CredKey is a key for credentials map.
+// These keys depend on the Provider.
+type CredKey string
 
 const (
-	CredsKeysPassword     CredsKeys = "password"
-	CredsKeysPasswordHash CredsKeys = "password_hash"
+	CredKeyPassword     CredKey = "password"
+	CredKeyPasswordHash CredKey = "password_hash"
 )
 
+// Authenticator is implemented by each Provider.
 type Authenticator interface {
-	GenerateToken(ctx context.Context, profileID int64, email string) (string, error)
+	GenerateToken(ctx context.Context, profileID int64) (string, error)
 
 	// App Errors:
-	// - apperror.ErrInvalidToken
-	// - apperror.ErrTokenExpired
+	// - ErrAuthInvalidToken
+	// - ErrAuthTokenExpired
 	ValidateToken(ctx context.Context, token string) (Claims, error)
 
 	// App Errors:
-	// - apperror.ErrInvalidValue
-	// - apperror.ErrInvalidCredentials
-	ValidateCredentials(ctx context.Context, credentials map[CredsKeys]any) error
+	// - ErrCommonInvalidValue
+	// - ErrAuthInvalidCredentials
+	ValidateCredentials(ctx context.Context, credentials map[CredKey]any) error
 }
 
+// AuthenticatorFactory returns an Authenticator instance for a given Provider.
 type AuthenticatorFactory interface {
 	// App Errors:
-	// - apperror.ErrInvalidProvider
+	// - ErrAuthWrongProvider
 	GetAuthenticator(provider Provider) (Authenticator, error)
 }
