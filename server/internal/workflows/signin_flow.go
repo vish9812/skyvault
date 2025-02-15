@@ -34,6 +34,12 @@ type SignInRes struct {
 	Token   string
 }
 
+// App Errors:
+// - ErrCommonNoData
+// - ErrCommonNoAccess
+// - ErrCommonInvalidValue
+// - ErrAuthWrongProvider
+// - ErrAuthInvalidCredentials
 func (f *SignInFlow) Run(ctx context.Context, req *SignInReq) (*SignInRes, error) {
 	// 1. Get auth by provider and provider user id
 	// 2. Get profile by profile id
@@ -54,10 +60,10 @@ func (f *SignInFlow) Run(ctx context.Context, req *SignInReq) (*SignInRes, error
 	}
 
 	token, err := f.authCommands.SignIn(ctx, &auth.SignInCommand{
-		Auth:      au,
-		Password:  req.Password,
-		ProfileID: au.ProfileID,
-		Email:     pro.Email,
+		ProfileID:    au.ProfileID,
+		Provider:     au.Provider,
+		Password:     req.Password,
+		PasswordHash: au.PasswordHash,
 	})
 	if err != nil {
 		return nil, apperror.NewAppError(err, "SignInFlow.Run:authCommands.SignIn")

@@ -20,6 +20,8 @@ type FileInfo struct {
 	Size          int64
 	Extension     *string
 	MimeType      string
+	Category      *string
+	Preview       *[]byte
 	TrashedAt     *time.Time
 	CreatedAt     time.Time
 	UpdatedAt     time.Time

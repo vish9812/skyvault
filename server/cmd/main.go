@@ -7,11 +7,8 @@ import (
 	"os"
 	"os/signal"
 	"skyvault/internal/api"
-	"skyvault/internal/domain/auth"
-	"skyvault/internal/domain/media"
-	"skyvault/internal/domain/profile"
+	"skyvault/internal/bootstrap"
 	"skyvault/internal/infrastructure"
-	"skyvault/internal/workflows"
 	"skyvault/pkg/appconfig"
 	"skyvault/pkg/applog"
 	"syscall"
@@ -61,7 +58,7 @@ func initApp(_ context.Context) *appconfig.App {
 
 func initDependencies(ctx context.Context) *api.API {
 	// Init Infrastructure
-	infra := infrastructure.NewInfrastructure(app)
+	infra := bootstrap.InitInfrastructure(app)
 
 	// Add health check endpoint
 	go monitorInfraHealth(ctx, infra)
@@ -69,21 +66,8 @@ func initDependencies(ctx context.Context) *api.API {
 	// Register cleanup on shutdown
 	app.RegisterCleanup(infra.Cleanup)
 
-	// Init workFlows, commands and queries
-	profileCommands := profile.NewCommandHandlers(infra.Repository.Profile)
-	profileQueries := profile.NewQueryHandlers(infra.Repository.Profile)
-	authCommands := auth.NewCommandHandlers(infra.Repository.Auth, infra.Auth)
-	authQueries := auth.NewQueryHandlers(infra.Repository.Auth, infra.Auth)
-	signUpFlow := workflows.NewSignUpFlow(app, authCommands, infra.Repository.Auth, profileCommands, infra.Repository.Profile)
-	signInFlow := workflows.NewSignInFlow(authCommands, authQueries, profileCommands, profileQueries)
-	mediaCommands := media.NewCommandHandlers(app, infra.Repository.Media, infra.Storage.LocalStorage)
-	mediaQueries := media.NewQueryHandlers(infra.Repository.Media, infra.Storage.LocalStorage)
-
 	// Init API
-	apiServer := api.NewAPI(app).InitRoutes(infra)
-	api.NewAuthAPI(apiServer, signUpFlow, signInFlow).InitRoutes()
-	api.NewMediaAPI(apiServer, app, mediaCommands, mediaQueries).InitRoutes()
-	api.NewProfileAPI(apiServer, profileCommands, profileQueries).InitRoutes()
+	apiServer := bootstrap.InitAPI(app, infra)
 
 	// Log all routes
 	if isDev {

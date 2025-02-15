@@ -15,6 +15,7 @@ require (
 	github.com/stretchr/testify v1.9.0
 	golang.org/x/crypto v0.31.0
 	golang.org/x/exp v0.0.0-20230905200255-921286631fa9
+	golang.org/x/image v0.23.0
 )
 
 require (

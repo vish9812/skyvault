@@ -3,62 +3,88 @@ package media
 import (
 	"context"
 	"skyvault/internal/domain/internal"
+	"skyvault/pkg/paging"
 )
 
 type Repository interface {
 	internal.RepositoryTx[Repository]
 
 	//--------------------------------
-	// File
+	// Files
 	//--------------------------------
 
 	// App Errors:
-	// - apperror.ErrDuplicateData
+	// - ErrCommonDuplicateData
 	CreateFileInfo(ctx context.Context, info *FileInfo) (*FileInfo, error)
 
 	// App Errors:
-	// - apperror.ErrNoData
+	// - ErrCommonNoData
 	GetFileInfo(ctx context.Context, fileID int64) (*FileInfo, error)
 
-	// OwnerID is only used when folderID is nil to get all files in the root folder of the owner.
-	// Otherwise only folderID is used to get all files in the specified folder.
-	//
 	// App Errors:
-	// - apperror.ErrNoData
-	GetFilesInfo(ctx context.Context, ownerID int64, folderID *int64) ([]*FileInfo, error)
+	// - ErrCommonNoData
+	GetFileInfoTrashed(ctx context.Context, fileID int64) (*FileInfo, error)
+
+	GetFileInfos(ctx context.Context, pagingOpt *paging.Options, ownerID int64, folderID *int64) (*paging.Page[*FileInfo], error)
+
+	GetFileInfosByCategory(ctx context.Context, pagingOpt *paging.Options, ownerID int64, category Category) (*paging.Page[*FileInfo], error)
 
 	// App Errors:
-	// - apperror.ErrNoData
+	// - ErrCommonNoData
 	UpdateFileInfo(ctx context.Context, info *FileInfo) error
 
 	// App Errors:
-	// - apperror.ErrNoData
+	// - ErrCommonNoData
 	DeleteFileInfo(ctx context.Context, fileID int64) error
 
+	// TODO: Once, sharing/permissions feature is implemented,
+	// replace the ownerID param with deletableBy to check appropriate permissions.
+
+	// App Errors:
+	// - ErrCommonNoData
+	TrashFileInfos(ctx context.Context, ownerID int64, fileIDs []int64) error
+
 	//--------------------------------
-	// Folder
+	// Folders
 	//--------------------------------
 
 	// App Errors:
-	// - apperror.ErrDuplicateData
+	// - ErrCommonDuplicateData
 	CreateFolderInfo(ctx context.Context, folder *FolderInfo) (*FolderInfo, error)
 
 	// App Errors:
-	// - apperror.ErrNoData
+	// - ErrCommonNoData
 	GetFolderInfo(ctx context.Context, folderID int64) (*FolderInfo, error)
 
-	// OwnerID is only used when parentFolderID is nil to get all folders in the root folder of the owner.
-	// Otherwise only parentFolderID is used to get all folders in the specified parent folder.
-	//
 	// App Errors:
-	// - apperror.ErrNoData
-	GetFoldersInfo(ctx context.Context, ownerID int64, parentFolderID *int64) ([]*FolderInfo, error)
+	// - ErrCommonNoData
+	GetFolderInfoTrashed(ctx context.Context, folderID int64) (*FolderInfo, error)
+
+	GetFolderInfos(ctx context.Context, pagingOpt *paging.Options, ownerID int64, parentFolderID *int64) (*paging.Page[*FolderInfo], error)
 
 	// App Errors:
-	// - apperror.ErrNoData
+	// - ErrCommonNoData
 	UpdateFolderInfo(ctx context.Context, folder *FolderInfo) error
 
 	// App Errors:
-	// - apperror.ErrNoData
+	// - ErrCommonNoData
 	DeleteFolderInfo(ctx context.Context, folderID int64) error
+
+	// Recursively trash all files and sub-folders.
+	//
+	// App Errors:
+	// - ErrCommonNoData
+	TrashFolderInfos(ctx context.Context, ownerID int64, folderIDs []int64) error
+
+	// Recursively restore all files and sub-folders.
+	//
+	// App Errors:
+	// - ErrCommonNoData
+	RestoreFolderInfo(ctx context.Context, ownerID, folderID int64) error
+
+	// GetDescendantFolderIDs returns all descendant folder IDs of the given folder ID, excluding the folder itself.
+	//
+	// App Errors:
+	// - ErrCommonNoData
+	GetDescendantFolderIDs(ctx context.Context, ownerID, folderID int64) ([]int64, error)
 }

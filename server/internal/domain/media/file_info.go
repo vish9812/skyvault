@@ -1,9 +1,11 @@
 package media
 
 import (
+	"io"
 	"path/filepath"
 	"skyvault/pkg/apperror"
 	"skyvault/pkg/utils"
+	"strings"
 	"time"
 )
 
@@ -13,12 +15,19 @@ const (
 	BytesPerGB = 1 << 30
 )
 
+const (
+	CategoryImages    = "images"
+	CategoryDocuments = "documents"
+	CategoryVideos    = "videos"
+	CategoryAudios    = "audios"
+	CategoryOthers    = "others"
+)
+
 type FileConfig struct {
 	MaxSizeMB int64
 }
 
-// TODO: 1. Keep preview as byte array of image type files
-// TODO: 2. Later generate previews asynchronously via worker
+// TODO: Generate preview asynchronously via worker
 type FileInfo struct {
 	ID            int64
 	OwnerID       int64
@@ -28,27 +37,24 @@ type FileInfo struct {
 	Size          int64 // bytes
 	Extension     *string
 	MimeType      string
+	Category      Category
+	Preview       []byte
 	CreatedAt     time.Time
 	UpdatedAt     time.Time
 	TrashedAt     *time.Time
 }
 
 // App Errors:
-// - ErrInvalidName
-// - ErrFileSizeLimitExceeded
-func NewFileInfo(config FileConfig, ownerID int64, folderID *int64, name string, size int64, mimeType string) (*FileInfo, error) {
-	if ownerID < 1 {
-		return nil, apperror.NewAppError(apperror.ErrCommonInvalidValue, "media.NewFileInfo:ownerID").WithMetadata("owner_id", ownerID)
-	}
-
-	name = utils.CleanFileName(name)
-
-	if name == "" {
-		return nil, apperror.NewAppError(apperror.ErrCommonInvalidValue, "media.NewFileInfo:name").WithMetadata("cleaned_name", name)
-	}
-
-	if size < 0 {
-		return nil, apperror.NewAppError(apperror.ErrCommonInvalidValue, "media.NewFileInfo:size").WithMetadata("file_size", size)
+// - ErrCommonNoAccess
+// - ErrCommonInvalidValue
+// - ErrMediaFileSizeLimitExceeded
+func NewFileInfo(config FileConfig, ownerID int64, parentFolder *FolderInfo, name string, size int64, mimeType string) (*FileInfo, error) {
+	var folderID *int64
+	if parentFolder != nil {
+		if err := parentFolder.ValidateAccess(ownerID); err != nil {
+			return nil, apperror.NewAppError(err, "media.NewFileInfo:ValidateParentAccess")
+		}
+		folderID = &parentFolder.ID
 	}
 
 	if size > (config.MaxSizeMB * BytesPerMB) {
@@ -66,6 +72,7 @@ func NewFileInfo(config FileConfig, ownerID int64, folderID *int64, name string,
 		ext = &e
 	}
 
+	now := time.Now().UTC()
 	return &FileInfo{
 		OwnerID:       ownerID,
 		FolderID:      folderID,
@@ -74,27 +81,99 @@ func NewFileInfo(config FileConfig, ownerID int64, folderID *int64, name string,
 		Size:          size,
 		Extension:     ext,
 		MimeType:      mimeType,
-		CreatedAt:     time.Now().UTC(),
-		UpdatedAt:     time.Now().UTC(),
+		Category:      getCategory(mimeType),
+		CreatedAt:     now,
+		UpdatedAt:     now,
 	}, nil
 }
 
-func (f *FileInfo) Trash() {
-	now := time.Now().UTC()
-	f.TrashedAt = &now
-	f.UpdatedAt = now
+type Category string
+
+func getCategory(mimeType string) Category {
+	var category Category
+	baseMime := strings.Split(mimeType, "/")[0]
+	switch baseMime {
+	case "text":
+		category = CategoryDocuments
+	case "image":
+		category = CategoryImages
+	case "audio":
+		category = CategoryAudios
+	case "video":
+		category = CategoryVideos
+	default:
+		category = CategoryOthers
+	}
+	return category
 }
 
-func (f *FileInfo) Restore() {
+func (f *FileInfo) WithPreview(file io.ReadSeeker) (*FileInfo, error) {
+	if f.Category != CategoryImages {
+		return f, nil
+	}
+
+	format := strings.Split(f.MimeType, "/")[1]
+	preview, err := utils.ScaleDownImageTo(format, file, 100, 100)
+	if err != nil {
+		// In case of unsupported image format, no need to set the preview
+		if err == utils.ErrUnsupportedImageFormat {
+			return f, nil
+		}
+
+		return nil, err
+	}
+
+	f.Preview = preview
+	return f, nil
+}
+
+// Restore to original parent folder if it's not trashed.
+// Otherwise, restore to root folder.
+func (f *FileInfo) Restore(parentFolderIsTrashed bool) {
+	if parentFolderIsTrashed {
+		f.FolderID = nil
+	}
+
 	f.TrashedAt = nil
 	f.UpdatedAt = time.Now().UTC()
 }
 
-func (f *FileInfo) IsTrashed() bool {
-	return f.TrashedAt != nil
+// App Errors:
+// - ErrCommonNoAccess
+func (f *FileInfo) ValidateAccess(ownerID int64) error {
+	if f.OwnerID != ownerID {
+		return apperror.NewAppError(apperror.ErrCommonNoAccess, "media.FileInfo.ValidateAccess").WithMetadata("owner_id", ownerID).WithMetadata("file_owner_id", f.OwnerID)
+	}
+	return nil
 }
 
-// TODO: Rename to IsAccessible
-func (f *FileInfo) HasAccess(ownerID int64) bool {
-	return f.OwnerID == ownerID
+func (f *FileInfo) Rename(newName string) {
+	f.Name = newName
+	f.UpdatedAt = time.Now().UTC()
+}
+
+// App Errors:
+// - ErrCommonNoAccess
+// - ErrCommonInvalidValue
+func (f *FileInfo) MoveTo(destFolderInfo *FolderInfo) error {
+	if destFolderInfo != nil {
+		if err := destFolderInfo.ValidateAccess(f.OwnerID); err != nil {
+			return apperror.NewAppError(err, "media.FileInfo.MoveTo:ValidateAccess")
+		}
+
+		if f.FolderID != nil && *f.FolderID == destFolderInfo.ID {
+			return apperror.NewAppError(apperror.ErrCommonInvalidValue, "media.FileInfo.MoveTo:SameFolder")
+		}
+
+		f.FolderID = &destFolderInfo.ID
+	} else {
+		if f.FolderID == nil {
+			return apperror.NewAppError(apperror.ErrCommonInvalidValue, "media.FileInfo.MoveTo:SameRootFolder")
+		}
+
+		f.FolderID = nil
+	}
+
+	f.UpdatedAt = time.Now().UTC()
+	return nil
 }

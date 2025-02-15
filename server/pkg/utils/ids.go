@@ -10,8 +10,14 @@ func UUID() string {
 	return uuid.New().String()
 }
 
-func IsValidEmail(email string) error {
-	_, err := mail.ParseAddress(email)
-	return err
+func ValidateEmail(email string) (string, error) {
+	mailObj, err := mail.ParseAddress(email)
+	if err != nil {
+		return "", err
+	}
+	return mailObj.Address, nil
 }
 
+func Ptr[T any](v T) *T {
+	return &v
+}

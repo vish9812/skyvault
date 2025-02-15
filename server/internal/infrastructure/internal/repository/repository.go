@@ -10,15 +10,12 @@ import (
 	"skyvault/internal/domain/media"
 	"skyvault/internal/domain/profile"
 	"skyvault/pkg/appconfig"
-	"skyvault/pkg/apperror"
 	"skyvault/pkg/applog"
 	"time"
 
 	"github.com/go-jet/jet/v2/qrm"
 	"github.com/golang-migrate/migrate/v4"
-	"github.com/jinzhu/copier"
 
-	jetpg "github.com/go-jet/jet/v2/postgres"
 	"github.com/golang-migrate/migrate/v4/database/postgres"
 	_ "github.com/golang-migrate/migrate/v4/source/file"
 	_ "github.com/jackc/pgx/v5/stdlib"
@@ -64,6 +61,12 @@ func NewRepository(app *appconfig.App) *Repository {
 	return repo
 }
 
+func (r *Repository) initRepositories() {
+	r.Auth = NewAuthRepository(r)
+	r.Profile = NewProfileRepository(r)
+	r.Media = NewMediaRepository(r)
+}
+
 func connectDatabase(logger applog.Logger, dsn string) *sql.DB {
 	db, err := sql.Open("pgx", dsn)
 	if err != nil {
@@ -89,17 +92,12 @@ func (r *Repository) close() error {
 	return nil
 }
 
-// TODO: No need to export this method.
-func (r *Repository) WithTx(ctx context.Context, tx *sql.Tx) *Repository {
+func (r *Repository) withTx(_ context.Context, tx *sql.Tx) *Repository {
 	return &Repository{app: r.app, db: r.db, dbTx: tx}
 }
 
 func (r *Repository) migrateUp() {
-	// Assuming the code is run from the main.go inside the cmd folder.
-	migrationPath, err := filepath.Abs("../internal/infrastructure/internal/repository/internal/migrations")
-	if err != nil {
-		r.app.Logger.Fatal().Err(err).Msg("failed to get the absolute migration path")
-	}
+	migrationPath := filepath.Join(r.app.Config.Server.Path, "internal/infrastructure/internal/repository/internal/migrations")
 	migrationDirURL := fmt.Sprintf("file://%s", migrationPath)
 	logger := r.app.Logger.With().Str("where", "migrateUp").Str("migration_path", migrationDirURL).Logger()
 
@@ -135,97 +133,4 @@ func (r *Repository) migrateUp() {
 	}
 
 	logger.Info().Msg("migrated db up")
-}
-
-// -----------------------------
-// DB Queries runner functions
-// -----------------------------
-
-// runSelect is to be used with Select statements that return a single row.
-//
-// App Errors:
-// - apperror.ErrNoData
-func runSelect[TDBModel any, TRes any](ctx context.Context, stmt jetpg.Statement, dbTx qrm.DB) (*TRes, error) {
-	var dbModel TDBModel
-	err := stmt.QueryContext(ctx, dbTx, &dbModel)
-	if err != nil {
-		if errors.Is(err, qrm.ErrNoRows) {
-			return nil, apperror.NewAppError(fmt.Errorf("%w: %w", apperror.ErrCommonNoData, err), "repository.runSelect:QueryContext:ErrNoRows")
-		}
-
-		return nil, apperror.NewAppError(err, "repository.runSelect:QueryContext")
-	}
-
-	var resModel TRes
-	err = copier.Copy(&resModel, &dbModel)
-	if err != nil {
-		return nil, apperror.NewAppError(fmt.Errorf("failed to copy the db model to the res model: %w", err), "repository.runSelect:Copy")
-	}
-
-	return &resModel, nil
-}
-
-// runSelectSlice is to be used with Select statements that return multiple rows.
-//
-// App Errors:
-// - apperror.ErrNoData
-func runSelectSlice[TDBModel any, TRes any](ctx context.Context, stmt jetpg.Statement, dbTx qrm.DB) ([]*TRes, error) {
-	res, err := runSelect[[]*TDBModel, []*TRes](ctx, stmt, dbTx)
-	if err != nil {
-		return nil, apperror.NewAppError(err, "repository.runSelectSlice:runSelect")
-	}
-
-	return *res, nil
-}
-
-// runInsert is to be used with Insert statements
-//
-// App Errors:
-// - apperror.ErrDuplicateData
-func runInsert[TDBModel any, TRes any](ctx context.Context, stmt jetpg.Statement, dbTx qrm.DB) (*TRes, error) {
-	var dbModel TDBModel
-	err := stmt.QueryContext(ctx, dbTx, &dbModel)
-	if err != nil {
-		if apperror.Contains(err, "unique constraint") {
-			return nil, apperror.NewAppError(fmt.Errorf("%w: %w", apperror.ErrCommonDuplicateData, err), "repository.runInsert:QueryContext")
-		}
-
-		return nil, apperror.NewAppError(err, "repository.runInsert:QueryContext")
-	}
-
-	var resModel TRes
-	err = copier.Copy(&resModel, &dbModel)
-	if err != nil {
-		return nil, apperror.NewAppError(fmt.Errorf("failed to copy the db model to the res model: %w", err), "repository.runInsert:Copy")
-	}
-
-	return &resModel, nil
-}
-
-// runUpdateOrDelete is to be used with Update or Delete statements
-//
-// App Errors:
-// - apperror.ErrNoData
-func runUpdateOrDelete(ctx context.Context, stmt jetpg.Statement, dbTx qrm.DB) error {
-	res, err := stmt.ExecContext(ctx, dbTx)
-	if err != nil {
-		return apperror.NewAppError(err, "repository.runUpdateOrDelete:ExecContext")
-	}
-
-	rowsAffected, err := res.RowsAffected()
-	if err != nil {
-		return apperror.NewAppError(err, "repository.runUpdateOrDelete:RowsAffected")
-	}
-
-	if rowsAffected == 0 {
-		return apperror.NewAppError(apperror.ErrCommonNoData, "repository.runUpdateOrDelete:RowsAffected")
-	}
-
-	return nil
-}
-
-func (r *Repository) initRepositories() {
-	r.Auth = NewAuthRepository(r)
-	r.Profile = NewProfileRepository(r)
-	r.Media = NewMediaRepository(r)
 }

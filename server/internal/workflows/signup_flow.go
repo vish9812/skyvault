@@ -29,10 +29,9 @@ func NewSignUpFlow(app *appconfig.App, authCommands auth.Commands, authRepositor
 type SignUpReq struct {
 	Email          string
 	FullName       string
-	Avatar         []byte
-	Password       *string
 	Provider       auth.Provider
 	ProviderUserID string
+	Password       *string
 }
 
 type SignUpRes struct {
@@ -41,8 +40,8 @@ type SignUpRes struct {
 }
 
 // App Errors:
-// - apperror.ErrInvalidValue
-// - apperror.ErrDuplicateData
+// - ErrCommonInvalidValue
+// - ErrCommonDuplicateData
 func (f *SignUpFlow) Run(ctx context.Context, req *SignUpReq) (*SignUpRes, error) {
 	// 1. Create profile with transaction
 	// 2. Create auth with transaction
@@ -72,10 +71,9 @@ func (f *SignUpFlow) Run(ctx context.Context, req *SignUpReq) (*SignUpRes, error
 
 	token, err := authCmdTx.SignUp(ctx, &auth.SignUpCommand{
 		ProfileID:      pro.ID,
-		Email:          req.Email,
-		Password:       req.Password,
 		Provider:       req.Provider,
 		ProviderUserID: req.ProviderUserID,
+		Password:       req.Password,
 	})
 	if err != nil {
 		return nil, apperror.NewAppError(err, "SignUpFlow.Run:SignUp")

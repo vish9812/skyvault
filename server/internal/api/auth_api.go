@@ -4,8 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"skyvault/internal/api/internal"
-	"skyvault/internal/api/internal/dtos"
+	"skyvault/internal/api/helper"
+	"skyvault/internal/api/helper/dtos"
 	"skyvault/internal/domain/auth"
 	"skyvault/internal/workflows"
 	"skyvault/pkg/apperror"
@@ -14,31 +14,39 @@ import (
 	"github.com/jinzhu/copier"
 )
 
-type authAPI struct {
+type AuthAPI struct {
 	api        *API
 	signUpFlow *workflows.SignUpFlow
 	signInFlow *workflows.SignInFlow
 }
 
-func NewAuthAPI(a *API, signUpFlow *workflows.SignUpFlow, signInFlow *workflows.SignInFlow) *authAPI {
-	return &authAPI{
+func NewAuthAPI(a *API, signUpFlow *workflows.SignUpFlow, signInFlow *workflows.SignInFlow) *AuthAPI {
+	return &AuthAPI{
 		api:        a,
 		signUpFlow: signUpFlow,
+		signInFlow: signInFlow,
 	}
 }
 
-func (a *authAPI) InitRoutes() {
+func (a *AuthAPI) InitRoutes() *AuthAPI {
 	pubRouter := a.api.v1Pub
 	pubRouter.Route("/auth", func(r chi.Router) {
 		r.Post("/sign-up", a.SignUp)
 		r.Post("/sign-in", a.SignIn)
 	})
+
+	return a
 }
 
-func (a *authAPI) SignUp(w http.ResponseWriter, r *http.Request) {
-	var req dtos.SignUpReq
+func (a *AuthAPI) SignUp(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		Email    string  `json:"email"`
+		FullName string  `json:"fullName"`
+		Password *string `json:"password"`
+		Provider string  `json:"provider"`
+	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		internal.RespondError(w, r, apperror.NewAppError(fmt.Errorf("%w: %w", apperror.ErrCommonInvalidValue, err), "authAPI.SignUp:DecodeBody"))
+		helper.RespondError(w, r, apperror.NewAppError(fmt.Errorf("%w: %w", apperror.ErrCommonInvalidValue, err), "authAPI.SignUp:DecodeBody"))
 		return
 	}
 
@@ -53,27 +61,31 @@ func (a *authAPI) SignUp(w http.ResponseWriter, r *http.Request) {
 
 	res, err := a.signUpFlow.Run(r.Context(), flowReq)
 	if err != nil {
-		internal.RespondError(w, r, apperror.NewAppError(err, "authAPI.SignUp:Run"))
+		helper.RespondError(w, r, apperror.NewAppError(err, "authAPI.SignUp:Run"))
 		return
 	}
 
-	var dto dtos.SignUpRes
+	var dto dtos.SignUp
 	dto.Token = res.Token
 	dto.Profile = &dtos.GetProfileRes{}
 
 	err = copier.Copy(&dto.Profile, res.Profile)
 	if err != nil {
-		internal.RespondError(w, r, apperror.NewAppError(err, "authAPI.SignUp:Copy"))
+		helper.RespondError(w, r, apperror.NewAppError(err, "authAPI.SignUp:Copy"))
 		return
 	}
 
-	internal.RespondJSON(w, http.StatusCreated, dto)
+	helper.RespondJSON(w, http.StatusCreated, dto)
 }
 
-func (a *authAPI) SignIn(w http.ResponseWriter, r *http.Request) {
-	var req dtos.SignInReq
+func (a *AuthAPI) SignIn(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		Provider       string  `json:"provider"`
+		ProviderUserID string  `json:"providerUserId"`
+		Password       *string `json:"password"`
+	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		internal.RespondError(w, r, apperror.NewAppError(fmt.Errorf("%w: %w", apperror.ErrCommonInvalidValue, err), "authAPI.SignIn:DecodeBody"))
+		helper.RespondError(w, r, apperror.NewAppError(fmt.Errorf("%w: %w", apperror.ErrCommonInvalidValue, err), "authAPI.SignIn:DecodeBody"))
 		return
 	}
 
@@ -85,19 +97,19 @@ func (a *authAPI) SignIn(w http.ResponseWriter, r *http.Request) {
 
 	res, err := a.signInFlow.Run(r.Context(), flowReq)
 	if err != nil {
-		internal.RespondError(w, r, apperror.NewAppError(err, "authAPI.SignIn:Run"))
+		helper.RespondError(w, r, apperror.NewAppError(err, "authAPI.SignIn:Run"))
 		return
 	}
 
-	var dto dtos.SignInRes
+	var dto dtos.SignUp
 	dto.Token = res.Token
 	dto.Profile = &dtos.GetProfileRes{}
 
 	err = copier.Copy(&dto.Profile, res.Profile)
 	if err != nil {
-		internal.RespondError(w, r, apperror.NewAppError(err, "authAPI.SignIn:Copy"))
+		helper.RespondError(w, r, apperror.NewAppError(err, "authAPI.SignIn:Copy"))
 		return
 	}
 
-	internal.RespondJSON(w, http.StatusOK, dto)
+	helper.RespondJSON(w, http.StatusOK, dto)
 }

@@ -3,6 +3,7 @@ package profile
 import (
 	"context"
 	"skyvault/pkg/apperror"
+	"skyvault/pkg/common"
 )
 
 var _ Commands = (*CommandHandlers)(nil)
@@ -20,19 +21,33 @@ func (h *CommandHandlers) WithTxRepository(ctx context.Context, repository Repos
 }
 
 func (h *CommandHandlers) Create(ctx context.Context, cmd *CreateCommand) (*Profile, error) {
-	pro, err := NewProfile(cmd.Email, cmd.FullName)
-	if err != nil {
-		return nil, apperror.NewAppError(err, "CommandHandlers.Create:NewProfile")
-	}
+	pro := NewProfile(cmd.Email, cmd.FullName)
 
-	pro, err = h.repository.Create(ctx, pro)
+	pro, err := h.repository.Create(ctx, pro)
 	if err != nil {
-		return nil, apperror.NewAppError(err, "CommandHandlers.Create:Create")
+		return nil, apperror.NewAppError(err, "profile.CommandHandlers.Create:Create")
 	}
 
 	return pro, nil
 }
 
 func (h *CommandHandlers) Delete(ctx context.Context, cmd *DeleteCommand) error {
-	return h.repository.Delete(ctx, cmd.ID)
+	loggedInProfileID := common.GetProfileIDFromContext(ctx)
+
+	pro, err := h.repository.Get(ctx, cmd.ID)
+	if err != nil {
+		return apperror.NewAppError(err, "profile.CommandHandlers.Delete:Get")
+	}
+
+	err = pro.ValidateAccess(loggedInProfileID)
+	if err != nil {
+		return apperror.NewAppError(err, "profile.CommandHandlers.Delete:ValidateAccess")
+	}
+
+	err = h.repository.Delete(ctx, cmd.ID)
+	if err != nil {
+		return apperror.NewAppError(err, "profile.CommandHandlers.Delete:Delete")
+	}
+
+	return nil
 }
