@@ -71,6 +71,31 @@ create table if not exists contact (
 create unique index if not exists contact_idx_unq_email_per_user 
 on contact(owner_id, email);
 
+-- Contact groups
+create table if not exists contact_group (
+    id bigserial primary key,
+    owner_id bigint not null references profile(id) on delete cascade,
+    name text not null,
+    created_at timestamp not null default (timezone('utc', now())),
+    updated_at timestamp not null default (timezone('utc', now()))
+);
+
+-- Ensure unique group names per user
+create unique index if not exists contact_group_idx_unq_name
+on contact_group(owner_id, name);
+
+-- Contact group members
+create table if not exists contact_group_member (
+    id bigserial primary key,
+    group_id bigint not null references contact_group(id) on delete cascade,
+    contact_id bigint not null references contact(id) on delete cascade,
+    created_at timestamp not null default (timezone('utc', now()))
+);
+
+-- Ensure unique contacts per group
+create unique index if not exists contact_group_member_idx_unq_contact
+on contact_group_member(group_id, contact_id);
+
 -- Sharing configuration for resources (files/folders)
 create table if not exists share_config (
     id bigserial primary key,

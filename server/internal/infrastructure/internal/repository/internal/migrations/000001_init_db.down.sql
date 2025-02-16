@@ -8,6 +8,12 @@ drop index if exists share_config_idx_folder;
 drop index if exists share_config_idx_file;
 drop table if exists share_config;
 
+drop index if exists contact_group_member_idx_unq_contact;
+drop table if exists contact_group_member;
+
+drop index if exists contact_group_idx_unq_name;
+drop table if exists contact_group;
+
 drop index if exists contact_idx_unq_email_per_user;
 drop table if exists contact;
 
