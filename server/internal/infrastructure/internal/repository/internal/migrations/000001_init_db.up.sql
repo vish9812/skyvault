@@ -57,3 +57,52 @@ where trashed_at is null;
 create index if not exists file_info_idx_category
 on file_info(owner_id, category)
 where trashed_at is null;
+
+-- Contacts list for users
+create table if not exists contact (
+    id bigserial primary key,
+    owner_id bigint not null references profile(id) on delete cascade,
+    email text not null,
+    name text,
+    created_at timestamp not null default (timezone('utc', now())),
+    updated_at timestamp not null default (timezone('utc', now()))
+);
+
+create unique index if not exists contact_idx_unq_email_per_user 
+on contact(owner_id, email);
+
+-- Sharing configuration
+create table if not exists share (
+    id bigserial primary key,
+    owner_id bigint not null references profile(id) on delete cascade,
+    resource_type text not null check (resource_type in ('file', 'folder')),
+    resource_id bigint not null,
+    shared_with text not null, -- email address
+    password_hash text, -- optional password protection
+    max_downloads int, -- null means unlimited
+    downloads_count int not null default 0,
+    expires_at timestamp, -- null means never expires
+    created_at timestamp not null default (timezone('utc', now())),
+    updated_at timestamp not null default (timezone('utc', now()))
+);
+
+-- Ensure resource_id points to correct table based on resource_type
+create index if not exists share_idx_file 
+on share(resource_id)
+where resource_type = 'file';
+
+create index if not exists share_idx_folder
+on share(resource_id) 
+where resource_type = 'folder';
+
+-- For looking up shares by email
+create index if not exists share_idx_email
+on share(shared_with);
+
+-- Track share access history
+create table if not exists share_access (
+    id bigserial primary key,
+    share_id bigint not null references share(id) on delete cascade,
+    accessed_at timestamp not null default (timezone('utc', now())),
+    accessed_from_ip text not null
+);

@@ -1,3 +1,13 @@
+drop table if exists share_access;
+
+drop index if exists share_idx_email;
+drop index if exists share_idx_folder;
+drop index if exists share_idx_file;
+drop table if exists share;
+
+drop index if exists contact_idx_unq_email_per_user;
+drop table if exists contact;
+
 drop index if exists auth_idx_profile_id;
 drop index if exists auth_idx_unq_provider_user;
 drop table if exists auth;
