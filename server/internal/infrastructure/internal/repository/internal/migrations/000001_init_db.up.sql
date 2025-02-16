@@ -71,33 +71,45 @@ create table if not exists contact (
 create unique index if not exists contact_idx_unq_email_per_user 
 on contact(owner_id, email);
 
--- Sharing configuration
-create table if not exists share (
+-- Sharing configuration for resources (files/folders)
+create table if not exists share_config (
     id bigserial primary key,
     owner_id bigint not null references profile(id) on delete cascade,
     resource_type text not null check (resource_type in ('file', 'folder')),
     resource_id bigint not null,
-    shared_with text not null, -- email address
     password_hash text, -- optional password protection
     max_downloads int, -- null means unlimited
-    downloads_count int not null default 0,
     expires_at timestamp, -- null means never expires
     created_at timestamp not null default (timezone('utc', now())),
     updated_at timestamp not null default (timezone('utc', now()))
 );
 
 -- Ensure resource_id points to correct table based on resource_type
-create index if not exists share_idx_file 
-on share(resource_id)
+create index if not exists share_config_idx_file 
+on share_config(resource_id)
 where resource_type = 'file';
 
-create index if not exists share_idx_folder
-on share(resource_id) 
+create index if not exists share_config_idx_folder
+on share_config(resource_id) 
 where resource_type = 'folder';
 
+-- Share recipients
+create table if not exists share_recipient (
+    id bigserial primary key,
+    share_config_id bigint not null references share_config(id) on delete cascade,
+    email text not null,
+    downloads_count int not null default 0,
+    created_at timestamp not null default (timezone('utc', now())),
+    updated_at timestamp not null default (timezone('utc', now()))
+);
+
 -- For looking up shares by email
-create index if not exists share_idx_email
-on share(shared_with);
+create index if not exists share_recipient_idx_email
+on share_recipient(email);
+
+-- Ensure unique recipient per share
+create unique index if not exists share_recipient_idx_unq_email
+on share_recipient(share_config_id, email);
 
 -- Track share access history
 create table if not exists share_access (
