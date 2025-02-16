@@ -122,19 +122,34 @@ where resource_type = 'folder';
 create table if not exists share_recipient (
     id bigserial primary key,
     share_config_id bigint not null references share_config(id) on delete cascade,
-    email text not null,
+    recipient_type text not null check (recipient_type in ('email', 'group')),
+    recipient_id bigint, -- null for direct email shares, references contact_group(id) for group shares
+    email text not null, -- direct email or expanded from group
     downloads_count int not null default 0,
     created_at timestamp not null default (timezone('utc', now())),
-    updated_at timestamp not null default (timezone('utc', now()))
+    updated_at timestamp not null default (timezone('utc', now())),
+    constraint fk_recipient_group
+        foreign key (recipient_id)
+        references contact_group(id)
+        on delete cascade
+        check (
+            (recipient_type = 'email' and recipient_id is null) or
+            (recipient_type = 'group' and recipient_id is not null)
+        )
 );
 
 -- For looking up shares by email
 create index if not exists share_recipient_idx_email
 on share_recipient(email);
 
--- Ensure unique recipient per share
-create unique index if not exists share_recipient_idx_unq_email
-on share_recipient(share_config_id, email);
+-- For looking up shares by group
+create index if not exists share_recipient_idx_group
+on share_recipient(recipient_id)
+where recipient_type = 'group';
+
+-- Ensure unique recipient (email or group) per share
+create unique index if not exists share_recipient_idx_unq_recipient
+on share_recipient(share_config_id, coalesce(recipient_id::text, email));
 
 -- Track share access history
 create table if not exists share_access (
