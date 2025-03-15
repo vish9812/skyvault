@@ -207,82 +207,137 @@ func (r *SharingRepository) DeleteContactGroup(ctx context.Context, ownerID, gro
 }
 
 func (r *SharingRepository) AddContactToGroup(ctx context.Context, ownerID, groupID, contactID int64) error {
-	// First verify that both the group and contact belong to the owner
-	groupStmt := SELECT(ContactGroup.ID).
-		FROM(ContactGroup).
-		WHERE(
-			ContactGroup.ID.EQ(Int64(groupID)).
-				AND(ContactGroup.OwnerID.EQ(Int64(ownerID))),
-		)
-
-	var groupExists bool
-	err := groupStmt.QueryContext(ctx, r.repository.dbTx, &groupExists)
-	if err != nil {
-		return apperror.NewAppError(err, "repository.AddContactToGroup:VerifyGroup")
-	}
-	if !groupExists {
-		return apperror.NewAppError(apperror.ErrCommonNoData, "repository.AddContactToGroup:GroupNotFound")
-	}
-
-	contactStmt := SELECT(Contact.ID).
-		FROM(Contact).
-		WHERE(
-			Contact.ID.EQ(Int64(contactID)).
-				AND(Contact.OwnerID.EQ(Int64(ownerID))),
-		)
-
-	var contactExists bool
-	err = contactStmt.QueryContext(ctx, r.repository.dbTx, &contactExists)
-	if err != nil {
-		return apperror.NewAppError(err, "repository.AddContactToGroup:VerifyContact")
-	}
-	if !contactExists {
-		return apperror.NewAppError(apperror.ErrCommonNoData, "repository.AddContactToGroup:ContactNotFound")
-	}
-
-	// Now add the contact to the group
+	// Define CTEs for valid group and contact that belong to the owner
+	validGroup := CTE("valid_group")
+	validContact := CTE("valid_contact")
+	
+	// Get the current time for the insertion
 	now := time.Now().UTC()
-	member := model.ContactGroupMember{
-		GroupID:   groupID,
-		ContactID: contactID,
-		CreatedAt: now,
+	
+	// Build the WITH statement with CTEs to verify ownership
+	stmt := WITH(
+		validGroup.AS(
+			SELECT(ContactGroup.ID).
+			FROM(ContactGroup).
+			WHERE(
+				ContactGroup.ID.EQ(Int64(groupID)).
+				AND(ContactGroup.OwnerID.EQ(Int64(ownerID))),
+			),
+		),
+		validContact.AS(
+			SELECT(Contact.ID).
+			FROM(Contact).
+			WHERE(
+				Contact.ID.EQ(Int64(contactID)).
+				AND(Contact.OwnerID.EQ(Int64(ownerID))),
+			),
+		),
+	)(
+		// Insert only if both CTEs return results
+		ContactGroupMember.INSERT(
+			ContactGroupMember.GroupID,
+			ContactGroupMember.ContactID,
+			ContactGroupMember.CreatedAt,
+		).
+		VALUES(
+			Int64(groupID),
+			Int64(contactID),
+			TimestampT(now),
+		).
+		WHERE(
+			EXISTS(
+				SELECT(Int(1)).
+				FROM(validGroup).
+				WHERE(EXISTS(
+					SELECT(Int(1)).
+					FROM(validContact),
+				)),
+			),
+		),
+	)
+	
+	// Execute the statement
+	result, err := stmt.ExecContext(ctx, r.repository.dbTx)
+	if err != nil {
+		return apperror.NewAppError(err, "repository.AddContactToGroup:ExecContext")
 	}
-
-	stmt := ContactGroupMember.INSERT(
-		ContactGroupMember.GroupID,
-		ContactGroupMember.ContactID,
-		ContactGroupMember.CreatedAt,
-	).MODEL(member)
-
-	return runInsertNoReturn(ctx, stmt, r.repository.dbTx)
+	
+	// Check if any rows were affected (if not, either group or contact doesn't exist or doesn't belong to owner)
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return apperror.NewAppError(err, "repository.AddContactToGroup:RowsAffected")
+	}
+	
+	if rowsAffected == 0 {
+		return apperror.NewAppError(apperror.ErrCommonNoData, "repository.AddContactToGroup:NoRowsAffected")
+	}
+	
+	return nil
 }
 
 func (r *SharingRepository) RemoveContactFromGroup(ctx context.Context, ownerID, groupID, contactID int64) error {
-	// First verify that the group belongs to the owner
-	groupStmt := SELECT(ContactGroup.ID).
-		FROM(ContactGroup).
-		WHERE(
-			ContactGroup.ID.EQ(Int64(groupID)).
+	// Define CTE for valid group that belongs to the owner
+	validGroup := CTE("valid_group")
+	
+	// Build the WITH statement with CTE to verify ownership
+	stmt := WITH(
+		validGroup.AS(
+			SELECT(ContactGroup.ID).
+			FROM(ContactGroup).
+			WHERE(
+				ContactGroup.ID.EQ(Int64(groupID)).
 				AND(ContactGroup.OwnerID.EQ(Int64(ownerID))),
-		)
-
-	var groupExists bool
-	err := groupStmt.QueryContext(ctx, r.repository.dbTx, &groupExists)
-	if err != nil {
-		return apperror.NewAppError(err, "repository.RemoveContactFromGroup:VerifyGroup")
-	}
-	if !groupExists {
-		return apperror.NewAppError(apperror.ErrCommonNoData, "repository.RemoveContactFromGroup:GroupNotFound")
-	}
-
-	// Now remove the contact from the group
-	stmt := ContactGroupMember.DELETE().
+			),
+		),
+	)(
+		// Delete only if the CTE returns results
+		ContactGroupMember.DELETE().
 		WHERE(
 			ContactGroupMember.GroupID.EQ(Int64(groupID)).
-				AND(ContactGroupMember.ContactID.EQ(Int64(contactID))),
-		)
-
-	return runUpdateOrDelete(ctx, stmt, r.repository.dbTx)
+			AND(ContactGroupMember.ContactID.EQ(Int64(contactID))).
+			AND(EXISTS(
+				SELECT(Int(1)).
+				FROM(validGroup),
+			)),
+		),
+	)
+	
+	// Execute the statement
+	result, err := stmt.ExecContext(ctx, r.repository.dbTx)
+	if err != nil {
+		return apperror.NewAppError(err, "repository.RemoveContactFromGroup:ExecContext")
+	}
+	
+	// Check if any rows were affected (if not, the group doesn't exist or doesn't belong to owner)
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return apperror.NewAppError(err, "repository.RemoveContactFromGroup:RowsAffected")
+	}
+	
+	if rowsAffected == 0 {
+		// Check if it's because the group doesn't exist/belong to owner
+		var groupExists bool
+		groupStmt := SELECT(ContactGroup.ID).
+			FROM(ContactGroup).
+			WHERE(
+				ContactGroup.ID.EQ(Int64(groupID)).
+				AND(ContactGroup.OwnerID.EQ(Int64(ownerID))),
+			)
+		
+		err = groupStmt.QueryContext(ctx, r.repository.dbTx, &groupExists)
+		if err != nil {
+			return apperror.NewAppError(err, "repository.RemoveContactFromGroup:VerifyGroup")
+		}
+		
+		if !groupExists {
+			return apperror.NewAppError(apperror.ErrCommonNoData, "repository.RemoveContactFromGroup:GroupNotFound")
+		}
+		
+		// If we get here, the group exists but the contact wasn't in the group - this is not an error
+		return nil
+	}
+	
+	return nil
 }
 
 //--------------------------------
