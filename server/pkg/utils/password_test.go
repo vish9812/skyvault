@@ -62,11 +62,11 @@ func TestIsValidPassword(t *testing.T) {
 	require.NoError(t, err, "Failed to create test wrong hash")
 
 	tests := []struct {
-		name        string
-		hash        string
-		password    string
-		want        bool
-		wantErr     bool
+		name     string
+		hash     string
+		password string
+		want     bool
+		wantErr  bool
 	}{
 		{
 			name:     "valid password",
@@ -90,11 +90,11 @@ func TestIsValidPassword(t *testing.T) {
 			wantErr:  false,
 		},
 		{
-			name:        "invalid hash format",
-			hash:        strings.Repeat("a", 100),
-			password:    password,
-			want:        false,
-			wantErr:     true,
+			name:     "invalid hash format",
+			hash:     strings.Repeat("a", 100),
+			password: password,
+			want:     false,
+			wantErr:  true,
 		},
 		{
 			name:     "empty password",
@@ -115,7 +115,7 @@ func TestIsValidPassword(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			got, err := IsValidPassword(tt.hash, tt.password)
+			got, err := SamePassword(tt.hash, tt.password)
 			if tt.wantErr {
 				require.Error(t, err)
 				return

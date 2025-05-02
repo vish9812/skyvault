@@ -10,19 +10,11 @@ type Queries interface {
 	// Contacts
 	//--------------------------------
 
-	// App Errors:
-	// - ErrCommonNoData
-	GetContact(ctx context.Context, query *GetContactQuery) (*Contact, error)
-
 	GetContacts(ctx context.Context, query *GetContactsQuery) (*paging.Page[*Contact], error)
 
 	//--------------------------------
 	// Contact Groups
 	//--------------------------------
-
-	// App Errors:
-	// - ErrCommonNoData
-	GetContactGroup(ctx context.Context, query *GetContactGroupQuery) (*ContactGroup, error)
 
 	GetContactGroups(ctx context.Context, query *GetContactGroupsQuery) (*paging.Page[*ContactGroup], error)
 
@@ -48,13 +40,7 @@ type Queries interface {
 // Contacts
 //--------------------------------
 
-type GetContactQuery struct {
-	OwnerID   int64
-	ContactID int64
-}
-
 type GetContactsQuery struct {
-	OwnerID    int64
 	SearchTerm *string
 	PagingOpt  *paging.Options
 }
@@ -63,19 +49,12 @@ type GetContactsQuery struct {
 // Contact Groups
 //--------------------------------
 
-type GetContactGroupQuery struct {
-	OwnerID int64
-	GroupID int64
-}
-
 type GetContactGroupsQuery struct {
-	OwnerID    int64
 	SearchTerm *string
 	PagingOpt  *paging.Options
 }
 
 type GetContactGroupMembersQuery struct {
-	OwnerID   int64
 	GroupID   int64
 	PagingOpt *paging.Options
 }
@@ -88,14 +67,8 @@ type GetShareConfigQuery struct {
 	ShareID int64
 }
 
-type GetShareConfigsQuery struct {
-	OwnerID      int64
-	ResourceType *ResourceType
-	PagingOpt    *paging.Options
-}
-
 type ValidateShareAccessQuery struct {
-	ShareID     int64
-	RecipientID int64
-	Password    *string
+	CustomID string
+	Email    *string
+	Password *string
 }

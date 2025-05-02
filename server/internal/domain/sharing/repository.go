@@ -4,6 +4,7 @@ import (
 	"context"
 	"skyvault/internal/domain/internal"
 	"skyvault/pkg/paging"
+	"time"
 )
 
 type Repository interface {
@@ -17,15 +18,11 @@ type Repository interface {
 	// - ErrCommonDuplicateData
 	CreateContact(ctx context.Context, contact *Contact) (*Contact, error)
 
-	// App Errors:
-	// - ErrCommonNoData
-	GetContact(ctx context.Context, ownerID, contactID int64) (*Contact, error)
-
-	GetContacts(ctx context.Context, pagingOpt *paging.Options, ownerID int64, searchTerm *string) (*paging.Page[*Contact], error)
+	GetContacts(ctx context.Context, ownerID int64, pagingOpt *paging.Options, searchTerm *string) (*paging.Page[*Contact], error)
 
 	// App Errors:
 	// - ErrCommonNoData
-	UpdateContact(ctx context.Context, contact *Contact) error
+	UpdateContact(ctx context.Context, ownerID, contactID int64, email, name string) error
 
 	// App Errors:
 	// - ErrCommonNoData
@@ -43,13 +40,13 @@ type Repository interface {
 	// - ErrCommonNoData
 	GetContactGroup(ctx context.Context, ownerID, groupID int64) (*ContactGroup, error)
 
-	GetContactGroups(ctx context.Context, pagingOpt *paging.Options, ownerID int64, searchTerm *string) (*paging.Page[*ContactGroup], error)
+	GetContactGroups(ctx context.Context, ownerID int64, pagingOpt *paging.Options, searchTerm *string) (*paging.Page[*ContactGroup], error)
 
-	GetContactGroupMembers(ctx context.Context, pagingOpt *paging.Options, ownerID, groupID int64) (*paging.Page[*Contact], error)
+	GetContactGroupMembers(ctx context.Context, ownerID int64, pagingOpt *paging.Options, groupID int64) (*paging.Page[*Contact], error)
 
 	// App Errors:
 	// - ErrCommonNoData
-	UpdateContactGroup(ctx context.Context, group *ContactGroup) error
+	UpdateContactGroup(ctx context.Context, ownerID, groupID int64, name string) error
 
 	// App Errors:
 	// - ErrCommonNoData
@@ -74,41 +71,33 @@ type Repository interface {
 
 	// App Errors:
 	// - ErrCommonNoData
-	GetShareConfig(ctx context.Context, shareID int64) (*ShareConfig, error)
+	GetShareConfig(ctx context.Context, ownerID, shareID int64) (*ShareConfig, error)
 
 	// App Errors:
 	// - ErrCommonNoData
-	UpdateShareConfig(ctx context.Context, config *ShareConfig) error
+	GetShareConfigByCustomID(ctx context.Context, ownerID int64, customID string) (*ShareConfig, error)
+
+	// App Errors:
+	// - ErrCommonNoData
+	UpdateShareExpiry(ctx context.Context, ownerID, shareID int64, maxDownloads *int64, expiresAt *time.Time) error
+
+	// App Errors:
+	// - ErrCommonNoData
+	UpdateSharePassword(ctx context.Context, ownerID, shareID int64, password *string) error
 
 	// App Errors:
 	// - ErrCommonNoData
 	DeleteShareConfig(ctx context.Context, ownerID, shareID int64) error
 
-	//--------------------------------
-	// Share Recipients
-	//--------------------------------
-
 	// App Errors:
 	// - ErrCommonDuplicateData
-	CreateShareRecipient(ctx context.Context, recipient *ShareRecipient) (*ShareRecipient, error)
+	CreateShareRecipient(ctx context.Context, ownerID int64, recipient *ShareRecipient) (*ShareRecipient, error)
 
 	// App Errors:
 	// - ErrCommonNoData
-	GetShareRecipient(ctx context.Context, shareID, recipientID int64) (*ShareRecipient, error)
+	DeleteShareRecipient(ctx context.Context, ownerID, shareID, recipientID int64) error
 
 	// App Errors:
 	// - ErrCommonNoData
-	UpdateShareRecipient(ctx context.Context, recipient *ShareRecipient) error
-
-	// App Errors:
-	// - ErrCommonNoData
-	DeleteShareRecipient(ctx context.Context, shareID, recipientID int64) error
-
-	//--------------------------------
-	// Share Access
-	//--------------------------------
-
-	// App Errors:
-	// - ErrCommonNoData
-	RecordShareAccess(ctx context.Context, shareID int64, accessedFromIP string) error
+	GetShareRecipientByEmail(ctx context.Context, shareID int64, email string) (*ShareRecipient, error)
 }

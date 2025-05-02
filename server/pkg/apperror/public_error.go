@@ -34,7 +34,7 @@ var (
 	// Sharing errors
 	ErrSharingExpired             = PublicError{Code: "SHARING_EXPIRED"}
 	ErrSharingMaxDownloadsReached = PublicError{Code: "SHARING_MAX_DOWNLOADS_REACHED"}
-	ErrSharingInvalidPassword     = PublicError{Code: "SHARING_INVALID_PASSWORD"}
+	ErrSharingInvalidCredentials  = PublicError{Code: "SHARING_INVALID_CREDENTIALS"}
 )
 
 func (e PublicError) Error() string {
@@ -67,7 +67,7 @@ func (e PublicError) HTTPStatus() int {
 		return http.StatusBadRequest
 	case ErrAuthInvalidCredentials, ErrAuthInvalidToken, ErrAuthTokenExpired:
 		return http.StatusUnauthorized
-	case ErrSharingExpired, ErrSharingMaxDownloadsReached, ErrSharingInvalidPassword:
+	case ErrSharingExpired, ErrSharingMaxDownloadsReached, ErrSharingInvalidCredentials:
 		return http.StatusForbidden
 	default:
 		return http.StatusInternalServerError

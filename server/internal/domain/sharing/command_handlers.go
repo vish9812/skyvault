@@ -2,19 +2,24 @@ package sharing
 
 import (
 	"context"
+	"database/sql"
+	"skyvault/internal/domain/media"
 	"skyvault/pkg/appconfig"
 	"skyvault/pkg/apperror"
+	"skyvault/pkg/common"
+	"skyvault/pkg/utils"
 )
 
 var _ Commands = (*CommandHandlers)(nil)
 
 type CommandHandlers struct {
-	app        *appconfig.App
-	repository Repository
+	app             *appconfig.App
+	repository      Repository
+	mediaRepository media.Repository
 }
 
-func NewCommandHandlers(app *appconfig.App, repository Repository) *CommandHandlers {
-	return &CommandHandlers{app: app, repository: repository}
+func NewCommandHandlers(app *appconfig.App, repository Repository, mediaRepository media.Repository) *CommandHandlers {
+	return &CommandHandlers{app: app, repository: repository, mediaRepository: mediaRepository}
 }
 
 //--------------------------------
@@ -22,12 +27,10 @@ func NewCommandHandlers(app *appconfig.App, repository Repository) *CommandHandl
 //--------------------------------
 
 func (h *CommandHandlers) CreateContact(ctx context.Context, cmd *CreateContactCommand) (*Contact, error) {
-	contact, err := NewContact(cmd.OwnerID, cmd.Email, cmd.Name)
-	if err != nil {
-		return nil, apperror.NewAppError(err, "sharing.CommandHandlers.CreateContact:NewContact")
-	}
+	profileID := common.GetProfileIDFromContext(ctx)
+	contact := NewContact(profileID, cmd.Email, cmd.Name)
 
-	contact, err = h.repository.CreateContact(ctx, contact)
+	contact, err := h.repository.CreateContact(ctx, contact)
 	if err != nil {
 		return nil, apperror.NewAppError(err, "sharing.CommandHandlers.CreateContact:CreateContact")
 	}
@@ -36,14 +39,8 @@ func (h *CommandHandlers) CreateContact(ctx context.Context, cmd *CreateContactC
 }
 
 func (h *CommandHandlers) UpdateContact(ctx context.Context, cmd *UpdateContactCommand) error {
-	contact, err := h.repository.GetContact(ctx, cmd.OwnerID, cmd.ContactID)
-	if err != nil {
-		return apperror.NewAppError(err, "sharing.CommandHandlers.UpdateContact:GetContact")
-	}
-
-	contact.UpdateName(cmd.Name)
-
-	err = h.repository.UpdateContact(ctx, contact)
+	profileID := common.GetProfileIDFromContext(ctx)
+	err := h.repository.UpdateContact(ctx, profileID, cmd.ContactID, cmd.Email, cmd.Name)
 	if err != nil {
 		return apperror.NewAppError(err, "sharing.CommandHandlers.UpdateContact:UpdateContact")
 	}
@@ -52,7 +49,8 @@ func (h *CommandHandlers) UpdateContact(ctx context.Context, cmd *UpdateContactC
 }
 
 func (h *CommandHandlers) DeleteContact(ctx context.Context, cmd *DeleteContactCommand) error {
-	err := h.repository.DeleteContact(ctx, cmd.OwnerID, cmd.ContactID)
+	profileID := common.GetProfileIDFromContext(ctx)
+	err := h.repository.DeleteContact(ctx, profileID, cmd.ContactID)
 	if err != nil {
 		return apperror.NewAppError(err, "sharing.CommandHandlers.DeleteContact:DeleteContact")
 	}
@@ -65,12 +63,10 @@ func (h *CommandHandlers) DeleteContact(ctx context.Context, cmd *DeleteContactC
 //--------------------------------
 
 func (h *CommandHandlers) CreateContactGroup(ctx context.Context, cmd *CreateContactGroupCommand) (*ContactGroup, error) {
-	group, err := NewContactGroup(cmd.OwnerID, cmd.Name)
-	if err != nil {
-		return nil, apperror.NewAppError(err, "sharing.CommandHandlers.CreateContactGroup:NewContactGroup")
-	}
+	profileID := common.GetProfileIDFromContext(ctx)
+	group := NewContactGroup(profileID, cmd.Name)
 
-	group, err = h.repository.CreateContactGroup(ctx, group)
+	group, err := h.repository.CreateContactGroup(ctx, group)
 	if err != nil {
 		return nil, apperror.NewAppError(err, "sharing.CommandHandlers.CreateContactGroup:CreateContactGroup")
 	}
@@ -79,17 +75,8 @@ func (h *CommandHandlers) CreateContactGroup(ctx context.Context, cmd *CreateCon
 }
 
 func (h *CommandHandlers) RenameContactGroup(ctx context.Context, cmd *RenameContactGroupCommand) error {
-	group, err := h.repository.GetContactGroup(ctx, cmd.OwnerID, cmd.GroupID)
-	if err != nil {
-		return apperror.NewAppError(err, "sharing.CommandHandlers.RenameContactGroup:GetContactGroup")
-	}
-
-	err = group.Rename(cmd.NewName)
-	if err != nil {
-		return apperror.NewAppError(err, "sharing.CommandHandlers.RenameContactGroup:Rename")
-	}
-
-	err = h.repository.UpdateContactGroup(ctx, group)
+	profileID := common.GetProfileIDFromContext(ctx)
+	err := h.repository.UpdateContactGroup(ctx, profileID, cmd.GroupID, cmd.NewName)
 	if err != nil {
 		return apperror.NewAppError(err, "sharing.CommandHandlers.RenameContactGroup:UpdateContactGroup")
 	}
@@ -98,7 +85,8 @@ func (h *CommandHandlers) RenameContactGroup(ctx context.Context, cmd *RenameCon
 }
 
 func (h *CommandHandlers) DeleteContactGroup(ctx context.Context, cmd *DeleteContactGroupCommand) error {
-	err := h.repository.DeleteContactGroup(ctx, cmd.OwnerID, cmd.GroupID)
+	profileID := common.GetProfileIDFromContext(ctx)
+	err := h.repository.DeleteContactGroup(ctx, profileID, cmd.GroupID)
 	if err != nil {
 		return apperror.NewAppError(err, "sharing.CommandHandlers.DeleteContactGroup:DeleteContactGroup")
 	}
@@ -107,7 +95,8 @@ func (h *CommandHandlers) DeleteContactGroup(ctx context.Context, cmd *DeleteCon
 }
 
 func (h *CommandHandlers) AddContactToGroup(ctx context.Context, cmd *AddContactToGroupCommand) error {
-	err := h.repository.AddContactToGroup(ctx, cmd.OwnerID, cmd.GroupID, cmd.ContactID)
+	profileID := common.GetProfileIDFromContext(ctx)
+	err := h.repository.AddContactToGroup(ctx, profileID, cmd.GroupID, cmd.ContactID)
 	if err != nil {
 		return apperror.NewAppError(err, "sharing.CommandHandlers.AddContactToGroup:AddContactToGroup")
 	}
@@ -116,7 +105,8 @@ func (h *CommandHandlers) AddContactToGroup(ctx context.Context, cmd *AddContact
 }
 
 func (h *CommandHandlers) RemoveContactFromGroup(ctx context.Context, cmd *RemoveContactFromGroupCommand) error {
-	err := h.repository.RemoveContactFromGroup(ctx, cmd.OwnerID, cmd.GroupID, cmd.ContactID)
+	profileID := common.GetProfileIDFromContext(ctx)
+	err := h.repository.RemoveContactFromGroup(ctx, profileID, cmd.GroupID, cmd.ContactID)
 	if err != nil {
 		return apperror.NewAppError(err, "sharing.CommandHandlers.RemoveContactFromGroup:RemoveContactFromGroup")
 	}
@@ -129,11 +119,37 @@ func (h *CommandHandlers) RemoveContactFromGroup(ctx context.Context, cmd *Remov
 //--------------------------------
 
 func (h *CommandHandlers) CreateShare(ctx context.Context, cmd *CreateShareCommand) (*ShareConfig, error) {
+	profileID := common.GetProfileIDFromContext(ctx)
+
+	if cmd.FileID != nil {
+		fileInfo, err := h.mediaRepository.GetFileInfo(ctx, *cmd.FileID)
+		if err != nil {
+			return nil, apperror.NewAppError(err, "sharing.CommandHandlers.CreateShare:GetFileInfo")
+		}
+
+		err = fileInfo.ValidateAccess(profileID)
+		if err != nil {
+			return nil, apperror.NewAppError(err, "sharing.CommandHandlers.CreateShare:File.ValidateAccess")
+		}
+	}
+
+	if cmd.FolderID != nil {
+		folderInfo, err := h.mediaRepository.GetFolderInfo(ctx, *cmd.FolderID)
+		if err != nil {
+			return nil, apperror.NewAppError(err, "sharing.CommandHandlers.CreateShare:GetFolderInfo")
+		}
+
+		err = folderInfo.ValidateAccess(profileID)
+		if err != nil {
+			return nil, apperror.NewAppError(err, "sharing.CommandHandlers.CreateShare:Folder.ValidateAccess")
+		}
+	}
+
 	config, err := NewShareConfig(
-		cmd.OwnerID,
-		cmd.ResourceType,
-		cmd.ResourceID,
-		cmd.PasswordHash,
+		profileID,
+		cmd.FileID,
+		cmd.FolderID,
+		cmd.Password,
 		cmd.MaxDownloads,
 		cmd.ExpiresAt,
 	)
@@ -149,27 +165,18 @@ func (h *CommandHandlers) CreateShare(ctx context.Context, cmd *CreateShareComma
 
 	repoTx := h.repository.WithTx(ctx, tx)
 
+	// Create share config
 	config, err = repoTx.CreateShareConfig(ctx, config)
 	if err != nil {
 		return nil, apperror.NewAppError(err, "sharing.CommandHandlers.CreateShare:CreateShareConfig")
 	}
 
+	// Create share recipients
 	for _, r := range cmd.Recipients {
-		recipient, err := NewShareRecipient(
-			config.ID,
-			r.Type,
-			r.RecipientID,
-			r.Email,
-		)
+		recipient, err := addShareRecipient(ctx, repoTx, profileID, config.ID, r)
 		if err != nil {
-			return nil, apperror.NewAppError(err, "sharing.CommandHandlers.CreateShare:NewShareRecipient")
+			return nil, apperror.NewAppError(err, "sharing.CommandHandlers.CreateShare:addShareRecipient")
 		}
-
-		recipient, err = repoTx.CreateShareRecipient(ctx, recipient)
-		if err != nil {
-			return nil, apperror.NewAppError(err, "sharing.CommandHandlers.CreateShare:CreateShareRecipient")
-		}
-
 		config.Recipients = append(config.Recipients, recipient)
 	}
 
@@ -181,42 +188,34 @@ func (h *CommandHandlers) CreateShare(ctx context.Context, cmd *CreateShareComma
 	return config, nil
 }
 
-func (h *CommandHandlers) UpdateShareConfig(ctx context.Context, cmd *UpdateShareConfigCommand) error {
-	config, err := h.repository.GetShareConfig(ctx, cmd.ShareID)
+func (h *CommandHandlers) UpdateShareExpiry(ctx context.Context, cmd *UpdateShareExpiryCommand) error {
+	profileID := common.GetProfileIDFromContext(ctx)
+	err := h.repository.UpdateShareExpiry(ctx, profileID, cmd.ShareID, cmd.MaxDownloads, cmd.ExpiresAt)
 	if err != nil {
-		return apperror.NewAppError(err, "sharing.CommandHandlers.UpdateShareConfig:GetShareConfig")
+		return apperror.NewAppError(err, "sharing.CommandHandlers.UpdateShareExpiry:UpdateShareExpiry")
 	}
 
-	err = config.ValidateAccess(cmd.OwnerID)
+	return nil
+}
+
+func (h *CommandHandlers) UpdateSharePassword(ctx context.Context, cmd *UpdateSharePasswordCommand) error {
+	profileID := common.GetProfileIDFromContext(ctx)
+	pwdHash, err := utils.HashPassword(*cmd.Password)
 	if err != nil {
-		return apperror.NewAppError(err, "sharing.CommandHandlers.UpdateShareConfig:ValidateAccess")
+		return apperror.NewAppError(err, "sharing.CommandHandlers.UpdateSharePassword:HashPassword")
 	}
 
-	err = config.UpdateConfig(cmd.PasswordHash, cmd.MaxDownloads, cmd.ExpiresAt)
+	err = h.repository.UpdateSharePassword(ctx, profileID, cmd.ShareID, &pwdHash)
 	if err != nil {
-		return apperror.NewAppError(err, "sharing.CommandHandlers.UpdateShareConfig:UpdateConfig")
-	}
-
-	err = h.repository.UpdateShareConfig(ctx, config)
-	if err != nil {
-		return apperror.NewAppError(err, "sharing.CommandHandlers.UpdateShareConfig:UpdateShareConfig")
+		return apperror.NewAppError(err, "sharing.CommandHandlers.UpdateSharePassword:UpdateSharePassword")
 	}
 
 	return nil
 }
 
 func (h *CommandHandlers) DeleteShare(ctx context.Context, cmd *DeleteShareCommand) error {
-	config, err := h.repository.GetShareConfig(ctx, cmd.ShareID)
-	if err != nil {
-		return apperror.NewAppError(err, "sharing.CommandHandlers.DeleteShare:GetShareConfig")
-	}
-
-	err = config.ValidateAccess(cmd.OwnerID)
-	if err != nil {
-		return apperror.NewAppError(err, "sharing.CommandHandlers.DeleteShare:ValidateAccess")
-	}
-
-	err = h.repository.DeleteShareConfig(ctx, cmd.OwnerID, cmd.ShareID)
+	profileID := common.GetProfileIDFromContext(ctx)
+	err := h.repository.DeleteShareConfig(ctx, profileID, cmd.ShareID)
 	if err != nil {
 		return apperror.NewAppError(err, "sharing.CommandHandlers.DeleteShare:DeleteShareConfig")
 	}
@@ -224,47 +223,64 @@ func (h *CommandHandlers) DeleteShare(ctx context.Context, cmd *DeleteShareComma
 	return nil
 }
 
-func (h *CommandHandlers) AddShareRecipient(ctx context.Context, cmd *AddShareRecipientCommand) error {
-	config, err := h.repository.GetShareConfig(ctx, cmd.ShareID)
-	if err != nil {
-		return apperror.NewAppError(err, "sharing.CommandHandlers.AddShareRecipient:GetShareConfig")
+func (h *CommandHandlers) AddShareRecipient(ctx context.Context, cmd *AddShareRecipientCommand) (*ShareRecipient, error) {
+	var tx *sql.Tx
+	repoTx := h.repository
+	if cmd.SaveAsContact {
+		tx, err := repoTx.BeginTx(ctx)
+		if err != nil {
+			return nil, apperror.NewAppError(err, "sharing.CommandHandlers.AddShareRecipient:BeginTx")
+		}
+		defer tx.Rollback()
+		repoTx = repoTx.WithTx(ctx, tx)
 	}
 
-	err = config.ValidateAccess(cmd.OwnerID)
+	profileID := common.GetProfileIDFromContext(ctx)
+	recipient, err := addShareRecipient(ctx, repoTx, profileID, cmd.ShareID, cmd.ShareRecipientInput)
 	if err != nil {
-		return apperror.NewAppError(err, "sharing.CommandHandlers.AddShareRecipient:ValidateAccess")
+		return nil, apperror.NewAppError(err, "sharing.CommandHandlers.AddShareRecipient:addShareRecipient")
 	}
 
-	recipient, err := NewShareRecipient(
-		config.ID,
-		cmd.Type,
-		cmd.RecipientID,
-		cmd.Email,
-	)
-	if err != nil {
-		return apperror.NewAppError(err, "sharing.CommandHandlers.AddShareRecipient:NewShareRecipient")
+	if tx != nil {
+		err = tx.Commit()
+		if err != nil {
+			return nil, apperror.NewAppError(err, "sharing.CommandHandlers.AddShareRecipient:Commit")
+		}
+	}
+	return recipient, nil
+}
+
+// TODO: When the Block feature is implemented,
+// add a check to see if the recipient has blocked the sender.
+// Don't inform the sender if the recipient has blocked them.
+
+func addShareRecipient(ctx context.Context, repoTx Repository, profileID, shareConfigID int64, recInput *ShareRecipientInput) (*ShareRecipient, error) {
+	var nonContactEmail *string
+	var contactID *int64
+	if recInput.SaveAsContact {
+		contact := NewContact(profileID, *recInput.Email, *recInput.Name)
+		contact, err := repoTx.CreateContact(ctx, contact)
+		if err != nil {
+			return nil, apperror.NewAppError(err, "sharing.addShareRecipient:CreateContact")
+		}
+		contactID = &contact.ID
+	} else {
+		nonContactEmail = recInput.Email
 	}
 
-	_, err = h.repository.CreateShareRecipient(ctx, recipient)
+	recipient := NewShareRecipient(shareConfigID, contactID, recInput.ContactGroupID, nonContactEmail)
+
+	_, err := repoTx.CreateShareRecipient(ctx, profileID, recipient)
 	if err != nil {
-		return apperror.NewAppError(err, "sharing.CommandHandlers.AddShareRecipient:CreateShareRecipient")
+		return nil, apperror.NewAppError(err, "sharing.addShareRecipient:CreateShareRecipient")
 	}
 
-	return nil
+	return recipient, nil
 }
 
 func (h *CommandHandlers) RemoveShareRecipient(ctx context.Context, cmd *RemoveShareRecipientCommand) error {
-	config, err := h.repository.GetShareConfig(ctx, cmd.ShareID)
-	if err != nil {
-		return apperror.NewAppError(err, "sharing.CommandHandlers.RemoveShareRecipient:GetShareConfig")
-	}
-
-	err = config.ValidateAccess(cmd.OwnerID)
-	if err != nil {
-		return apperror.NewAppError(err, "sharing.CommandHandlers.RemoveShareRecipient:ValidateAccess")
-	}
-
-	err = h.repository.DeleteShareRecipient(ctx, cmd.ShareID, cmd.RecipientID)
+	profileID := common.GetProfileIDFromContext(ctx)
+	err := h.repository.DeleteShareRecipient(ctx, profileID, cmd.ShareID, cmd.RecipientID)
 	if err != nil {
 		return apperror.NewAppError(err, "sharing.CommandHandlers.RemoveShareRecipient:DeleteShareRecipient")
 	}

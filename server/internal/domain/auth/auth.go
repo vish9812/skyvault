@@ -3,6 +3,7 @@ package auth
 import (
 	"skyvault/pkg/apperror"
 	"skyvault/pkg/utils"
+	"skyvault/pkg/validate"
 	"time"
 )
 
@@ -33,7 +34,7 @@ func NewAuth(profileID int64, provider Provider, providerUserID string, password
 			return nil, apperror.NewAppError(apperror.ErrCommonInvalidValue, "auth.NewAuth:Password")
 		}
 
-		if email, err := utils.ValidateEmail(providerUserID); err != nil {
+		if email, err := validate.Email(providerUserID); err != nil {
 			return nil, apperror.NewAppError(apperror.ErrCommonInvalidValue, "auth.NewAuth:ValidateEmail")
 		} else {
 			providerUserID = email

@@ -207,137 +207,64 @@ func (r *SharingRepository) DeleteContactGroup(ctx context.Context, ownerID, gro
 }
 
 func (r *SharingRepository) AddContactToGroup(ctx context.Context, ownerID, groupID, contactID int64) error {
-	// Define CTEs for valid group and contact that belong to the owner
-	validGroup := CTE("valid_group")
-	validContact := CTE("valid_contact")
-	
-	// Get the current time for the insertion
-	now := time.Now().UTC()
-	
-	// Build the WITH statement with CTEs to verify ownership
-	stmt := WITH(
-		validGroup.AS(
-			SELECT(ContactGroup.ID).
-			FROM(ContactGroup).
-			WHERE(
-				ContactGroup.ID.EQ(Int64(groupID)).
-				AND(ContactGroup.OwnerID.EQ(Int64(ownerID))),
-			),
-		),
-		validContact.AS(
-			SELECT(Contact.ID).
-			FROM(Contact).
-			WHERE(
-				Contact.ID.EQ(Int64(contactID)).
-				AND(Contact.OwnerID.EQ(Int64(ownerID))),
-			),
-		),
-	)(
-		// Insert only if both CTEs return results
-		ContactGroupMember.INSERT(
-			ContactGroupMember.GroupID,
-			ContactGroupMember.ContactID,
-			ContactGroupMember.CreatedAt,
-		).
-		VALUES(
-			Int64(groupID),
-			Int64(contactID),
-			TimestampT(now),
-		).
+	validContact := SELECT(Contact.ID).
+		FROM(Contact).
 		WHERE(
-			EXISTS(
-				SELECT(Int(1)).
-				FROM(validGroup).
-				WHERE(EXISTS(
-					SELECT(Int(1)).
-					FROM(validContact),
-				)),
-			),
-		),
-	)
-	
-	// Execute the statement
-	result, err := stmt.ExecContext(ctx, r.repository.dbTx)
-	if err != nil {
-		return apperror.NewAppError(err, "repository.AddContactToGroup:ExecContext")
-	}
-	
-	// Check if any rows were affected (if not, either group or contact doesn't exist or doesn't belong to owner)
-	rowsAffected, err := result.RowsAffected()
-	if err != nil {
-		return apperror.NewAppError(err, "repository.AddContactToGroup:RowsAffected")
-	}
-	
-	if rowsAffected == 0 {
-		return apperror.NewAppError(apperror.ErrCommonNoData, "repository.AddContactToGroup:NoRowsAffected")
-	}
-	
-	return nil
+			Contact.ID.EQ(Int64(contactID)).
+				AND(Contact.OwnerID.EQ(Int64(ownerID))),
+		).AsTable("valid_contact")
+
+	validContactID := Contact.ID.From(validContact)
+
+	validGroup := SELECT(ContactGroup.ID).
+		FROM(ContactGroup).
+		WHERE(
+			ContactGroup.ID.EQ(Int64(groupID)).
+				AND(ContactGroup.OwnerID.EQ(Int64(ownerID))),
+		).AsTable("valid_group")
+
+	validGroupID := ContactGroup.ID.From(validGroup)
+
+	now := time.Now().UTC()
+	stmt := ContactGroupMember.INSERT(
+		ContactGroupMember.GroupID,
+		ContactGroupMember.ContactID,
+		ContactGroupMember.CreatedAt,
+	).
+		QUERY(SELECT(validGroupID, validContactID, TimestampT(now)).
+			FROM(validGroup, validContact),
+		)
+
+	return runInsertNoReturn(ctx, stmt, r.repository.dbTx)
 }
 
 func (r *SharingRepository) RemoveContactFromGroup(ctx context.Context, ownerID, groupID, contactID int64) error {
-	// Define CTE for valid group that belongs to the owner
-	validGroup := CTE("valid_group")
-	
-	// Build the WITH statement with CTE to verify ownership
-	stmt := WITH(
-		validGroup.AS(
-			SELECT(ContactGroup.ID).
-			FROM(ContactGroup).
-			WHERE(
-				ContactGroup.ID.EQ(Int64(groupID)).
-				AND(ContactGroup.OwnerID.EQ(Int64(ownerID))),
-			),
-		),
-	)(
-		// Delete only if the CTE returns results
-		ContactGroupMember.DELETE().
+	validContact := SELECT(Contact.ID).
+		FROM(Contact).
 		WHERE(
-			ContactGroupMember.GroupID.EQ(Int64(groupID)).
-			AND(ContactGroupMember.ContactID.EQ(Int64(contactID))).
-			AND(EXISTS(
-				SELECT(Int(1)).
-				FROM(validGroup),
-			)),
-		),
-	)
-	
-	// Execute the statement
-	result, err := stmt.ExecContext(ctx, r.repository.dbTx)
-	if err != nil {
-		return apperror.NewAppError(err, "repository.RemoveContactFromGroup:ExecContext")
-	}
-	
-	// Check if any rows were affected (if not, the group doesn't exist or doesn't belong to owner)
-	rowsAffected, err := result.RowsAffected()
-	if err != nil {
-		return apperror.NewAppError(err, "repository.RemoveContactFromGroup:RowsAffected")
-	}
-	
-	if rowsAffected == 0 {
-		// Check if it's because the group doesn't exist/belong to owner
-		var groupExists bool
-		groupStmt := SELECT(ContactGroup.ID).
-			FROM(ContactGroup).
-			WHERE(
-				ContactGroup.ID.EQ(Int64(groupID)).
+			Contact.ID.EQ(Int64(contactID)).
+				AND(Contact.OwnerID.EQ(Int64(ownerID))),
+		).AsTable("valid_contact")
+
+	validContactID := Contact.ID.From(validContact)
+
+	validGroup := SELECT(ContactGroup.ID).
+		FROM(ContactGroup).
+		WHERE(
+			ContactGroup.ID.EQ(Int64(groupID)).
 				AND(ContactGroup.OwnerID.EQ(Int64(ownerID))),
-			)
-		
-		err = groupStmt.QueryContext(ctx, r.repository.dbTx, &groupExists)
-		if err != nil {
-			return apperror.NewAppError(err, "repository.RemoveContactFromGroup:VerifyGroup")
-		}
-		
-		if !groupExists {
-			return apperror.NewAppError(apperror.ErrCommonNoData, "repository.RemoveContactFromGroup:GroupNotFound")
-		}
-		
-		// If we get here, the group exists but the contact wasn't in the group - this is not an error
-		return nil
-	}
-	
-	return nil
+		).AsTable("valid_group")
+
+	validGroupID := ContactGroup.ID.From(validGroup)
+
+	stmt := ContactGroupMember.DELETE().
+		USING(validGroup, validContact).
+		WHERE(
+			ContactGroupMember.GroupID.EQ(validGroupID).
+				AND(ContactGroupMember.ContactID.EQ(validContactID)),
+		)
+
+	return runUpdateOrDelete(ctx, stmt, r.repository.dbTx)
 }
 
 //--------------------------------
@@ -436,7 +363,7 @@ func (r *SharingRepository) getShareRecipients(ctx context.Context, shareConfigI
 	return recipients, nil
 }
 
-func (r *SharingRepository) UpdateShareExpiry(ctx context.Context, ownerID, shareID int64, maxDownloads *int, expiresAt *time.Time) error {
+func (r *SharingRepository) UpdateShareExpiry(ctx context.Context, ownerID, shareID int64, maxDownloads *int64, expiresAt *time.Time) error {
 	now := time.Now().UTC()
 	config := model.ShareConfig{
 		MaxDownloads: maxDownloads,
@@ -522,27 +449,20 @@ func (r *SharingRepository) CreateShareRecipient(ctx context.Context, ownerID in
 	return runInsert[model.ShareRecipient, sharing.ShareRecipient](ctx, stmt, r.repository.dbTx)
 }
 
-func (r *SharingRepository) DeleteShareRecipient(ctx context.Context, ownerID, recipientID int64) error {
+func (r *SharingRepository) DeleteShareRecipient(ctx context.Context, ownerID, shareID, recipientID int64) error {
 	// First verify that the recipient belongs to a share config owned by the owner
-	verifyStmt := SELECT(ShareConfig.ID).
-		FROM(ShareConfig.
-			INNER_JOIN(ShareRecipient, ShareRecipient.ShareConfigID.EQ(ShareConfig.ID))).
-		WHERE(
-			ShareRecipient.ID.EQ(Int64(recipientID)).
-				AND(ShareConfig.OwnerID.EQ(Int64(ownerID))),
-		)
+	shareSubTable := SELECT(ShareConfig.ID).
+		FROM(ShareConfig).
+		WHERE(ShareConfig.ID.EQ(Int64(shareID)).
+			AND(ShareConfig.OwnerID.EQ(Int64(ownerID))),
+		).AsTable("share_sub_table")
 
-	var shareExists bool
-	err := verifyStmt.QueryContext(ctx, r.repository.dbTx, &shareExists)
-	if err != nil {
-		return apperror.NewAppError(err, "repository.DeleteShareRecipient:VerifyOwnership")
-	}
-	if !shareExists {
-		return apperror.NewAppError(apperror.ErrCommonNoData, "repository.DeleteShareRecipient:RecipientNotFound")
-	}
+	shareConfigID := ShareConfig.ID.From(shareSubTable)
 
 	stmt := ShareRecipient.DELETE().
-		WHERE(ShareRecipient.ID.EQ(Int64(recipientID)))
+		WHERE(ShareRecipient.ID.EQ(Int64(recipientID)).
+			AND(ShareRecipient.ShareConfigID.EQ(shareConfigID)),
+		)
 
 	return runUpdateOrDelete(ctx, stmt, r.repository.dbTx)
 }

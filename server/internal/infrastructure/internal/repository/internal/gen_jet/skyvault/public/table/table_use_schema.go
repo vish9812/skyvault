@@ -11,8 +11,13 @@ package table
 // this method only once at the beginning of the program.
 func UseSchema(schema string) {
 	Auth = Auth.FromSchema(schema)
+	Contact = Contact.FromSchema(schema)
+	ContactGroup = ContactGroup.FromSchema(schema)
+	ContactGroupMember = ContactGroupMember.FromSchema(schema)
 	FileInfo = FileInfo.FromSchema(schema)
 	FolderInfo = FolderInfo.FromSchema(schema)
 	Profile = Profile.FromSchema(schema)
 	SchemaMigrations = SchemaMigrations.FromSchema(schema)
+	ShareConfig = ShareConfig.FromSchema(schema)
+	ShareRecipient = ShareRecipient.FromSchema(schema)
 }

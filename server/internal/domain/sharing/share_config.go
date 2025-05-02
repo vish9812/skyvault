@@ -2,23 +2,18 @@ package sharing
 
 import (
 	"skyvault/pkg/apperror"
+	"skyvault/pkg/utils"
 	"time"
-)
-
-type ResourceType string
-
-const (
-	ResourceTypeFile   ResourceType = "file"
-	ResourceTypeFolder ResourceType = "folder"
 )
 
 type ShareConfig struct {
 	ID           int64
+	CustomID     string // for url path
 	OwnerID      int64
-	ResourceType ResourceType
-	ResourceID   int64
+	FileID       *int64 // Only one of file or folder must be set
+	FolderID     *int64
 	PasswordHash *string
-	MaxDownloads *int
+	MaxDownloads *int64
 	ExpiresAt    *time.Time
 	CreatedAt    time.Time
 	UpdatedAt    time.Time
@@ -27,37 +22,33 @@ type ShareConfig struct {
 
 func NewShareConfig(
 	ownerID int64,
-	resourceType ResourceType,
-	resourceID int64,
-	passwordHash *string,
-	maxDownloads *int,
+	fileID *int64,
+	folderID *int64,
+	password *string,
+	maxDownloads *int64,
 	expiresAt *time.Time,
 ) (*ShareConfig, error) {
-	switch resourceType {
-	case ResourceTypeFile, ResourceTypeFolder:
-		// valid
-	default:
-		return nil, apperror.NewAppError(apperror.ErrCommonInvalidValue, "sharing.NewShareConfig:ResourceType")
-	}
-
-	if maxDownloads != nil && *maxDownloads <= 0 {
-		return nil, apperror.NewAppError(apperror.ErrCommonInvalidValue, "sharing.NewShareConfig:MaxDownloads")
+	var passwordHash *string
+	if password != nil {
+		h, err := utils.HashPassword(*password)
+		if err != nil {
+			return nil, apperror.NewAppError(err, "sharing.NewShareConfig:Password")
+		}
+		passwordHash = &h
 	}
 
 	now := time.Now().UTC()
-	if expiresAt != nil && expiresAt.Before(now) {
-		return nil, apperror.NewAppError(apperror.ErrCommonInvalidValue, "sharing.NewShareConfig:ExpiresAt")
-	}
-
 	return &ShareConfig{
+		CustomID:     utils.UUID(),
 		OwnerID:      ownerID,
-		ResourceType: resourceType,
-		ResourceID:   resourceID,
+		FileID:       fileID,
+		FolderID:     folderID,
 		PasswordHash: passwordHash,
 		MaxDownloads: maxDownloads,
 		ExpiresAt:    expiresAt,
 		CreatedAt:    now,
 		UpdatedAt:    now,
+		Recipients:   []*ShareRecipient{},
 	}, nil
 }
 
@@ -70,23 +61,9 @@ func (s *ShareConfig) ValidateAccess(ownerID int64) error {
 	return nil
 }
 
-func (s *ShareConfig) UpdateConfig(
-	passwordHash *string,
-	maxDownloads *int,
-	expiresAt *time.Time,
-) error {
-	if maxDownloads != nil && *maxDownloads <= 0 {
-		return apperror.NewAppError(apperror.ErrCommonInvalidValue, "sharing.ShareConfig.UpdateConfig:MaxDownloads")
+func (s *ShareConfig) ValidateExpiry() error {
+	if s.ExpiresAt != nil && s.ExpiresAt.Before(time.Now().UTC()) {
+		return apperror.NewAppError(apperror.ErrSharingExpired, "sharing.ShareConfig.ValidateExpiry")
 	}
-
-	now := time.Now().UTC()
-	if expiresAt != nil && expiresAt.Before(now) {
-		return apperror.NewAppError(apperror.ErrCommonInvalidValue, "sharing.ShareConfig.UpdateConfig:ExpiresAt")
-	}
-
-	s.PasswordHash = passwordHash
-	s.MaxDownloads = maxDownloads
-	s.ExpiresAt = expiresAt
-	s.UpdatedAt = now
 	return nil
 }

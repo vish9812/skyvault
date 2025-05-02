@@ -16,7 +16,9 @@ type Commands interface {
 	CreateContact(ctx context.Context, cmd *CreateContactCommand) (*Contact, error)
 
 	// App Errors:
+	// - ErrCommonInvalidValue
 	// - ErrCommonNoData
+	// - ErrCommonNoAccess
 	UpdateContact(ctx context.Context, cmd *UpdateContactCommand) error
 
 	// App Errors:
@@ -62,7 +64,12 @@ type Commands interface {
 	// App Errors:
 	// - ErrCommonNoData
 	// - ErrCommonNoAccess
-	UpdateShareConfig(ctx context.Context, cmd *UpdateShareConfigCommand) error
+	UpdateShareExpiry(ctx context.Context, cmd *UpdateShareExpiryCommand) error
+
+	// App Errors:
+	// - ErrCommonNoData
+	// - ErrCommonNoAccess
+	UpdateSharePassword(ctx context.Context, cmd *UpdateSharePasswordCommand) error
 
 	// App Errors:
 	// - ErrCommonNoData
@@ -73,7 +80,7 @@ type Commands interface {
 	// - ErrCommonNoData
 	// - ErrCommonNoAccess
 	// - ErrCommonDuplicateData
-	AddShareRecipient(ctx context.Context, cmd *AddShareRecipientCommand) error
+	AddShareRecipient(ctx context.Context, cmd *AddShareRecipientCommand) (*ShareRecipient, error)
 
 	// App Errors:
 	// - ErrCommonNoData
@@ -86,19 +93,17 @@ type Commands interface {
 //--------------------------------
 
 type CreateContactCommand struct {
-	OwnerID int64
-	Email   string
-	Name    *string
+	Email string
+	Name  string
 }
 
 type UpdateContactCommand struct {
-	OwnerID   int64
 	ContactID int64
-	Name      *string
+	Name      string
+	Email     string
 }
 
 type DeleteContactCommand struct {
-	OwnerID   int64
 	ContactID int64
 }
 
@@ -107,29 +112,24 @@ type DeleteContactCommand struct {
 //--------------------------------
 
 type CreateContactGroupCommand struct {
-	OwnerID int64
-	Name    string
+	Name string
 }
 
 type RenameContactGroupCommand struct {
-	OwnerID int64
 	GroupID int64
 	NewName string
 }
 
 type DeleteContactGroupCommand struct {
-	OwnerID int64
 	GroupID int64
 }
 
 type AddContactToGroupCommand struct {
-	OwnerID   int64
 	GroupID   int64
 	ContactID int64
 }
 
 type RemoveContactFromGroupCommand struct {
-	OwnerID   int64
 	GroupID   int64
 	ContactID int64
 }
@@ -138,45 +138,49 @@ type RemoveContactFromGroupCommand struct {
 // Sharing
 //--------------------------------
 
+// Only one of FileID or FolderID must be set.
 type CreateShareCommand struct {
-	OwnerID      int64
-	ResourceType ResourceType
-	ResourceID   int64
-	Recipients   []ShareRecipientInput
-	PasswordHash *string
-	MaxDownloads *int
+	FileID       *int64
+	FolderID     *int64
+	Recipients   []*ShareRecipientInput
+	Password     *string
+	MaxDownloads *int64
 	ExpiresAt    *time.Time
 }
 
+// Only one of ContactID, ContactGroupID or Email can be set.
+// If SaveAsContact is true, then Email and Name must be set. Otherwise, Name is ignored.
 type ShareRecipientInput struct {
-	Type        RecipientType
-	RecipientID *int64 // For groups
-	Email       string // For direct email shares
+	ContactID      *int64
+	ContactGroupID *int64
+	Email          *string
+	Name           *string
+	SaveAsContact  bool
 }
 
-type UpdateShareConfigCommand struct {
-	OwnerID      int64
+type UpdateShareExpiryCommand struct {
 	ShareID      int64
-	PasswordHash *string
-	MaxDownloads *int
+	MaxDownloads *int64
 	ExpiresAt    *time.Time
+}
+
+type UpdateSharePasswordCommand struct {
+	ShareID  int64
+	Password *string
 }
 
 type DeleteShareCommand struct {
-	OwnerID int64
 	ShareID int64
 }
 
+// Only one of ContactID, ContactGroupID or Email can be set.
+// If SaveAsContact is true, then Email and Name must be set. Otherwise, Name is ignored.
 type AddShareRecipientCommand struct {
-	OwnerID     int64
-	ShareID     int64
-	Type        RecipientType
-	RecipientID *int64
-	Email       string
+	ShareID int64
+	*ShareRecipientInput
 }
 
 type RemoveShareRecipientCommand struct {
-	OwnerID     int64
 	ShareID     int64
 	RecipientID int64
 }
