@@ -3,13 +3,13 @@ package auth
 import (
 	"context"
 	"skyvault/pkg/apperror"
+	"skyvault/pkg/validate"
 	"strings"
 )
 
 const (
-	passwordMinLen       = 4
-	passwordMaxLen       = 50
-	providerUserIDMaxLen = 255
+	passwordMinLen = 4
+	passwordMaxLen = 50
 )
 
 var _ Commands = (*CommandsSanitizer)(nil)
@@ -33,7 +33,7 @@ func validateProvider(provider Provider) (Provider, error) {
 
 func validateProviderUserID(providerUserID string) (string, error) {
 	providerUserID = strings.TrimSpace(providerUserID)
-	if len(providerUserID) > providerUserIDMaxLen || len(providerUserID) == 0 {
+	if len(providerUserID) > validate.MaxLen || len(providerUserID) == 0 {
 		return "", apperror.ErrCommonInvalidValue
 	}
 	return providerUserID, nil

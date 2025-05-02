@@ -4,13 +4,7 @@ import (
 	"context"
 	"fmt"
 	"skyvault/pkg/apperror"
-	"skyvault/pkg/utils"
-	"strings"
-)
-
-const (
-	emailMaxLen    = 255
-	fullNameMaxLen = 255
+	"skyvault/pkg/validate"
 )
 
 var _ Commands = (*CommandsSanitizer)(nil)
@@ -24,19 +18,14 @@ func NewCommandsSanitizer(commands Commands) *CommandsSanitizer {
 }
 
 func (s *CommandsSanitizer) Create(ctx context.Context, cmd *CreateCommand) (*Profile, error) {
-	cmd.Email = strings.TrimSpace(cmd.Email)
-	cmd.FullName = strings.TrimSpace(cmd.FullName)
-
-	if cmd.Email == "" || len(cmd.Email) > emailMaxLen {
-		return nil, apperror.NewAppError(apperror.ErrCommonInvalidValue, "profile.CommandsSantizer.Create:Email")
+	if n, err := validate.Name(cmd.FullName); err != nil {
+		return nil, apperror.NewAppError(fmt.Errorf("%w: %w", apperror.ErrCommonInvalidValue, err), "profile.CommandsSantizer.Create:ValidateName")
+	} else {
+		cmd.FullName = n
 	}
 
-	if cmd.FullName == "" || len(cmd.FullName) > fullNameMaxLen {
-		return nil, apperror.NewAppError(apperror.ErrCommonInvalidValue, "profile.CommandsSantizer.Create:FullName")
-	}
-
-	if email, err := utils.ValidateEmail(cmd.Email); err != nil {
-		return nil, apperror.NewAppError(fmt.Errorf("%w: %w", apperror.ErrCommonInvalidValue, err), "profile.CommandsSantizer.Create:ParseEmail")
+	if email, err := validate.Email(cmd.Email); err != nil {
+		return nil, apperror.NewAppError(fmt.Errorf("%w: %w", apperror.ErrCommonInvalidValue, err), "profile.CommandsSantizer.Create:ValidateEmail")
 	} else {
 		cmd.Email = email
 	}

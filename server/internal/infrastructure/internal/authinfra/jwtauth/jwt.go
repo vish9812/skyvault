@@ -106,7 +106,7 @@ func (a *JWTAuth) ValidateCredentials(ctx context.Context, credentials map[auth.
 		password = p
 	}
 
-	ok, err := utils.IsValidPassword(passwordHash, password)
+	ok, err := utils.SamePassword(passwordHash, password)
 	if err != nil {
 		return apperror.NewAppError(err, "JWTAuth.ValidateCredentials:IsValidPassword")
 	}

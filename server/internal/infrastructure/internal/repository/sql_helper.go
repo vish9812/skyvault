@@ -14,6 +14,10 @@ import (
 	"github.com/jinzhu/copier"
 )
 
+func ILIKE(lhs, rhs StringExpression) BoolExpression {
+	return BoolExp(CustomExpression(lhs, Token("ILIKE"), rhs))
+}
+
 type cursorQuery struct {
 	ID        ColumnInteger
 	Name      ColumnString
@@ -219,7 +223,7 @@ func (o *cursorQuery) buildUpdatedClauses(cursor *paging.Cursor, forward bool) {
 // runSelect is to be used with Select statements that return a single row.
 //
 // App Errors:
-// - apperror.ErrNoData
+// - ErrCommonNoData
 func runSelect[TDBModel any, TRes any](ctx context.Context, stmt Statement, dbTx qrm.DB) (*TRes, error) {
 	var dbModel TDBModel
 	err := stmt.QueryContext(ctx, dbTx, &dbModel)
@@ -305,7 +309,7 @@ func runSelectSliceAll[TDBModel any, TRes any](ctx context.Context, stmt SelectS
 // runInsert is to be used with Insert statements
 //
 // App Errors:
-// - apperror.ErrDuplicateData
+// - ErrCommonDuplicateData
 func runInsert[TDBModel any, TRes any](ctx context.Context, stmt Statement, dbTx qrm.DB) (*TRes, error) {
 	var dbModel TDBModel
 	err := stmt.QueryContext(ctx, dbTx, &dbModel)
@@ -326,10 +330,37 @@ func runInsert[TDBModel any, TRes any](ctx context.Context, stmt Statement, dbTx
 	return &resModel, nil
 }
 
+// runInsertNoReturn is to be used with Insert statements that do not return a value
+//
+// App Errors:
+// - ErrCommonDuplicateData
+// - ErrCommonNoData
+func runInsertNoReturn(ctx context.Context, stmt Statement, dbTx qrm.DB) error {
+	res, err := stmt.ExecContext(ctx, dbTx)
+	if err != nil {
+		if apperror.Contains(err, "unique constraint") {
+			return apperror.NewAppError(fmt.Errorf("%w: %w", apperror.ErrCommonDuplicateData, err), "repository.runInsertNoReturn:ExecContext")
+		}
+
+		return apperror.NewAppError(err, "repository.runInsertNoReturn:ExecContext")
+	}
+
+	rowsAffected, err := res.RowsAffected()
+	if err != nil {
+		return apperror.NewAppError(err, "repository.runInsertNoReturn:RowsAffected")
+	}
+
+	if rowsAffected == 0 {
+		return apperror.NewAppError(apperror.ErrCommonNoData, "repository.runInsertNoReturn:NoRowsAffected")
+	}
+
+	return nil
+}
+
 // runUpdateOrDelete is to be used with Update or Delete statements
 //
 // App Errors:
-// - apperror.ErrNoData
+// - ErrCommonNoData
 func runUpdateOrDelete(ctx context.Context, stmt Statement, dbTx qrm.DB) error {
 	res, err := stmt.ExecContext(ctx, dbTx)
 	if err != nil {

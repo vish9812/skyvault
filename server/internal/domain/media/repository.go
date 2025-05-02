@@ -39,6 +39,7 @@ type Repository interface {
 
 	// TODO: Once, sharing/permissions feature is implemented,
 	// replace the ownerID param with deletableBy to check appropriate permissions.
+	// Permissions: CanDelete, CanEditFile, CanUploadToFolder
 
 	// App Errors:
 	// - ErrCommonNoData
