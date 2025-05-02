@@ -1,11 +1,8 @@
 import type { Component } from "solid-js";
+import AppRoutes from "./routes";
 
 const App: Component = () => {
-  return (
-    <div>
-      <h1 class="text-3xl font-bold underline">Hello World</h1>
-    </div>
-  );
+  return <AppRoutes />;
 };
 
 export default App;

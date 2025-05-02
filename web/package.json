@@ -1,26 +1,28 @@
 {
-  "name": "vite-template-solid",
-  "version": "0.0.0",
-  "description": "",
-  "type": "module",
+  "name": "skyvault-web",
+  "private": true,
+  "version": "0.0.1",
+  "description": "SkyVault Web",
   "scripts": {
+    "preinstall": "npx only-allow pnpm",
     "start": "vite",
     "dev": "vite",
     "build": "vite build",
     "serve": "vite preview"
   },
-  "license": "MIT",
   "devDependencies": {
-    "typescript": "^5.7.2",
-    "vite": "^6.0.0",
-    "vite-plugin-solid": "^2.11.6"
+    "solid-devtools": "^0.34.0",
+    "typescript": "^5.8.3",
+    "vite": "^6.3.4",
+    "vite-plugin-solid": "^2.11.6",
+    "vite-tsconfig-paths": "^5.1.4"
   },
   "dependencies": {
-    "@kobalte/core": "^0.11.2",
-    "@solidjs/router": "^0.6.0",
+    "@kobalte/core": "^0.13.9",
+    "@solidjs/router": "^0.15.3",
     "@tailwindcss/vite": "^4.1.5",
     "@tanstack/solid-query": "^5.75.0",
-    "solid-js": "^1.9.5",
+    "solid-js": "^1.9.6",
     "tailwindcss": "^4.1.5",
     "zod": "^3.24.3"
   }

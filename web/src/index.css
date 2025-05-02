@@ -1,1 +1,207 @@
 @import "tailwindcss";
+
+@theme {
+  /* Primary Colors */
+  --color-primary: linear-gradient(
+    90deg,
+    #6366f1 0%,
+    #38bdf8 100%
+  ); /* indigo-500 to sky-400 */
+  --color-primary-light: #60a5fa;
+  --color-primary-dark: #2563eb;
+
+  /* Secondary Colors */
+  --color-secondary: #8b5cf6;
+  --color-secondary-light: #a78bfa;
+  --color-secondary-dark: #7c3aed;
+
+  /* Success Colors */
+  --color-success: #22c55e;
+  --color-success-light: #4ade80;
+  --color-success-dark: #16a34a;
+
+  /* Error Colors */
+  --color-error: #ef4444;
+  --color-error-light: #f87171;
+  --color-error-dark: #dc2626;
+
+  /* Warning Colors */
+  --color-warning: #f59e0b;
+  --color-warning-light: #fbbf24;
+  --color-warning-dark: #d97706;
+
+  /* Info Colors */
+  --color-info: #0ea5e9;
+  --color-info-light: #38bdf8;
+  --color-info-dark: #0284c7;
+
+  /* Neutral Colors */
+  --color-text: #1f2937;
+  --color-text-light: #6b7280;
+  --color-text-lighter: #9ca3af;
+
+  /* Background Colors */
+  --color-bg: #ffffff;
+  --color-bg-subtle: #f9fafb;
+  --color-bg-muted: #f3f4f6;
+
+  /* Border Colors */
+  --color-border: #e5e7eb;
+  --color-border-strong: #d1d5db;
+
+  /* Shadow */
+  --shadow-xs: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  --shadow-sm: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
+  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1),
+    0 4px 6px -4px rgb(0 0 0 / 0.1);
+
+  /* Radius */
+  --radius-xs: 0.125rem;
+  --radius-sm: 0.375rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 0.75rem;
+  --radius-full: 9999px;
+}
+
+@layer base {
+  body {
+    @apply text-gray-800 bg-gray-50;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    @apply font-semibold text-gray-900;
+  }
+}
+
+/* Button Base */
+@utility btn {
+  @apply inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium rounded-md transition-colors duration-150 cursor-pointer;
+}
+
+/* Button Variants */
+@utility btn-primary {
+  @apply bg-primary text-white hover:bg-primary-dark active:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2;
+}
+
+@utility btn-secondary {
+  @apply bg-secondary text-white hover:bg-secondary-dark active:bg-secondary-dark;
+}
+
+@utility btn-success {
+  @apply bg-success text-white hover:bg-success-dark;
+}
+
+@utility btn-error {
+  @apply bg-error text-white hover:bg-error-dark;
+}
+
+@utility btn-outline {
+  @apply bg-transparent border border-border-strong text-gray-800 hover:bg-gray-100;
+}
+
+@utility btn-ghost {
+  @apply bg-transparent text-gray-800 hover:bg-gray-200;
+}
+
+/* Button Sizes */
+@utility btn-sm {
+  @apply px-3 py-1 text-xs;
+}
+
+@utility btn-lg {
+  @apply px-6 py-3 text-lg;
+}
+
+/* Input Styles */
+@utility input {
+  @apply w-full px-3 py-2 border border-border-strong rounded-md text-sm text-gray-800 transition-colors duration-150 focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary;
+}
+
+@utility input-error {
+  @apply border-error focus:ring-error focus:border-error;
+}
+
+/* Label Styles */
+@utility label {
+  @apply block text-sm font-medium text-gray-800 mb-1;
+}
+
+/* Badge Styles */
+@utility badge {
+  @apply inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium;
+}
+
+@utility badge-blue {
+  @apply bg-blue-100 text-blue-700;
+}
+
+@utility badge-green {
+  @apply bg-green-100 text-green-700;
+}
+
+@utility badge-red {
+  @apply bg-red-100 text-red-700;
+}
+
+@utility badge-yellow {
+  @apply bg-yellow-100 text-yellow-700;
+}
+
+@utility badge-purple {
+  @apply bg-purple-100 text-purple-700;
+}
+
+/* Gradient utilities */
+@utility bg-gradient-primary {
+  @apply bg-gradient-to-r from-primary to-primary-light;
+}
+
+@utility bg-gradient-secondary {
+  @apply bg-gradient-to-r from-secondary to-secondary-light;
+}
+
+@utility card {
+  @apply bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden;
+}
+
+@utility card-header {
+  @apply p-4 border-b border-gray-200;
+}
+
+@utility card-body {
+  @apply p-4;
+}
+
+@utility card-footer {
+  @apply p-4 border-t border-gray-200;
+}
+
+@utility alert {
+  @apply p-4 rounded-md mb-4;
+}
+
+@utility alert-info {
+  @apply alert bg-blue-50 text-blue-800 border border-blue-200;
+}
+
+@utility alert-success {
+  @apply alert bg-green-50 text-green-800 border border-green-200;
+}
+
+@utility alert-warning {
+  @apply alert bg-yellow-50 text-yellow-800 border border-yellow-200;
+}
+
+@utility alert-error {
+  @apply alert bg-red-50 text-red-800 border border-red-200;
+}
+
+@utility bg-primary {
+  @apply bg-gradient-to-r from-indigo-500 to-sky-400;
+}
