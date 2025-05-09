@@ -13,8 +13,14 @@ type CommandsSanitizer struct {
 	Commands
 }
 
-func NewCommandsSanitizer(commands Commands) *CommandsSanitizer {
+func NewCommandsSanitizer(commands Commands) Commands {
 	return &CommandsSanitizer{Commands: commands}
+}
+
+func (s *CommandsSanitizer) WithTxRepository(ctx context.Context, repository Repository) Commands {
+	return &CommandsSanitizer{
+		Commands: s.Commands.WithTxRepository(ctx, repository),
+	}
 }
 
 func (s *CommandsSanitizer) Create(ctx context.Context, cmd *CreateCommand) (*Profile, error) {

@@ -12,7 +12,7 @@ type CommandHandlers struct {
 	repository Repository
 }
 
-func NewCommandHandlers(repository Repository) *CommandHandlers {
+func NewCommandHandlers(repository Repository) Commands {
 	return &CommandHandlers{repository: repository}
 }
 

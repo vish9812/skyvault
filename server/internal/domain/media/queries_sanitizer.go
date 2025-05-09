@@ -13,7 +13,7 @@ type QueriesSanitizer struct {
 	Queries
 }
 
-func NewQueriesSanitizer(queries Queries) *QueriesSanitizer {
+func NewQueriesSanitizer(queries Queries) Queries {
 	return &QueriesSanitizer{Queries: queries}
 }
 

@@ -6,6 +6,7 @@ import (
 	"skyvault/internal/domain/auth"
 	"skyvault/pkg/apperror"
 	"skyvault/pkg/utils"
+	"skyvault/pkg/validate"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -100,7 +101,7 @@ func (a *JWTAuth) ValidateCredentials(ctx context.Context, credentials map[auth.
 	passwordHash := *(credentials[auth.CredKeyPasswordHash].(*string))
 	password := *(credentials[auth.CredKeyPassword].(*string))
 
-	if p, err := auth.ValidatePasswordLen(password); err != nil {
+	if p, err := validate.PasswordLen(password); err != nil {
 		return apperror.NewAppError(err, "JWTAuth.ValidateCredentials:ValidatePassword")
 	} else {
 		password = p

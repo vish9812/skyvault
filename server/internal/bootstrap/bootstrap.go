@@ -18,27 +18,35 @@ func InitInfrastructure(app *appconfig.App) *infrastructure.Infrastructure {
 // InitAPI initializes all APIs and returns the main API server
 func InitAPI(app *appconfig.App, infra *infrastructure.Infrastructure) *api.API {
 	// Init workFlows, commands and queries
-	profileCommands := profile.NewCommandHandlers(infra.Repository.Profile)
-	profileQueries := profile.NewQueryHandlers(infra.Repository.Profile)
-	authCommands := auth.NewCommandHandlers(infra.Repository.Auth, infra.Auth)
-	authQueries := auth.NewQueryHandlers(infra.Repository.Auth, infra.Auth)
-	signUpFlow := workflows.NewSignUpFlow(app, authCommands, infra.Repository.Auth, profileCommands, infra.Repository.Profile)
-	signInFlow := workflows.NewSignInFlow(authCommands, authQueries, profileCommands, profileQueries)
-	mediaCommands := media.NewCommandHandlers(app, infra.Repository.Media, infra.Storage.LocalStorage)
-	mediaQueries := media.NewQueryHandlers(infra.Repository.Media, infra.Storage.LocalStorage)
+	proCmd := profile.NewCommandHandlers(infra.Repository.Profile)
+	proCmdRoot := profile.NewCommandsSanitizer(proCmd)
+	proQrs := profile.NewQueryHandlers(infra.Repository.Profile)
+	proQrsRoot := profile.NewQueriesSanitizer(proQrs)
+	authCmd := auth.NewCommandHandlers(infra.Repository.Auth, infra.Auth)
+	authCmdRoot := auth.NewCommandsSanitizer(authCmd)
+	authQrs := auth.NewQueryHandlers(infra.Repository.Auth, infra.Auth)
+	authQrsRoot := auth.NewQueriesSanitizer(authQrs)
+	signUpFlow := workflows.NewSignUpFlow(app, authCmdRoot, infra.Repository.Auth, proCmdRoot, infra.Repository.Profile)
+	signInFlow := workflows.NewSignInFlow(authCmdRoot, authQrsRoot, proCmdRoot, proQrsRoot)
+	mediaCmd := media.NewCommandHandlers(app, infra.Repository.Media, infra.Storage.LocalStorage)
+	mediaCmdRoot := media.NewCommandsSanitizer(mediaCmd)
+	mediaQrs := media.NewQueryHandlers(infra.Repository.Media, infra.Storage.LocalStorage)
+	mediaQrsRoot := media.NewQueriesSanitizer(mediaQrs)
 
 	// Init API
 	apiServer := api.NewAPI(app).InitRoutes(infra)
 	apiServer.Auth = api.NewAuthAPI(apiServer, signUpFlow, signInFlow).InitRoutes()
-	apiServer.Media = api.NewMediaAPI(apiServer, app, mediaCommands, mediaQueries).InitRoutes()
-	apiServer.Profile = api.NewProfileAPI(apiServer, profileCommands, profileQueries).InitRoutes()
+	apiServer.Media = api.NewMediaAPI(apiServer, app, mediaCmdRoot, mediaQrsRoot).InitRoutes()
+	apiServer.Profile = api.NewProfileAPI(apiServer, proCmdRoot, proQrsRoot).InitRoutes()
 
 	return apiServer
 }
 
 // InitSignUpFlow initializes and returns the signup workflow
 func InitSignUpFlow(app *appconfig.App, infra *infrastructure.Infrastructure) *workflows.SignUpFlow {
-	authCommands := auth.NewCommandHandlers(infra.Repository.Auth, infra.Auth)
-	profileCommands := profile.NewCommandHandlers(infra.Repository.Profile)
-	return workflows.NewSignUpFlow(app, authCommands, infra.Repository.Auth, profileCommands, infra.Repository.Profile)
+	authCmd := auth.NewCommandHandlers(infra.Repository.Auth, infra.Auth)
+	authCmdRoot := auth.NewCommandsSanitizer(authCmd)
+	proCmd := profile.NewCommandHandlers(infra.Repository.Profile)
+	proCmdRoot := profile.NewCommandsSanitizer(proCmd)
+	return workflows.NewSignUpFlow(app, authCmdRoot, infra.Repository.Auth, proCmdRoot, infra.Repository.Profile)
 }

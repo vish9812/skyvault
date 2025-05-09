@@ -12,7 +12,7 @@ type CommandsSanitizer struct {
 	Commands
 }
 
-func NewCommandsSanitizer(commands Commands) *CommandsSanitizer {
+func NewCommandsSanitizer(commands Commands) Commands {
 	return &CommandsSanitizer{Commands: commands}
 }
 

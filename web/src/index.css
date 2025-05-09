@@ -2,18 +2,14 @@
 
 @theme {
   /* Primary Colors */
-  --color-primary: linear-gradient(
-    90deg,
-    #6366f1 0%,
-    #38bdf8 100%
-  ); /* indigo-500 to sky-400 */
-  --color-primary-light: #60a5fa;
-  --color-primary-dark: #2563eb;
+  --color-primary: #7274f3;
+  --color-primary-light: #8a8bf5;
+  --color-primary-dark: #5b5df1;
 
   /* Secondary Colors */
-  --color-secondary: #8b5cf6;
-  --color-secondary-light: #a78bfa;
-  --color-secondary-dark: #7c3aed;
+  --color-secondary: #9d72f3;
+  --color-secondary-light: #ad8af5;
+  --color-secondary-dark: #8d5bf1;
 
   /* Success Colors */
   --color-success: #22c55e;
@@ -36,9 +32,9 @@
   --color-info-dark: #0284c7;
 
   /* Neutral Colors */
-  --color-text: #1f2937;
-  --color-text-light: #6b7280;
-  --color-text-lighter: #9ca3af;
+  --color-neutral: #1f2937;
+  --color-neutral-light: #6b7280;
+  --color-neutral-lighter: #9ca3af;
 
   /* Background Colors */
   --color-bg: #ffffff;
@@ -63,20 +59,47 @@
   --radius-lg: 0.75rem;
   --radius-full: 9999px;
 }
-
 @layer base {
   body {
-    @apply text-gray-800 bg-gray-50;
+    @apply text-neutral bg-bg-muted;
   }
 
-  h1,
-  h2,
-  h3,
-  h4,
-  h5,
-  h6 {
-    @apply font-semibold text-gray-900;
+  /* ===== TYPOGRAPHY */
+  h1 {
+    @apply text-neutral text-[34px] leading-[42px] font-bold;
   }
+  h2 {
+    @apply text-neutral text-[24px] leading-[36px] font-bold;
+  }
+  h3 {
+    @apply text-neutral-light text-[20px] leading-[28px] font-semibold;
+  }
+  h4 {
+    @apply text-neutral-light text-[18px] leading-[20px] font-semibold;
+  }
+  h5 {
+    @apply text-neutral-lighter text-[16px] leading-[24px] font-medium;
+  }
+  h6 {
+    @apply text-neutral-lighter text-[14px] leading-[20px] font-medium;
+  }
+}
+
+@utility subtitle {
+  @apply text-neutral-light text-[16px] leading-[24px] font-medium;
+}
+@utility subtitle-sm {
+  @apply text-neutral-light text-[14px] leading-[20px] font-semibold;
+}
+@utility caption {
+  @apply text-neutral-light text-[12px] leading-[16px] font-normal;
+}
+@utility caption-sm {
+  @apply text-neutral-light text-[10px] leading-[14px] font-normal;
+}
+
+@utility flex-center {
+  @apply flex items-center justify-center;
 }
 
 /* Button Base */
@@ -86,11 +109,15 @@
 
 /* Button Variants */
 @utility btn-primary {
-  @apply bg-primary text-white hover:bg-primary-dark active:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2;
+  @apply bg-primary text-white hover:bg-primary-dark;
 }
 
 @utility btn-secondary {
-  @apply bg-secondary text-white hover:bg-secondary-dark active:bg-secondary-dark;
+  @apply bg-secondary text-white hover:bg-secondary-dark;
+}
+
+@utility btn-disabled {
+  @apply bg-neutral-lighter text-neutral cursor-not-allowed;
 }
 
 @utility btn-success {
@@ -118,18 +145,30 @@
   @apply px-6 py-3 text-lg;
 }
 
-/* Input Styles */
-@utility input {
-  @apply w-full px-3 py-2 border border-border-strong rounded-md text-sm text-gray-800 transition-colors duration-150 focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary;
+@utility link {
+  @apply text-primary hover:text-primary-dark hover:underline;
 }
 
-@utility input-error {
-  @apply border-error focus:ring-error focus:border-error;
+/* Input Styles */
+@utility input {
+  @apply w-full px-3 py-2 border rounded focus:outline-none;
+}
+
+@utility input-b-std {
+  @apply border-border-strong focus:border-primary;
+}
+
+@utility input-b-error {
+  @apply border-error-light focus:border-error-dark;
+}
+
+@utility input-t-error {
+  @apply text-error text-xs mt-1;
 }
 
 /* Label Styles */
 @utility label {
-  @apply block text-sm font-medium text-gray-800 mb-1;
+  @apply block subtitle-sm mb-1;
 }
 
 /* Badge Styles */
@@ -158,12 +197,12 @@
 }
 
 /* Gradient utilities */
-@utility bg-gradient-primary {
-  @apply bg-gradient-to-r from-primary to-primary-light;
+@utility gradient {
+  @apply bg-radial from-primary-dark to-secondary;
 }
 
-@utility bg-gradient-secondary {
-  @apply bg-gradient-to-r from-secondary to-secondary-light;
+@utility gradient-text {
+  @apply bg-radial from-primary-dark to-secondary bg-clip-text text-transparent;
 }
 
 @utility card {
@@ -200,8 +239,4 @@
 
 @utility alert-error {
   @apply alert bg-red-50 text-red-800 border border-red-200;
-}
-
-@utility bg-primary {
-  @apply bg-gradient-to-r from-indigo-500 to-sky-400;
 }

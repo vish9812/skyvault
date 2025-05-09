@@ -16,7 +16,7 @@ type CommandHandlers struct {
 	storage    Storage
 }
 
-func NewCommandHandlers(app *appconfig.App, repository Repository, storage Storage) *CommandHandlers {
+func NewCommandHandlers(app *appconfig.App, repository Repository, storage Storage) Commands {
 	return &CommandHandlers{app: app, repository: repository, storage: storage}
 }
 

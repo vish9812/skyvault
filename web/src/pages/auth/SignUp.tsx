@@ -1,27 +1,25 @@
 import { createSignal } from "solid-js";
 import { useNavigate } from "@solidjs/router";
-import { z } from "zod";
 import { Link } from "@kobalte/core/link";
 import AuthForm from "@sv/components/auth/AuthForm";
 import { getErrorMessage } from "@sv/utils/errors";
-import { signUpSchema } from "@sv/utils/validation";
-import { signUp } from "@sv/utils/api";
+import { signUpSchema } from "@sv/pages/auth/validation";
+import { signUp } from "@sv/apis/auth";
+import type { SignUpReq } from "@sv/apis/auth/models";
 
 export default function SignUp() {
-  console.log("SignUp");
   const navigate = useNavigate();
   const [error, setError] = createSignal("");
   const [loading, setLoading] = createSignal(false);
 
-  const handleSubmit = async (values: z.infer<typeof signUpSchema>) => {
+  const handleSubmit = async (values: SignUpReq) => {
     setLoading(true);
     setError("");
     try {
-      const res = await signUp(values);
-      localStorage.setItem("token", res.token);
+      await signUp(values);
       navigate("/");
     } catch (err: any) {
-      setError(getErrorMessage(err?.code));
+      setError(getErrorMessage(err?.message));
     } finally {
       setLoading(false);
     }

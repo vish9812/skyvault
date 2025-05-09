@@ -18,7 +18,7 @@ type CommandsSanitizer struct {
 	Commands
 }
 
-func NewCommandsSanitizer(commands Commands) *CommandsSanitizer {
+func NewCommandsSanitizer(commands Commands) Commands {
 	return &CommandsSanitizer{Commands: commands}
 }
 
@@ -31,20 +31,10 @@ func validateProvider(provider Provider) (Provider, error) {
 	return "", apperror.ErrCommonInvalidValue
 }
 
-func validateProviderUserID(providerUserID string) (string, error) {
-	providerUserID = strings.TrimSpace(providerUserID)
-	if len(providerUserID) > validate.MaxLen || len(providerUserID) == 0 {
-		return "", apperror.ErrCommonInvalidValue
+func (s *CommandsSanitizer) WithTxRepository(ctx context.Context, repository Repository) Commands {
+	return &CommandsSanitizer{
+		Commands: s.Commands.WithTxRepository(ctx, repository),
 	}
-	return providerUserID, nil
-}
-
-func ValidatePasswordLen(pwd string) (string, error) {
-	pwd = strings.TrimSpace(pwd)
-	if len(pwd) < passwordMinLen || len(pwd) > passwordMaxLen {
-		return "", apperror.ErrCommonInvalidValue
-	}
-	return pwd, nil
 }
 
 func (s *CommandsSanitizer) SignUp(ctx context.Context, cmd *SignUpCommand) (token string, err error) {
@@ -54,14 +44,14 @@ func (s *CommandsSanitizer) SignUp(ctx context.Context, cmd *SignUpCommand) (tok
 		cmd.Provider = p
 	}
 
-	if puid, err := validateProviderUserID(cmd.ProviderUserID); err != nil {
+	if pUID, err := validate.Name(cmd.ProviderUserID); err != nil {
 		return "", apperror.NewAppError(err, "auth.CommandsSanitizer.SignUp:ProviderUserID")
 	} else {
-		cmd.ProviderUserID = puid
+		cmd.ProviderUserID = pUID
 	}
 
 	if cmd.Password != nil {
-		if p, err := ValidatePasswordLen(*cmd.Password); err != nil {
+		if p, err := validate.PasswordLen(*cmd.Password); err != nil {
 			return "", apperror.NewAppError(err, "auth.CommandsSanitizer.SignUp:Password")
 		} else {
 			cmd.Password = &p
@@ -79,7 +69,7 @@ func (s *CommandsSanitizer) SignIn(ctx context.Context, cmd *SignInCommand) (tok
 	}
 
 	if cmd.Password != nil {
-		if p, err := ValidatePasswordLen(*cmd.Password); err != nil {
+		if p, err := validate.PasswordLen(*cmd.Password); err != nil {
 			return "", apperror.NewAppError(err, "auth.CommandsSanitizer.SignIn:Password")
 		} else {
 			cmd.Password = &p

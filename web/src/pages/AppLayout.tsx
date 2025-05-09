@@ -1,8 +1,9 @@
-import { ParentComponent } from "solid-js";
+import { onMount, ParentComponent } from "solid-js";
 import { Button } from "@kobalte/core/button";
 import { DropdownMenu } from "@kobalte/core/dropdown-menu";
 import { Toast } from "@kobalte/core/toast";
 import { Portal } from "solid-js/web";
+import { useNavigate } from "@solidjs/router";
 
 // Toast notifications region
 function Notifications() {
@@ -150,6 +151,14 @@ function Navigation() {
 }
 
 const AppLayout: ParentComponent = (props) => {
+  const navigate = useNavigate();
+  onMount(() => {
+    const token = localStorage.getItem("token");
+    if (!token) {
+      navigate("/sign-in", { replace: true });
+    }
+  });
+
   return (
     <div class="bg-gray-50 min-h-screen">
       {/* Navigation */}

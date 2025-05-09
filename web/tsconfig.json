@@ -16,6 +16,7 @@
       "@sv/components/*": ["components/*"],
       "@sv/utils/*": ["utils/*"],
       "@sv/pages/*": ["pages/*"],
+      "@sv/apis/*": ["apis/*"]
     }
   }
 }

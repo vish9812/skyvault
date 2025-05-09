@@ -3,15 +3,16 @@ import { useNavigate } from "@solidjs/router";
 import { z } from "zod";
 import AuthForm from "@sv/components/auth/AuthForm";
 import { getErrorMessage } from "@sv/utils/errors";
-import { signInSchema } from "@sv/utils/validation";
-import { signIn } from "@sv/utils/api";
+import { signInSchema } from "@sv/pages/auth/validation";
+import { signIn } from "../../apis/auth";
+import type { SignInReq } from "../../apis/auth/models";
 
 export default function SignIn() {
   const navigate = useNavigate();
   const [error, setError] = createSignal("");
   const [loading, setLoading] = createSignal(false);
 
-  const handleSubmit = async (values: z.infer<typeof signInSchema>) => {
+  const handleSubmit = async (values: SignInReq) => {
     setLoading(true);
     setError("");
     try {
