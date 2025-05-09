@@ -1,5 +1,11 @@
 @import "tailwindcss";
 
+/* Hide password reveal button in Edge */
+input[type="password"]::-ms-reveal,
+input[type="password"]::-ms-clear {
+  display: none !important;
+}
+
 @theme {
   /* Primary Colors */
   --color-primary: #7274f3;
