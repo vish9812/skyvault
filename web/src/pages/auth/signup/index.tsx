@@ -153,7 +153,7 @@ function SignUp() {
           class="btn"
           classList={{
             "btn-disabled": isDisabled(),
-            "btn-primary": !isDisabled(),
+            "btn-gradient": !isDisabled(),
           }}
           disabled={isDisabled()}
         >

@@ -7,8 +7,8 @@ import FileCard from "@sv/components/file/FileCard";
 import FileListItem from "@sv/components/file/FileListItem";
 import FolderCard from "@sv/components/folder/FolderCard";
 import FolderListItem from "@sv/components/folder/FolderListItem";
-import { fetchRootContent } from "../apis/media";
-import type { FolderContent } from "../apis/media/models";
+import { fetchRootContent } from "@sv/apis/media";
+import type { FolderContent } from "@sv/apis/media/models";
 import { Button } from "@kobalte/core/button";
 
 // Dummy storage usage

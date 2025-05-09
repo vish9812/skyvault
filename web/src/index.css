@@ -52,18 +52,18 @@ input[type="password"]::-ms-clear {
   --color-border-strong: #d1d5db;
 
   /* Shadow */
-  --shadow-xs: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  /* --shadow-xs: 0 1px 2px 0 rgb(0 0 0 / 0.05);
   --shadow-sm: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
   --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
   --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1),
-    0 4px 6px -4px rgb(0 0 0 / 0.1);
+    0 4px 6px -4px rgb(0 0 0 / 0.1); */
 
   /* Radius */
-  --radius-xs: 0.125rem;
+  /* --radius-xs: 0.125rem;
   --radius-sm: 0.375rem;
   --radius-md: 0.5rem;
   --radius-lg: 0.75rem;
-  --radius-full: 9999px;
+  --radius-full: 9999px; */
 }
 @layer base {
   body {
@@ -122,6 +122,15 @@ input[type="password"]::-ms-clear {
   @apply bg-secondary text-white hover:bg-secondary-dark;
 }
 
+@utility btn-gradient {
+  @apply bg-linear-to-r from-primary to-secondary text-white hover:from-primary-dark hover:to-secondary-dark;
+}
+
+/* d refers to data attribute */
+@utility btn-gradient-d-expanded {
+  @apply data-expanded:from-primary-dark data-expanded:to-secondary-dark;
+}
+
 @utility btn-disabled {
   @apply bg-neutral-lighter text-neutral cursor-not-allowed;
 }
@@ -160,6 +169,7 @@ input[type="password"]::-ms-clear {
   @apply w-full px-3 py-2 border rounded focus:outline-none;
 }
 
+/* b refers to border */
 @utility input-b-std {
   @apply border-border-strong focus:border-primary;
 }
@@ -168,6 +178,7 @@ input[type="password"]::-ms-clear {
   @apply border-error-light focus:border-error-dark;
 }
 
+/* t refers to text */
 @utility input-t-error {
   @apply text-error text-xs mt-1;
 }
@@ -204,11 +215,11 @@ input[type="password"]::-ms-clear {
 
 /* Gradient utilities */
 @utility gradient {
-  @apply bg-radial from-primary-dark to-secondary;
+  @apply bg-linear-to-r from-primary to-secondary;
 }
 
 @utility gradient-text {
-  @apply bg-radial from-primary-dark to-secondary bg-clip-text text-transparent;
+  @apply bg-linear-to-r from-primary to-secondary bg-clip-text text-transparent mb-2;
 }
 
 @utility card {
