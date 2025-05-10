@@ -9,13 +9,15 @@ input[type="password"]::-ms-clear {
 @theme {
   /* Primary Colors */
   --color-primary: #7274f3;
-  --color-primary-light: #8a8bf5;
-  --color-primary-dark: #5b5df1;
+  --color-primary-light: #a1a3f7;
+  --color-primary-lighter: #e8e8fd;
+  --color-primary-dark: #4346ef;
 
   /* Secondary Colors */
   --color-secondary: #9d72f3;
-  --color-secondary-light: #ad8af5;
-  --color-secondary-dark: #8d5bf1;
+  --color-secondary-light: #bea1f7;
+  --color-secondary-lighter: #efe8fd;
+  --color-secondary-dark: #7c43ef;
 
   /* Success Colors */
   --color-success: #22c55e;
@@ -43,7 +45,6 @@ input[type="password"]::-ms-clear {
   --color-neutral-lighter: #9ca3af;
 
   /* Background Colors */
-  --color-bg: #ffffff;
   --color-bg-subtle: #f9fafb;
   --color-bg-muted: #f3f4f6;
 
@@ -122,15 +123,6 @@ input[type="password"]::-ms-clear {
   @apply bg-secondary text-white hover:bg-secondary-dark;
 }
 
-@utility btn-gradient {
-  @apply bg-linear-to-r from-primary to-secondary text-white hover:from-primary-dark hover:to-secondary-dark;
-}
-
-/* d refers to data attribute */
-@utility btn-gradient-d-expanded {
-  @apply data-expanded:from-primary-dark data-expanded:to-secondary-dark;
-}
-
 @utility btn-disabled {
   @apply bg-neutral-lighter text-neutral cursor-not-allowed;
 }
@@ -164,6 +156,10 @@ input[type="password"]::-ms-clear {
   @apply text-primary hover:text-primary-dark hover:underline;
 }
 
+@utility link-no-underline {
+  @apply text-primary hover:text-primary-dark no-underline hover:bg-primary-lighter;
+}
+
 /* Input Styles */
 @utility input {
   @apply w-full px-3 py-2 border rounded focus:outline-none;
@@ -188,31 +184,6 @@ input[type="password"]::-ms-clear {
   @apply block subtitle-sm mb-1;
 }
 
-/* Badge Styles */
-@utility badge {
-  @apply inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium;
-}
-
-@utility badge-blue {
-  @apply bg-blue-100 text-blue-700;
-}
-
-@utility badge-green {
-  @apply bg-green-100 text-green-700;
-}
-
-@utility badge-red {
-  @apply bg-red-100 text-red-700;
-}
-
-@utility badge-yellow {
-  @apply bg-yellow-100 text-yellow-700;
-}
-
-@utility badge-purple {
-  @apply bg-purple-100 text-purple-700;
-}
-
 /* Gradient utilities */
 @utility gradient {
   @apply bg-linear-to-r from-primary to-secondary;
@@ -222,38 +193,15 @@ input[type="password"]::-ms-clear {
   @apply bg-linear-to-r from-primary to-secondary bg-clip-text text-transparent mb-2;
 }
 
-@utility card {
-  @apply bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden;
+@utility btn-gradient {
+  @apply bg-linear-to-r from-primary to-secondary text-white hover:from-primary-dark hover:to-secondary-dark;
 }
 
-@utility card-header {
-  @apply p-4 border-b border-gray-200;
+/* d refers to data attribute */
+@utility btn-gradient-d-expanded {
+  @apply data-expanded:from-primary-dark data-expanded:to-secondary-dark;
 }
 
-@utility card-body {
-  @apply p-4;
-}
-
-@utility card-footer {
-  @apply p-4 border-t border-gray-200;
-}
-
-@utility alert {
-  @apply p-4 rounded-md mb-4;
-}
-
-@utility alert-info {
-  @apply alert bg-blue-50 text-blue-800 border border-blue-200;
-}
-
-@utility alert-success {
-  @apply alert bg-green-50 text-green-800 border border-green-200;
-}
-
-@utility alert-warning {
-  @apply alert bg-yellow-50 text-yellow-800 border border-yellow-200;
-}
-
-@utility alert-error {
-  @apply alert bg-red-50 text-red-800 border border-red-200;
+@utility dropdown-item {
+  @apply px-4 py-2  cursor-pointer hover:bg-bg-muted transition-colors;
 }

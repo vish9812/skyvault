@@ -1,15 +1,51 @@
-import { Button } from "@kobalte/core/button";
 import { DropdownMenu } from "@kobalte/core/dropdown-menu";
 
 function CreateUpload() {
   return (
     <DropdownMenu>
-      <DropdownMenu.Trigger class="mb-4 mt-2 btn btn-gradient btn-gradient-d-expanded w-full">
-        Create or Upload
+      {/* Desktop trigger */}
+      <DropdownMenu.Trigger class="p-2 btn btn-gradient btn-gradient-d-expanded max-md:rounded-full md:w-full md:mb-4 md:mt-2">
+        <span class="hidden md:block">
+          <span class="flex-center gap-2">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke-width="1.5"
+              stroke="currentColor"
+              class="size-6"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                d="M12 9v6m3-3H9m12 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"
+              />
+            </svg>
+            Create or Upload
+          </span>
+        </span>
+
+        {/* Mobile trigger */}
+        <div class="md:hidden">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke-width="1.5"
+            stroke="currentColor"
+            class="size-6 md:hidden"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              d="M12 4.5v15m7.5-7.5h-15"
+            />
+          </svg>
+        </div>
       </DropdownMenu.Trigger>
       <DropdownMenu.Portal>
-        <DropdownMenu.Content class="bg-white rounded-lg shadow-md border border-border-strong min-w-[180px] py-2 mt-2">
-          <DropdownMenu.Item class="px-4 py-2 rounded-md cursor-pointer hover:bg-bg-muted transition-colors">
+        <DropdownMenu.Content class="bg-white rounded-lg shadow-md border border-border-strong min-w-[180px] py-2">
+          <DropdownMenu.Item class="dropdown-item">
             <div class="flex items-center gap-2">
               <svg
                 xmlns="http://www.w3.org/2000/svg"
@@ -28,7 +64,8 @@ function CreateUpload() {
               <span>Create Folder</span>
             </div>
           </DropdownMenu.Item>
-          <DropdownMenu.Item class="px-4 py-2 rounded-md cursor-pointer hover:bg-bg-muted transition-colors">
+          <DropdownMenu.Separator class="border-border-strong my-2" />
+          <DropdownMenu.Item class="dropdown-item">
             <div class="flex items-center gap-2">
               <svg
                 xmlns="http://www.w3.org/2000/svg"
@@ -48,7 +85,7 @@ function CreateUpload() {
               <span>Upload Files</span>
             </div>
           </DropdownMenu.Item>
-          <DropdownMenu.Item class="px-4 py-2 rounded-md cursor-pointer hover:bg-bg-muted transition-colors">
+          <DropdownMenu.Item class="dropdown-item">
             <div class="flex items-center gap-2">
               <svg
                 xmlns="http://www.w3.org/2000/svg"
@@ -67,6 +104,7 @@ function CreateUpload() {
               <span>Upload Folder</span>
             </div>
           </DropdownMenu.Item>
+          <DropdownMenu.Arrow />
         </DropdownMenu.Content>
       </DropdownMenu.Portal>
     </DropdownMenu>
