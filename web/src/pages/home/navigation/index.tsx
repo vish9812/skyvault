@@ -1,6 +1,6 @@
-import { A } from "@solidjs/router";
+import { A, useLocation } from "@solidjs/router";
 import CreateUpload from "@sv/components/create-upload";
-import { createSignal, For, Show } from "solid-js";
+import { createEffect, createSignal, For, Show } from "solid-js";
 
 const menuItems = [
   {
@@ -91,7 +91,15 @@ const menuItems = [
 
 // Main navigation sidebar
 function Navigation() {
-  const [activeMenu, setActiveMenu] = createSignal<string>("");
+  const location = useLocation();
+  const lastPath = location.pathname.split("/").pop();
+
+  const defaultActiveMenu =
+    (menuItems.some((item) => item.href.substring(1) === lastPath)
+      ? lastPath
+      : "home") || "home";
+
+  const [activeMenu, setActiveMenu] = createSignal<string>(defaultActiveMenu!);
 
   return (
     <>
