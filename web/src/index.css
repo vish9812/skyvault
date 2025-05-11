@@ -190,7 +190,7 @@ input[type="password"]::-ms-clear {
 }
 
 @utility gradient-text {
-  @apply bg-linear-to-r from-primary to-secondary bg-clip-text text-transparent mb-2;
+  @apply bg-linear-to-r from-primary to-secondary bg-clip-text text-transparent;
 }
 
 @utility btn-gradient {

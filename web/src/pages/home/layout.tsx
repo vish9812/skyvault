@@ -6,6 +6,7 @@ import { Portal } from "solid-js/web";
 import { useNavigate } from "@solidjs/router";
 import { getProfile } from "@sv/apis/auth";
 import Navigation from "./navigation";
+import Header from "./header";
 
 // Toast notifications region
 function Notifications() {
@@ -82,10 +83,12 @@ const AppLayout: ParentComponent = (props) => {
       {/* Navigation */}
       <Navigation />
 
+      <Header />
+
       {/* Main Content */}
       <div class="md:pl-64 pt-16 pb-16 min-h-screen">
         {/* Header */}
-        <header class="fixed top-0 left-0 right-0 md:left-64 bg-white h-16 border-b border-gray-200 z-30 px-4 flex items-center justify-between">
+        {/* <header class="fixed top-0 left-0 right-0 md:left-64 bg-white h-16 border-b border-gray-200 z-30 px-4 flex items-center justify-between">
           <div class="md:hidden text-xl font-extrabold bg-primary bg-clip-text text-transparent select-none">
             SkyVault
           </div>
@@ -97,7 +100,7 @@ const AppLayout: ParentComponent = (props) => {
             </button>
             <UserProfileMenu />
           </div>
-        </header>
+        </header> */}
 
         {/* Page Content */}
         <main class="p-4 md:p-6">{props.children}</main>
