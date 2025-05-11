@@ -117,7 +117,7 @@ function Navigation() {
                 <A href={item.href} title={item.label}>
                   <div
                     class={`m-1 py-2 px-2 rounded-full link-no-underline ${
-                      activeMenu() === item.name ? "bg-primary-light/30" : ""
+                      activeMenu() === item.name ? "bg-secondary-light/30" : ""
                     }`}
                     onClick={() => setActiveMenu(item.name)}
                   >
@@ -142,7 +142,7 @@ function Navigation() {
               <A href={item.href} title={item.label}>
                 <div
                   class={`link-no-underline flex items-center gap-3 px-3 py-2 rounded-md font-medium ${
-                    activeMenu() === item.name ? "bg-primary-light/30" : ""
+                    activeMenu() === item.name ? "bg-secondary-light/30" : ""
                   }`}
                   onClick={() => setActiveMenu(item.name)}
                 >

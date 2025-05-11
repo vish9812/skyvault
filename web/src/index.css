@@ -157,7 +157,7 @@ input[type="password"]::-ms-clear {
 }
 
 @utility link-no-underline {
-  @apply text-primary hover:text-primary-dark no-underline hover:bg-primary-lighter;
+  @apply text-primary hover:text-primary-dark no-underline hover:bg-secondary-lighter;
 }
 
 /* Input Styles */
