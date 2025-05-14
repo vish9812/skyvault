@@ -20,7 +20,7 @@ export default function Home() {
   const [viewMode, setViewMode] = createSignal<"grid" | "list">("grid");
 
   return (
-    <div class="max-w-6xl mx-auto space-y-6 md:pl-0">
+    <>
       {/* Page title and breadcrumbs */}
       <div class="flex items-center justify-between">
         <div>
@@ -168,6 +168,6 @@ export default function Home() {
         {/* Skeleton loader */}
         <SkeletonGrid />
       </Show>
-    </div>
+    </>
   );
 }
