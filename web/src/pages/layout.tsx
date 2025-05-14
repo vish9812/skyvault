@@ -5,8 +5,9 @@ import { Toast } from "@kobalte/core/toast";
 import { Portal } from "solid-js/web";
 import { useNavigate } from "@solidjs/router";
 import { getProfile } from "@sv/apis/auth";
-import Navigation from "./navigation";
-import Header from "./header";
+import Navigation from "./home/navigation";
+import Header from "./home/header";
+import { CLIENT_URLS } from "@sv/utils/consts";
 
 // Toast notifications region
 function Notifications() {
@@ -75,7 +76,8 @@ const AppLayout: ParentComponent = (props) => {
   const navigate = useNavigate();
   const profile = getProfile();
   if (!profile) {
-    navigate("/sign-in", { replace: true });
+    navigate(CLIENT_URLS.SIGN_IN, { replace: true });
+    return;
   }
 
   return (

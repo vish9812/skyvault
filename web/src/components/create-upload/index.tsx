@@ -3,8 +3,8 @@ import { DropdownMenu } from "@kobalte/core/dropdown-menu";
 function CreateUpload() {
   return (
     <DropdownMenu>
-      {/* Desktop trigger */}
       <DropdownMenu.Trigger class="p-2 btn btn-gradient btn-gradient-d-expanded max-md:rounded-full md:w-full md:mb-4 md:mt-2">
+        {/* Desktop trigger */}
         <span class="hidden md:block">
           <span class="flex-center gap-2">
             <svg
@@ -51,9 +51,9 @@ function CreateUpload() {
                 xmlns="http://www.w3.org/2000/svg"
                 fill="none"
                 viewBox="0 0 24 24"
-                stroke-width="1"
+                stroke-width="1.5"
                 stroke="currentColor"
-                class="size-4"
+                class="size-5 text-neutral-light"
               >
                 <path
                   stroke-linecap="round"
@@ -71,9 +71,9 @@ function CreateUpload() {
                 xmlns="http://www.w3.org/2000/svg"
                 fill="none"
                 viewBox="0 0 24 24"
-                stroke-width="1"
+                stroke-width="1.5"
                 stroke="currentColor"
-                class="size-4"
+                class="size-5 text-neutral-light"
               >
                 <path
                   stroke-linecap="round"
@@ -91,9 +91,9 @@ function CreateUpload() {
                 xmlns="http://www.w3.org/2000/svg"
                 fill="none"
                 viewBox="0 0 24 24"
-                stroke-width="1"
+                stroke-width="1.5"
                 stroke="currentColor"
-                class="size-4"
+                class="size-5 text-neutral-light"
               >
                 <path
                   stroke-linecap="round"

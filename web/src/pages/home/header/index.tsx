@@ -1,4 +1,5 @@
 import Search from "@sv/pages/home/search";
+import Profile from "@sv/pages/home/profile";
 
 function Header() {
   return (
@@ -8,7 +9,7 @@ function Header() {
         <div>
           <Search />
         </div>
-        <div>Profile</div>
+        <Profile />
       </div>
     </header>
   );

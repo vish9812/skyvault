@@ -2,7 +2,7 @@ import { Route, Router } from "@solidjs/router";
 import AuthLayout from "@sv/pages/auth/layout";
 import SignUp from "@sv/pages/auth/signup";
 import SignIn from "@sv/pages/auth/signin";
-import AppLayout from "@sv/pages/home/layout";
+import AppLayout from "@sv/pages/layout";
 import Home from "@sv/pages/home";
 
 export default function AppRoutes() {
