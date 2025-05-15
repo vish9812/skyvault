@@ -1,12 +1,12 @@
 // FIFO is a short term for Files and Folders
 
-import { createEffect, For, Show } from "solid-js";
+import { createEffect, Show } from "solid-js";
 import EmptyState from "./empty-state";
 import { FolderContent } from "@sv/apis/media/models";
-import Row from "./row";
-import Card from "./card";
-import CardsSkeleton from "./cards-skeleton";
-import RowsSkeleton from "./rows-skeleton";
+import GridSkeleton from "./grid-skeleton";
+import ListSkeleton from "./list-skeleton";
+import ListView from "./list-view";
+import GridView from "./grid-view";
 
 interface FifoViewProps {
   fifo: FolderContent | undefined;
@@ -24,8 +24,8 @@ function FifoView(props: FifoViewProps) {
     <Show
       when={!props.loading}
       fallback={
-        <Show when={props.isListView} fallback={<CardsSkeleton />}>
-          <RowsSkeleton />
+        <Show when={props.isListView} fallback={<GridSkeleton />}>
+          <ListSkeleton />
         </Show>
       }
     >
@@ -38,31 +38,9 @@ function FifoView(props: FifoViewProps) {
       >
         <Show
           when={props.isListView}
-          fallback={
-            <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-              {/* Folders */}
-              <For each={props.fifo?.folderPage?.items}>
-                {(folder) => <Card type="folder" name={folder.name} />}
-              </For>
-
-              {/* Files */}
-              <For each={props.fifo?.filePage?.items}>
-                {(file) => <Card type="file" name={file.name} />}
-              </For>
-            </div>
-          }
+          fallback={<GridView content={props.fifo!} />}
         >
-          <div>
-            {/* Folder list items */}
-            <For each={props.fifo?.folderPage?.items}>
-              {(folder) => <Row type="folder" name={folder.name} />}
-            </For>
-
-            {/* File list items */}
-            <For each={props.fifo?.filePage?.items}>
-              {(file) => <Row type="file" name={file.name} />}
-            </For>
-          </div>
+          <ListView content={props.fifo!} />
         </Show>
       </Show>
     </Show>

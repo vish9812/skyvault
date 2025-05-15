@@ -8,3 +8,11 @@ export const CLIENT_URLS = {
   SIGN_IN: "/auth/sign-in",
   HOME: "/",
 } as const;
+
+export const FILE_CATEGORIES = {
+  IMAGES: "images",
+  VIDEOS: "videos",
+  AUDIOS: "audios",
+  DOCUMENTS: "documents",
+  OTHERS: "others",
+} as const;
