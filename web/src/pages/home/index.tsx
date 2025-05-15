@@ -10,10 +10,13 @@ import FolderListItem from "@sv/components/folder/FolderListItem";
 import { fetchRootContent } from "@sv/apis/media";
 import type { FolderContent } from "@sv/apis/media/models";
 import { Button } from "@kobalte/core/button";
+import { A } from "@solidjs/router";
 
 // Dummy storage usage
 const storageUsed = 2.5; // GB
 const storageTotal = 10; // GB
+const folderParentPath = ["Home", "Folder 1", "Folder 11"];
+const currentFolder = "Folder 111";
 
 export default function Home() {
   const [rootContent] = createResource<FolderContent>(fetchRootContent);
@@ -21,13 +24,18 @@ export default function Home() {
 
   return (
     <>
-      {/* Page title and breadcrumbs */}
       <div class="flex items-center justify-between">
-        <div>
-          <h1 class="text-2xl font-semibold text-gray-800">Home</h1>
-          <div class="text-sm text-gray-500 mt-1">
-            All your files in one secure place
-          </div>
+        {/* Breadcrumbs */}
+        <div class="text-primary">
+          <For each={folderParentPath}>
+            {(folder) => (
+              <span>
+                <A href="/">{folder}</A>
+                {" / "}
+              </span>
+            )}
+          </For>
+          <span class="font-bold">{currentFolder}</span>
         </div>
         <div class="flex items-center gap-2">
           <button

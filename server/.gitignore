@@ -30,3 +30,4 @@ go.work.sum
 .data
 static
 **/testdata/
+__debug*
