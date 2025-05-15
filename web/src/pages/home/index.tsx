@@ -1,26 +1,35 @@
-import { createResource, Show, For, createSignal } from "solid-js";
-import StorageMeter from "@sv/components/StorageMeter";
-import ItemContextMenu from "@sv/components/ItemContextMenu";
-import EmptyState from "@sv/components/EmptyState";
-import SkeletonGrid from "@sv/components/SkeletonGrid";
-import FileCard from "@sv/components/file/FileCard";
-import FileListItem from "@sv/components/file/FileListItem";
-import FolderCard from "@sv/components/folder/FolderCard";
-import FolderListItem from "@sv/components/folder/FolderListItem";
+import {
+  createResource,
+  Show,
+  For,
+  createSignal,
+  createEffect,
+} from "solid-js";
 import { fetchRootContent } from "@sv/apis/media";
 import type { FolderContent } from "@sv/apis/media/models";
 import { Button } from "@kobalte/core/button";
 import { A } from "@solidjs/router";
+import FifoView from "@sv/components/fifo-view";
 
-// Dummy storage usage
-const storageUsed = 2.5; // GB
-const storageTotal = 10; // GB
 const folderParentPath = ["Home", "Folder 1", "Folder 11"];
 const currentFolder = "Folder 111";
 
 export default function Home() {
   const [rootContent] = createResource<FolderContent>(fetchRootContent);
-  const [viewMode, setViewMode] = createSignal<"grid" | "list">("grid");
+  const [listView, setListView] = createSignal<boolean>(
+    localStorage.getItem("listView") === "true"
+  );
+
+  const handleListViewChange = () => {
+    const newView = !listView();
+    console.log("listView string", newView.toString());
+    localStorage.setItem("listView", newView.toString());
+    setListView(newView);
+  };
+
+  createEffect(() => {
+    console.log("listView", listView());
+  });
 
   return (
     <>
@@ -30,152 +39,61 @@ export default function Home() {
           <For each={folderParentPath}>
             {(folder) => (
               <span>
-                <A href="/">{folder}</A>
+                <A href="/" class="link">
+                  {folder}
+                </A>
                 {" / "}
               </span>
             )}
           </For>
           <span class="font-bold">{currentFolder}</span>
         </div>
-        <div class="flex items-center gap-2">
-          <button
-            class={`p-2 rounded relative group`}
-            title="Grid View"
-            aria-label="Grid View"
-            style={{
-              background:
-                viewMode() === "grid"
-                  ? "linear-gradient(90deg,#6366f1 0%,#38bdf8 100%)"
-                  : undefined,
-              color: viewMode() === "grid" ? "#2563eb" : undefined,
-            }}
-            onClick={() => setViewMode("grid")}
-          >
-            <span class="material-symbols-outlined">grid_view</span>
-          </button>
-          <button
-            class={`p-2 rounded relative group`}
-            title="List View"
-            aria-label="List View"
-            style={{
-              background:
-                viewMode() === "list"
-                  ? "linear-gradient(90deg,#6366f1 0%,#38bdf8 100%)"
-                  : undefined,
-              color: viewMode() === "list" ? "#2563eb" : undefined,
-            }}
-            onClick={() => setViewMode("list")}
-          >
-            <span class="material-symbols-outlined">view_list</span>
-          </button>
-        </div>
-      </div>
-
-      {/* Storage meter and actions */}
-      <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
-        <div class="flex flex-col md:flex-row md:items-center gap-4">
-          <StorageMeter used={storageUsed} total={storageTotal} />
-          <div class="flex flex-wrap gap-3">
-            <Button class="btn btn-primary flex items-center gap-2">
-              <span class="material-symbols-outlined text-sm">upload</span>
-              <span>Upload</span>
-            </Button>
-            <Button class="btn btn-outline flex items-center gap-2">
-              <span class="material-symbols-outlined text-sm">
-                create_new_folder
-              </span>
-              <span>New Folder</span>
-            </Button>
-          </div>
+        <div>
+          <Button class="btn btn-ghost" onClick={handleListViewChange}>
+            <Show
+              when={listView()}
+              fallback={
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke-width="1.5"
+                  stroke="currentColor"
+                  class="size-6"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    d="M3.75 6A2.25 2.25 0 0 1 6 3.75h2.25A2.25 2.25 0 0 1 10.5 6v2.25a2.25 2.25 0 0 1-2.25 2.25H6a2.25 2.25 0 0 1-2.25-2.25V6ZM3.75 15.75A2.25 2.25 0 0 1 6 13.5h2.25a2.25 2.25 0 0 1 2.25 2.25V18a2.25 2.25 0 0 1-2.25 2.25H6A2.25 2.25 0 0 1 3.75 18v-2.25ZM13.5 6a2.25 2.25 0 0 1 2.25-2.25H18A2.25 2.25 0 0 1 20.25 6v2.25A2.25 2.25 0 0 1 18 10.5h-2.25a2.25 2.25 0 0 1-2.25-2.25V6ZM13.5 15.75a2.25 2.25 0 0 1 2.25-2.25H18a2.25 2.25 0 0 1 2.25 2.25V18A2.25 2.25 0 0 1 18 20.25h-2.25A2.25 2.25 0 0 1 13.5 18v-2.25Z"
+                  />
+                </svg>
+              }
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke-width="1.5"
+                stroke="currentColor"
+                class="size-6"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  d="M8.25 6.75h12M8.25 12h12m-12 5.25h12M3.75 6.75h.007v.008H3.75V6.75Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0ZM3.75 12h.007v.008H3.75V12Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm-.375 5.25h.007v.008H3.75v-.008Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Z"
+                />
+              </svg>
+            </Show>
+          </Button>
         </div>
       </div>
 
       {/* Files & Folders */}
-      <Show
-        when={rootContent.loading}
-        fallback={
-          <Show
-            when={
-              (rootContent() &&
-                (rootContent()?.folderPage?.items?.length ?? 0) > 0) ||
-              (rootContent()?.filePage?.items?.length ?? 0) > 0
-            }
-            fallback={<EmptyState />}
-          >
-            <Show
-              when={viewMode() === "grid"}
-              fallback={
-                <div class="bg-white rounded-lg border border-gray-200 shadow-sm divide-y">
-                  {/* Folder list items */}
-                  <For each={rootContent()?.folderPage?.items}>
-                    {(folder) => (
-                      <FolderListItem name={folder.name}>
-                        <ItemContextMenu
-                          type="folder"
-                          id={folder.id}
-                          name={folder.name}
-                        />
-                      </FolderListItem>
-                    )}
-                  </For>
-
-                  {/* File list items */}
-                  <For each={rootContent()?.filePage?.items}>
-                    {(file) => (
-                      <FileListItem
-                        name={file.name}
-                        size={file.size}
-                        updatedAt={file.updatedAt}
-                      >
-                        <ItemContextMenu
-                          type="file"
-                          id={file.id}
-                          name={file.name}
-                        />
-                      </FileListItem>
-                    )}
-                  </For>
-                </div>
-              }
-            >
-              <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-                {/* Folders */}
-                <For each={rootContent()?.folderPage?.items}>
-                  {(folder) => (
-                    <FolderCard name={folder.name}>
-                      <ItemContextMenu
-                        type="folder"
-                        id={folder.id}
-                        name={folder.name}
-                      />
-                    </FolderCard>
-                  )}
-                </For>
-
-                {/* Files */}
-                <For each={rootContent()?.filePage?.items}>
-                  {(file) => (
-                    <FileCard
-                      name={file.name}
-                      size={file.size}
-                      updatedAt={file.updatedAt}
-                    >
-                      <ItemContextMenu
-                        type="file"
-                        id={file.id}
-                        name={file.name}
-                      />
-                    </FileCard>
-                  )}
-                </For>
-              </div>
-            </Show>
-          </Show>
-        }
-      >
-        {/* Skeleton loader */}
-        <SkeletonGrid />
-      </Show>
+      <FifoView
+        loading={rootContent.loading}
+        fifo={rootContent.latest}
+        isListView={listView()}
+      />
     </>
   );
 }

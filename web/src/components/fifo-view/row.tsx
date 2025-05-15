@@ -1,11 +1,11 @@
-import type { JSX } from "solid-js";
-
-export interface FolderListItemProps {
+interface RowProps {
+  type: "file" | "folder";
   name: string;
-  children?: JSX.Element;
+  size?: number;
+  updatedAt?: string;
 }
 
-const FolderListItem = (props: FolderListItemProps): JSX.Element => {
+function Row(props: RowProps) {
   return (
     <div class="flex items-center py-3 px-4 hover:bg-gray-50 group relative">
       <span class="material-symbols-outlined text-primary mr-3 text-2xl">
@@ -15,11 +15,9 @@ const FolderListItem = (props: FolderListItemProps): JSX.Element => {
         <div class="text-base font-semibold text-gray-900 truncate">
           {props.name}
         </div>
-        <div class="text-xs text-gray-400 mt-0.5">Folder</div>
       </div>
-      {props.children}
     </div>
   );
-};
+}
 
-export default FolderListItem;
+export default Row;

@@ -9,5 +9,12 @@ export async function fetchRootContent(): Promise<FolderContent> {
     }
   );
   if (!res.ok) throw new Error("Failed to fetch folder content");
-  return res.json();
+  // return res.json();
+
+  // Set a timeout to simulate a slow response
+  return new Promise((resolve) => {
+    setTimeout(() => {
+      resolve(res.json());
+    }, 2000);
+  });
 }
