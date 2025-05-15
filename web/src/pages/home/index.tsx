@@ -46,7 +46,7 @@ export default function Home() {
               </span>
             )}
           </For>
-          <span class="font-bold">{currentFolder}</span>
+          <span class="font-bold text-neutral">{currentFolder}</span>
         </div>
         <div>
           <Button class="btn btn-ghost" onClick={handleListViewChange}>

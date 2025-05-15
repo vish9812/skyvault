@@ -1,8 +1,9 @@
-import { FILE_CATEGORIES } from "@sv/utils/consts";
+import { FILE_CATEGORIES, FOLDER_CONTENT_TYPES } from "@sv/utils/consts";
+import { formatDate, formatFileSize } from "@sv/utils/format";
 import icons from "@sv/utils/icons";
 
 interface ListItemProps {
-  type: "file" | "folder";
+  type: typeof FOLDER_CONTENT_TYPES.FILE | typeof FOLDER_CONTENT_TYPES.FOLDER;
   name: string;
   size?: number;
   fileCategory?: string;
@@ -10,89 +11,45 @@ interface ListItemProps {
 }
 
 function ListItem(props: ListItemProps) {
-  // Format file size to human-readable format
-  const formatFileSize = (bytes?: number) => {
-    if (bytes === undefined) return "-";
-    if (bytes === 0) return "0 B";
-
-    const units = ["B", "KB", "MB", "GB", "TB"];
-    const i = Math.floor(Math.log(bytes) / Math.log(1024));
-    return `${(bytes / Math.pow(1024, i)).toFixed(1)} ${units[i]}`;
-  };
-
-  // Format date to readable format
-  const formatDate = (dateString?: string) => {
-    if (!dateString) return "-";
-    const date = new Date(dateString);
-    return date.toLocaleDateString("en-US", {
-      year: "numeric",
-      month: "short",
-      day: "numeric",
-    });
-  };
-
   const getFileIcon = () => {
-    if (props.type === "folder") {
-      return icons.folder({
-        size: 5,
-        color: "text-primary",
-      });
+    if (props.type === FOLDER_CONTENT_TYPES.FOLDER) {
+      return icons.folder({ color: "text-primary" });
     }
 
     switch (props.fileCategory) {
       case FILE_CATEGORIES.IMAGES:
-        return icons.image({
-          size: 5,
-          color: "text-neutral-light",
-        });
+        return icons.image();
       case FILE_CATEGORIES.VIDEOS:
-        return icons.video({
-          size: 5,
-          color: "text-neutral-light",
-        });
+        return icons.video();
       case FILE_CATEGORIES.AUDIOS:
-        return icons.audio({
-          size: 5,
-          color: "text-neutral-light",
-        });
+        return icons.audio();
       case FILE_CATEGORIES.DOCUMENTS:
-        return icons.document({
-          size: 5,
-          color: "text-neutral-light",
-        });
+        return icons.document();
       default:
-        return icons.file({
-          size: 5,
-          color: "text-neutral-light",
-        });
+        return icons.file();
     }
   };
 
   return (
-    <div class="flex items-center py-3 px-4 hover:bg-bg-muted group border-t border-border first:border-t-0">
+    <div class="grid grid-cols-[2rem_1fr_6rem] md:grid-cols-[2rem_1fr_6rem_9rem] items-center py-3 px-3 hover:bg-bg-muted border-t border-border first:border-t-0">
       <span
-        class={`mr-3 ${
-          props.type === "folder" ? "text-primary" : "text-neutral-light"
+        class={`${
+          props.type === FOLDER_CONTENT_TYPES.FOLDER
+            ? "text-primary"
+            : "text-neutral-light"
         }`}
       >
         {getFileIcon()}
       </span>
-      <div class="flex-1 min-w-0">
-        <div class="text-base font-medium text-neutral truncate">
-          {props.name}
-        </div>
+      <div class="text-left font-medium text-neutral truncate">
+        {props.name}
       </div>
-      <div class="w-24 text-sm text-neutral-light text-right">
-        {props.type === "folder" ? "-" : formatFileSize(props.size)}
+      <div>
+        {props.type === FOLDER_CONTENT_TYPES.FOLDER
+          ? "-"
+          : formatFileSize(props.size)}
       </div>
-      <div class="w-36 text-sm text-neutral-light text-right">
-        {formatDate(props.updatedAt)}
-      </div>
-      <div class="w-8 opacity-0 group-hover:opacity-100 transition-opacity">
-        <span class="material-symbols-outlined text-neutral-light cursor-pointer hover:text-primary">
-          more_vert
-        </span>
-      </div>
+      <div class="hidden md:block">{formatDate(props.updatedAt)}</div>
     </div>
   );
 }

@@ -16,3 +16,8 @@ export const FILE_CATEGORIES = {
   DOCUMENTS: "documents",
   OTHERS: "others",
 } as const;
+
+export const FOLDER_CONTENT_TYPES = {
+  FOLDER: "folder",
+  FILE: "file",
+} as const;

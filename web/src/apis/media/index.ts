@@ -15,6 +15,6 @@ export async function fetchRootContent(): Promise<FolderContent> {
   return new Promise((resolve) => {
     setTimeout(() => {
       resolve(res.json());
-    }, 2000);
+    }, 700);
   });
 }
