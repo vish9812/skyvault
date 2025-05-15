@@ -13,11 +13,7 @@ function GridView(props: GridViewProps) {
       {/* Folders */}
       <For each={props.content.folderPage.items}>
         {(folder) => (
-          <GridItem
-            type={FOLDER_CONTENT_TYPES.FOLDER}
-            name={folder.name}
-            updatedAt={folder.updatedAt}
-          />
+          <GridItem type={FOLDER_CONTENT_TYPES.FOLDER} name={folder.name} />
         )}
       </For>
 
@@ -29,7 +25,6 @@ function GridView(props: GridViewProps) {
             name={file.name}
             preview={file.preview}
             size={file.size}
-            updatedAt={file.updatedAt}
             fileCategory={file.category}
           />
         )}

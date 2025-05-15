@@ -1,5 +1,5 @@
-import Search from "@sv/pages/home/search";
-import Profile from "@sv/pages/home/profile";
+import Search from "@sv/pages/app/search";
+import Profile from "@sv/pages/app/profile";
 
 function Header() {
   return (

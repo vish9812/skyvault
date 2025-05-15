@@ -1,20 +1,21 @@
 import type { FolderContent } from "./models";
+import { getJSON, handleJSONResponse } from "@sv/apis/common";
 
-export async function fetchRootContent(): Promise<FolderContent> {
-  const token = localStorage.getItem("token");
-  const res = await fetch(
-    "http://localhost:8090/api/v1/media/folders/0/content",
-    {
-      headers: { Authorization: `Bearer ${token}` },
-    }
-  );
-  if (!res.ok) throw new Error("Failed to fetch folder content");
-  // return res.json();
+const urlMedia = "media";
+const urlFolders = `${urlMedia}/folders`;
+
+export async function fetchFolderContent(
+  folderId?: string
+): Promise<FolderContent> {
+  const id = folderId || "0";
+
+  const res = await getJSON(`${urlFolders}/${id}/content`);
 
   // Set a timeout to simulate a slow response
   return new Promise((resolve) => {
-    setTimeout(() => {
-      resolve(res.json());
+    setTimeout(async () => {
+      const data = await handleJSONResponse(res);
+      resolve(data);
     }, 700);
   });
 }

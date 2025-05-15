@@ -1,3 +1,5 @@
+import { LOCAL_STORAGE_KEYS } from "@sv/utils/consts";
+
 export const ROOT_URL = "http://localhost:8090/api/v1";
 export const ROOT_URL_PUB = `${ROOT_URL}/pub`;
 
@@ -12,7 +14,7 @@ export function postJSONPub(url: string, data: any) {
 }
 
 export function postJSON(url: string, data: any) {
-  const token = localStorage.getItem("token");
+  const token = localStorage.getItem(LOCAL_STORAGE_KEYS.TOKEN);
   if (!token) throw new Error("No token found");
 
   return fetch(`${ROOT_URL}/${url}`, {
@@ -26,7 +28,7 @@ export function postJSON(url: string, data: any) {
 }
 
 export function getJSON(url: string) {
-  const token = localStorage.getItem("token");
+  const token = localStorage.getItem(LOCAL_STORAGE_KEYS.TOKEN);
   if (!token) throw new Error("No token found");
 
   return fetch(`${ROOT_URL}/${url}`, {

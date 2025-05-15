@@ -1,25 +1,18 @@
-// FIFO is a short term for Files and Folders
-
-import { createEffect, Show } from "solid-js";
+import { Show } from "solid-js";
+import { FolderContent as FolderContentType } from "@sv/apis/media/models";
 import EmptyState from "./empty-state";
-import { FolderContent } from "@sv/apis/media/models";
 import GridSkeleton from "./grid-skeleton";
 import ListSkeleton from "./list-skeleton";
 import ListView from "./list-view";
 import GridView from "./grid-view";
 
-interface FifoViewProps {
-  fifo: FolderContent | undefined;
+interface FolderContentProps {
+  content: FolderContentType | undefined;
   isListView: boolean;
   loading: boolean;
 }
 
-function FifoView(props: FifoViewProps) {
-  createEffect(() => {
-    console.log("loading", props.loading);
-    console.log("isListView", props.isListView);
-  });
-
+function FolderContent(props: FolderContentProps) {
   return (
     <Show
       when={!props.loading}
@@ -31,20 +24,20 @@ function FifoView(props: FifoViewProps) {
     >
       <Show
         when={
-          (props.fifo?.folderPage?.items?.length ?? 0) > 0 ||
-          (props.fifo?.filePage?.items?.length ?? 0) > 0
+          (props.content?.folderPage?.items?.length ?? 0) > 0 ||
+          (props.content?.filePage?.items?.length ?? 0) > 0
         }
         fallback={<EmptyState />}
       >
         <Show
           when={props.isListView}
-          fallback={<GridView content={props.fifo!} />}
+          fallback={<GridView content={props.content!} />}
         >
-          <ListView content={props.fifo!} />
+          <ListView content={props.content!} />
         </Show>
       </Show>
     </Show>
   );
 }
 
-export default FifoView;
+export default FolderContent;

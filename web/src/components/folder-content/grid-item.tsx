@@ -10,7 +10,6 @@ interface GridItemProps {
   name: string;
   preview?: string;
   size?: number;
-  updatedAt?: string;
   fileCategory?: string;
 }
 

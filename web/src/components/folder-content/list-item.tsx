@@ -1,6 +1,6 @@
-import { FILE_CATEGORIES, FOLDER_CONTENT_TYPES } from "@sv/utils/consts";
+import { FOLDER_CONTENT_TYPES } from "@sv/utils/consts";
 import { formatDate, formatFileSize } from "@sv/utils/format";
-import icons, { getFileIcon } from "@sv/utils/icons";
+import { getFileIcon } from "@sv/utils/icons";
 
 interface ListItemProps {
   type: typeof FOLDER_CONTENT_TYPES.FILE | typeof FOLDER_CONTENT_TYPES.FOLDER;

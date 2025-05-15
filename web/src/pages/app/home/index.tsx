@@ -1,35 +1,14 @@
-import {
-  createResource,
-  Show,
-  For,
-  createSignal,
-  createEffect,
-} from "solid-js";
-import { fetchRootContent } from "@sv/apis/media";
-import type { FolderContent } from "@sv/apis/media/models";
+import { Show, For } from "solid-js";
 import { Button } from "@kobalte/core/button";
 import { A } from "@solidjs/router";
-import FifoView from "@sv/components/fifo-view";
+import FolderContent from "@sv/components/folder-content";
+import useViewModel from "./useViewModel";
 
 const folderParentPath = ["Home", "Folder 1", "Folder 11"];
 const currentFolder = "Folder 111";
 
 export default function Home() {
-  const [rootContent] = createResource<FolderContent>(fetchRootContent);
-  const [listView, setListView] = createSignal<boolean>(
-    localStorage.getItem("listView") === "true"
-  );
-
-  const handleListViewChange = () => {
-    const newView = !listView();
-    console.log("listView string", newView.toString());
-    localStorage.setItem("listView", newView.toString());
-    setListView(newView);
-  };
-
-  createEffect(() => {
-    console.log("listView", listView());
-  });
+  const { isListView, handleListViewChange, folderContentRes } = useViewModel();
 
   return (
     <>
@@ -51,7 +30,7 @@ export default function Home() {
         <div>
           <Button class="btn btn-ghost" onClick={handleListViewChange}>
             <Show
-              when={listView()}
+              when={isListView()}
               fallback={
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
@@ -89,10 +68,10 @@ export default function Home() {
       </div>
 
       {/* Files & Folders */}
-      <FifoView
-        loading={rootContent.loading}
-        fifo={rootContent.latest}
-        isListView={listView()}
+      <FolderContent
+        loading={folderContentRes.loading}
+        content={folderContentRes.latest}
+        isListView={isListView()}
       />
     </>
   );

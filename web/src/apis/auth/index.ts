@@ -6,28 +6,32 @@ import type {
   SignUpRes,
 } from "./models";
 import { postJSONPub, handleJSONResponse } from "@sv/apis/common";
+import { LOCAL_STORAGE_KEYS } from "@sv/utils/consts";
 
-const BASE_URL = "auth";
+const urlAuth = "auth";
 
 export function getProfile(): Profile | null {
-  const profile = localStorage.getItem("profile");
+  const profile = localStorage.getItem(LOCAL_STORAGE_KEYS.PROFILE);
   if (!profile) return null;
   return JSON.parse(profile);
 }
 
 export function signOut() {
-  localStorage.removeItem("token");
-  localStorage.removeItem("profile");
+  localStorage.removeItem(LOCAL_STORAGE_KEYS.TOKEN);
+  localStorage.removeItem(LOCAL_STORAGE_KEYS.PROFILE);
 }
 
 async function handleAuthResponse(res: Response) {
   const data: SignInRes | SignUpRes = await handleJSONResponse(res);
-  localStorage.setItem("token", data.token);
-  localStorage.setItem("profile", JSON.stringify(data.profile));
+  localStorage.setItem(LOCAL_STORAGE_KEYS.TOKEN, data.token);
+  localStorage.setItem(
+    LOCAL_STORAGE_KEYS.PROFILE,
+    JSON.stringify(data.profile)
+  );
 }
 
 export async function signIn({ email, password }: SignInReq): Promise<void> {
-  const res = await postJSONPub(`${BASE_URL}/sign-in`, {
+  const res = await postJSONPub(`${urlAuth}/sign-in`, {
     provider: "email",
     providerUserId: email,
     password,
@@ -40,7 +44,7 @@ export async function signUp({
   email,
   password,
 }: SignUpReq): Promise<void> {
-  const res = await postJSONPub(`${BASE_URL}/sign-up`, {
+  const res = await postJSONPub(`${urlAuth}/sign-up`, {
     fullName,
     email,
     password,

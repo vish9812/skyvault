@@ -21,3 +21,14 @@ export const FOLDER_CONTENT_TYPES = {
   FOLDER: "folder",
   FILE: "file",
 } as const;
+
+export const CONTENT_VIEWS = {
+  LIST: "list",
+  GRID: "grid",
+} as const;
+
+export const LOCAL_STORAGE_KEYS = {
+  CONTENT_VIEW: "content-view",
+  PROFILE: "profile",
+  TOKEN: "token",
+} as const;
