@@ -1,39 +1,26 @@
+import { FOLDER_CONTENT_TYPES } from "@sv/utils/consts";
+import { formatFileSize } from "@sv/utils/format";
+import { getFileIcon } from "@sv/utils/icons";
+import { Show } from "solid-js";
+
+const iconSize = 10;
+
 interface GridItemProps {
-  type: "file" | "folder";
+  type: typeof FOLDER_CONTENT_TYPES.FILE | typeof FOLDER_CONTENT_TYPES.FOLDER;
   name: string;
   preview?: string;
+  size?: number;
+  updatedAt?: string;
+  fileCategory?: string;
 }
 
 function GridItem(props: GridItemProps) {
-  const getFileIcon = () => {
-    if (props.type === "folder") {
-      return "folder";
-    }
-
-    // Determine file type icon based on name/extension
-    if (props.name) {
-      const extension = props.name.split(".").pop()?.toLowerCase();
-
-      if (
-        ["jpg", "jpeg", "png", "gif", "svg", "webp"].includes(extension || "")
-      ) {
-        return "image";
-      } else if (["mp4", "webm", "avi", "mov"].includes(extension || "")) {
-        return "movie";
-      } else if (["mp3", "wav", "ogg"].includes(extension || "")) {
-        return "audio_file";
-      } else if (["doc", "docx", "pdf", "txt"].includes(extension || "")) {
-        return "description";
-      }
-    }
-
-    return "insert_drive_file";
-  };
+  const formattedSize = formatFileSize(props.size);
 
   return (
-    <div class="bg-white rounded-lg border border-border shadow-sm hover:border-primary hover:shadow-md transition-all group">
+    <div class="w-40 h-40 md:w-48 md:h-48 bg-white rounded-lg border border-border shadow-sm hover:border-primary hover:shadow-md transition-all cursor-pointer">
       {/* File/folder icon or preview */}
-      <div class="flex-center h-28 border-b border-border bg-bg-subtle relative">
+      <div class="flex-center h-28 md:h-34 rounded-t-lg border-b border-border bg-bg-subtle">
         {props.preview ? (
           <img
             src={`data:image/png;base64,${props.preview}`}
@@ -41,26 +28,22 @@ function GridItem(props: GridItemProps) {
             class="object-cover h-full w-full"
           />
         ) : (
-          <span
-            class={`material-symbols-outlined text-5xl ${
-              props.type === "folder" ? "text-primary" : "text-neutral-light"
-            }`}
-          >
-            {getFileIcon()}
+          <span>
+            {getFileIcon(
+              props.type === FOLDER_CONTENT_TYPES.FOLDER,
+              props.fileCategory,
+              iconSize
+            )}
           </span>
         )}
-        <div class="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
-          <span class="material-symbols-outlined text-neutral-light cursor-pointer hover:text-primary bg-white rounded-full shadow-sm p-1">
-            more_vert
-          </span>
-        </div>
       </div>
 
       {/* File/folder info */}
-      <div class="p-3">
-        <div class="text-sm font-medium text-neutral truncate">
-          {props.name}
-        </div>
+      <div class="p-2 flex flex-col">
+        <div class="font-medium text-neutral truncate">{props.name}</div>
+        <Show when={formattedSize !== "-"}>
+          <div class="caption">{formattedSize}</div>
+        </Show>
       </div>
     </div>
   );

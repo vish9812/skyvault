@@ -1,3 +1,5 @@
+import { FILE_CATEGORIES } from "./consts";
+
 interface IconProps {
   size?: number;
   color?: string;
@@ -20,7 +22,7 @@ const icons = {
         viewBox="0 0 24 24"
         stroke-width="1.5"
         stroke="currentColor"
-        class={`size-${size} ${color}`}
+        class={`w-${size} h-${size} ${color}`}
       >
         <path
           stroke-linecap="round"
@@ -42,7 +44,7 @@ const icons = {
         viewBox="0 0 24 24"
         stroke-width="1.5"
         stroke="currentColor"
-        class={`size-${size} ${color}`}
+        class={`w-${size} h-${size} ${color}`}
       >
         <path
           stroke-linecap="round"
@@ -64,7 +66,7 @@ const icons = {
         viewBox="0 0 24 24"
         stroke-width="1.5"
         stroke="currentColor"
-        class={`size-${size} ${color}`}
+        class={`w-${size} h-${size} ${color}`}
       >
         <path
           stroke-linecap="round"
@@ -86,7 +88,7 @@ const icons = {
         viewBox="0 0 24 24"
         stroke-width="1.5"
         stroke="currentColor"
-        class={`size-${size} ${color}`}
+        class={`w-${size} h-${size} ${color}`}
       >
         <path
           stroke-linecap="round"
@@ -108,7 +110,7 @@ const icons = {
         viewBox="0 0 24 24"
         stroke-width="1.5"
         stroke="currentColor"
-        class={`size-${size} ${color}`}
+        class={`w-${size} h-${size} ${color}`}
       >
         <path
           stroke-linecap="round"
@@ -130,7 +132,7 @@ const icons = {
         viewBox="0 0 24 24"
         stroke-width="1.5"
         stroke="currentColor"
-        class={`size-${size} ${color}`}
+        class={`w-${size} h-${size} ${color}`}
       >
         <path
           stroke-linecap="round"
@@ -141,5 +143,28 @@ const icons = {
     );
   },
 };
+
+export function getFileIcon(
+  isFolder: boolean,
+  fileCategory?: string,
+  size?: number
+) {
+  if (isFolder) {
+    return icons.folder({ color: "text-primary", size: size });
+  }
+
+  switch (fileCategory) {
+    case FILE_CATEGORIES.IMAGES:
+      return icons.image({ size: size });
+    case FILE_CATEGORIES.VIDEOS:
+      return icons.video({ size: size });
+    case FILE_CATEGORIES.AUDIOS:
+      return icons.audio({ size: size });
+    case FILE_CATEGORIES.DOCUMENTS:
+      return icons.document({ size: size });
+    default:
+      return icons.file({ size: size });
+  }
+}
 
 export default icons;

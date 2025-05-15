@@ -1,4 +1,5 @@
 import { FolderContent } from "@sv/apis/media/models";
+import { FOLDER_CONTENT_TYPES } from "@sv/utils/consts";
 import { For } from "solid-js";
 import GridItem from "./grid-item";
 
@@ -8,16 +9,29 @@ interface GridViewProps {
 
 function GridView(props: GridViewProps) {
   return (
-    <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+    <div class="p-4 flex flex-wrap gap-4 text-sm text-neutral-light">
       {/* Folders */}
       <For each={props.content.folderPage.items}>
-        {(folder) => <GridItem type="folder" name={folder.name} />}
+        {(folder) => (
+          <GridItem
+            type={FOLDER_CONTENT_TYPES.FOLDER}
+            name={folder.name}
+            updatedAt={folder.updatedAt}
+          />
+        )}
       </For>
 
       {/* Files */}
       <For each={props.content.filePage.items}>
         {(file) => (
-          <GridItem type="file" name={file.name} preview={file.preview} />
+          <GridItem
+            type={FOLDER_CONTENT_TYPES.FILE}
+            name={file.name}
+            preview={file.preview}
+            size={file.size}
+            updatedAt={file.updatedAt}
+            fileCategory={file.category}
+          />
         )}
       </For>
     </div>
