@@ -17,10 +17,10 @@ type shareRecipientTable struct {
 	postgres.Table
 
 	// Columns
-	ID             postgres.ColumnInteger
-	ShareConfigID  postgres.ColumnInteger
-	ContactID      postgres.ColumnInteger
-	GroupID        postgres.ColumnInteger
+	ID             postgres.ColumnString
+	ShareConfigID  postgres.ColumnString
+	ContactID      postgres.ColumnString
+	GroupID        postgres.ColumnString
 	Email          postgres.ColumnString
 	DownloadsCount postgres.ColumnInteger
 	CreatedAt      postgres.ColumnTimestamp
@@ -65,10 +65,10 @@ func newShareRecipientTable(schemaName, tableName, alias string) *ShareRecipient
 
 func newShareRecipientTableImpl(schemaName, tableName, alias string) shareRecipientTable {
 	var (
-		IDColumn             = postgres.IntegerColumn("id")
-		ShareConfigIDColumn  = postgres.IntegerColumn("share_config_id")
-		ContactIDColumn      = postgres.IntegerColumn("contact_id")
-		GroupIDColumn        = postgres.IntegerColumn("group_id")
+		IDColumn             = postgres.StringColumn("id")
+		ShareConfigIDColumn  = postgres.StringColumn("share_config_id")
+		ContactIDColumn      = postgres.StringColumn("contact_id")
+		GroupIDColumn        = postgres.StringColumn("group_id")
 		EmailColumn          = postgres.StringColumn("email")
 		DownloadsCountColumn = postgres.IntegerColumn("downloads_count")
 		CreatedAtColumn      = postgres.TimestampColumn("created_at")

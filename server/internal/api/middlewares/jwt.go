@@ -56,7 +56,7 @@ func JWT(authenticator auth.Authenticator) func(http.Handler) http.Handler {
 
 			logger = logger.
 				With().
-				Int64("session_profile_id", profileID).
+				Str("session_profile_id", profileID).
 				Logger()
 			ctx = context.WithValue(ctx, common.CtxKeyLogger, logger)
 

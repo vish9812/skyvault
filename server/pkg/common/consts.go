@@ -9,6 +9,6 @@ const (
 	CtxKeyProfileID CtxKey = "profile_id"
 )
 
-func GetProfileIDFromContext(ctx context.Context) int64 {
-	return ctx.Value(CtxKeyProfileID).(int64)
+func GetProfileIDFromContext(ctx context.Context) string {
+	return ctx.Value(CtxKeyProfileID).(string)
 }

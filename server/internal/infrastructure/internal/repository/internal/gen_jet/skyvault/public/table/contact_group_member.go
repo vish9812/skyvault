@@ -17,9 +17,9 @@ type contactGroupMemberTable struct {
 	postgres.Table
 
 	// Columns
-	ID        postgres.ColumnInteger
-	GroupID   postgres.ColumnInteger
-	ContactID postgres.ColumnInteger
+	ID        postgres.ColumnString
+	GroupID   postgres.ColumnString
+	ContactID postgres.ColumnString
 	CreatedAt postgres.ColumnTimestamp
 
 	AllColumns     postgres.ColumnList
@@ -61,9 +61,9 @@ func newContactGroupMemberTable(schemaName, tableName, alias string) *ContactGro
 
 func newContactGroupMemberTableImpl(schemaName, tableName, alias string) contactGroupMemberTable {
 	var (
-		IDColumn        = postgres.IntegerColumn("id")
-		GroupIDColumn   = postgres.IntegerColumn("group_id")
-		ContactIDColumn = postgres.IntegerColumn("contact_id")
+		IDColumn        = postgres.StringColumn("id")
+		GroupIDColumn   = postgres.StringColumn("group_id")
+		ContactIDColumn = postgres.StringColumn("contact_id")
 		CreatedAtColumn = postgres.TimestampColumn("created_at")
 		allColumns      = postgres.ColumnList{IDColumn, GroupIDColumn, ContactIDColumn, CreatedAtColumn}
 		mutableColumns  = postgres.ColumnList{GroupIDColumn, ContactIDColumn, CreatedAtColumn}

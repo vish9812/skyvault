@@ -5,6 +5,8 @@ import (
 	"net/mail"
 	"skyvault/pkg/apperror"
 	"strings"
+
+	"github.com/google/uuid"
 )
 
 const (
@@ -40,4 +42,21 @@ func PasswordLen(pwd string) (string, error) {
 	}
 
 	return pwd, nil
+}
+
+func UUID(uuidStr string) bool {
+	return uuid.Validate(uuidStr) == nil
+}
+
+func UUIDs(uuidStrs []string) ([]string, []string) {
+	validUUIDs := make([]string, 0, len(uuidStrs))
+	invalidUUIDs := make([]string, 0)
+	for _, uuidStr := range uuidStrs {
+		if UUID(uuidStr) {
+			validUUIDs = append(validUUIDs, uuidStr)
+		} else {
+			invalidUUIDs = append(invalidUUIDs, uuidStr)
+		}
+	}
+	return validUUIDs, invalidUUIDs
 }

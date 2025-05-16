@@ -17,11 +17,10 @@ type shareConfigTable struct {
 	postgres.Table
 
 	// Columns
-	ID           postgres.ColumnInteger
-	CustomID     postgres.ColumnString
-	OwnerID      postgres.ColumnInteger
-	FileID       postgres.ColumnInteger
-	FolderID     postgres.ColumnInteger
+	ID           postgres.ColumnString
+	OwnerID      postgres.ColumnString
+	FileID       postgres.ColumnString
+	FolderID     postgres.ColumnString
 	PasswordHash postgres.ColumnString
 	MaxDownloads postgres.ColumnInteger
 	ExpiresAt    postgres.ColumnTimestamp
@@ -67,18 +66,17 @@ func newShareConfigTable(schemaName, tableName, alias string) *ShareConfigTable 
 
 func newShareConfigTableImpl(schemaName, tableName, alias string) shareConfigTable {
 	var (
-		IDColumn           = postgres.IntegerColumn("id")
-		CustomIDColumn     = postgres.StringColumn("custom_id")
-		OwnerIDColumn      = postgres.IntegerColumn("owner_id")
-		FileIDColumn       = postgres.IntegerColumn("file_id")
-		FolderIDColumn     = postgres.IntegerColumn("folder_id")
+		IDColumn           = postgres.StringColumn("id")
+		OwnerIDColumn      = postgres.StringColumn("owner_id")
+		FileIDColumn       = postgres.StringColumn("file_id")
+		FolderIDColumn     = postgres.StringColumn("folder_id")
 		PasswordHashColumn = postgres.StringColumn("password_hash")
 		MaxDownloadsColumn = postgres.IntegerColumn("max_downloads")
 		ExpiresAtColumn    = postgres.TimestampColumn("expires_at")
 		CreatedAtColumn    = postgres.TimestampColumn("created_at")
 		UpdatedAtColumn    = postgres.TimestampColumn("updated_at")
-		allColumns         = postgres.ColumnList{IDColumn, CustomIDColumn, OwnerIDColumn, FileIDColumn, FolderIDColumn, PasswordHashColumn, MaxDownloadsColumn, ExpiresAtColumn, CreatedAtColumn, UpdatedAtColumn}
-		mutableColumns     = postgres.ColumnList{CustomIDColumn, OwnerIDColumn, FileIDColumn, FolderIDColumn, PasswordHashColumn, MaxDownloadsColumn, ExpiresAtColumn, CreatedAtColumn, UpdatedAtColumn}
+		allColumns         = postgres.ColumnList{IDColumn, OwnerIDColumn, FileIDColumn, FolderIDColumn, PasswordHashColumn, MaxDownloadsColumn, ExpiresAtColumn, CreatedAtColumn, UpdatedAtColumn}
+		mutableColumns     = postgres.ColumnList{OwnerIDColumn, FileIDColumn, FolderIDColumn, PasswordHashColumn, MaxDownloadsColumn, ExpiresAtColumn, CreatedAtColumn, UpdatedAtColumn}
 	)
 
 	return shareConfigTable{
@@ -86,7 +84,6 @@ func newShareConfigTableImpl(schemaName, tableName, alias string) shareConfigTab
 
 		//Columns
 		ID:           IDColumn,
-		CustomID:     CustomIDColumn,
 		OwnerID:      OwnerIDColumn,
 		FileID:       FileIDColumn,
 		FolderID:     FolderIDColumn,

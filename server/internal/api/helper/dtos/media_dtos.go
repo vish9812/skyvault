@@ -7,9 +7,9 @@ import (
 )
 
 type GetFileInfo struct {
-	ID            int64     `json:"id" copier:"must,nopanic"`
-	OwnerID       int64     `json:"ownerId" copier:"must,nopanic"`
-	FolderID      *int64    `json:"folderId,omitempty"`
+	ID            string    `json:"id" copier:"must,nopanic"`
+	OwnerID       string    `json:"ownerId" copier:"must,nopanic"`
+	FolderID      *string   `json:"folderId,omitempty"`
 	Name          string    `json:"name" copier:"must,nopanic"`
 	Size          int64     `json:"size" copier:"must,nopanic"`
 	Extension     *string   `json:"extension,omitempty"`
@@ -33,9 +33,9 @@ type GetFolderContent struct {
 }
 
 type GetFolderInfo struct {
-	ID             int64     `json:"id" copier:"must,nopanic"`
-	OwnerID        int64     `json:"ownerId" copier:"must,nopanic"`
-	ParentFolderID *int64    `json:"parentFolderId,omitempty"`
+	ID             string    `json:"id" copier:"must,nopanic"`
+	OwnerID        string    `json:"ownerId" copier:"must,nopanic"`
+	ParentFolderID *string   `json:"parentFolderId,omitempty"`
 	Name           string    `json:"name" copier:"must,nopanic"`
 	CreatedAt      time.Time `json:"createdAt" copier:"must,nopanic"`
 	UpdatedAt      time.Time `json:"updatedAt" copier:"must,nopanic"`

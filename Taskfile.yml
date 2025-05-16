@@ -77,6 +77,12 @@ tasks:
     cmds:
       - "{{.SERVER_BUILD_OUTPUT}}"
 
+  server:test:
+    dir: server
+    desc: Run the tests
+    cmds:
+      - go test ./...
+
   server:nuke:
     dir: server
     desc: Remove the containers and generated data
@@ -135,6 +141,11 @@ tasks:
       - rm -rf {{.SERVER_STATIC_DIR}}
       - ln -s web/dist {{.SERVER_STATIC_DIR}}
       - task: server:run
+
+  test:
+    desc: Run the tests
+    deps:
+      - server:test
 
   nuke:
     desc: Clean all generated files

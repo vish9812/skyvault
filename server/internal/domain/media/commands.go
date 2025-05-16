@@ -86,8 +86,8 @@ type Commands interface {
 //--------------------------------
 
 type UploadFileCommand struct {
-	OwnerID  int64
-	FolderID *int64
+	OwnerID  string
+	FolderID *string
 	Name     string
 	Size     int64
 	MimeType string
@@ -95,25 +95,25 @@ type UploadFileCommand struct {
 }
 
 type TrashFilesCommand struct {
-	OwnerID int64
-	FileIDs []int64
+	OwnerID string
+	FileIDs []string
 }
 
 type RenameFileCommand struct {
-	OwnerID int64
-	FileID  int64
+	OwnerID string
+	FileID  string
 	Name    string
 }
 
 type MoveFileCommand struct {
-	OwnerID  int64
-	FileID   int64
-	FolderID *int64
+	OwnerID  string
+	FileID   string
+	FolderID *string
 }
 
 type RestoreFileCommand struct {
-	OwnerID int64
-	FileID  int64
+	OwnerID string
+	FileID  string
 }
 
 //--------------------------------
@@ -121,29 +121,29 @@ type RestoreFileCommand struct {
 //--------------------------------
 
 type CreateFolderCommand struct {
-	OwnerID        int64
+	OwnerID        string
 	Name           string
-	ParentFolderID *int64
+	ParentFolderID *string
 }
 
 type TrashFoldersCommand struct {
-	OwnerID   int64
-	FolderIDs []int64
+	OwnerID   string
+	FolderIDs []string
 }
 
 type RenameFolderCommand struct {
-	OwnerID  int64
-	FolderID int64
+	OwnerID  string
+	FolderID string
 	Name     string
 }
 
 type MoveFolderCommand struct {
-	OwnerID        int64
-	FolderID       int64
-	ParentFolderID *int64
+	OwnerID        string
+	FolderID       string
+	ParentFolderID *string
 }
 
 type RestoreFolderCommand struct {
-	OwnerID  int64
-	FolderID int64
+	OwnerID  string
+	FolderID string
 }

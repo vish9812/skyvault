@@ -9,6 +9,7 @@ import (
 	"skyvault/internal/domain/auth"
 	"skyvault/internal/domain/media"
 	"skyvault/internal/domain/profile"
+	"skyvault/internal/domain/sharing"
 	"skyvault/pkg/appconfig"
 	"skyvault/pkg/applog"
 	"time"
@@ -37,6 +38,7 @@ type Repository struct {
 	Auth    auth.Repository
 	Profile profile.Repository
 	Media   media.Repository
+	Sharing sharing.Repository
 }
 
 func NewRepository(app *appconfig.App) *Repository {
@@ -65,6 +67,7 @@ func (r *Repository) initRepositories() {
 	r.Auth = NewAuthRepository(r)
 	r.Profile = NewProfileRepository(r)
 	r.Media = NewMediaRepository(r)
+	r.Sharing = NewSharingRepository(r)
 }
 
 func connectDatabase(logger applog.Logger, dsn string) *sql.DB {

@@ -11,6 +11,7 @@ import (
 	. "skyvault/internal/infrastructure/internal/repository/internal/gen_jet/skyvault/public/table"
 	"skyvault/pkg/apperror"
 	"skyvault/pkg/paging"
+	"skyvault/pkg/utils"
 
 	. "github.com/go-jet/jet/v2/postgres"
 	"github.com/jinzhu/copier"
@@ -45,13 +46,13 @@ func (r *SharingRepository) CreateContact(ctx context.Context, contact *sharing.
 		return nil, apperror.NewAppError(err, "repository.CreateContact:copier.Copy")
 	}
 
-	stmt := Contact.INSERT(Contact.MutableColumns).MODEL(dbModel).RETURNING(Contact.AllColumns)
+	stmt := Contact.INSERT(Contact.AllColumns).MODEL(dbModel).RETURNING(Contact.AllColumns)
 
 	return runInsert[model.Contact, sharing.Contact](ctx, stmt, r.repository.dbTx)
 }
 
-func (r *SharingRepository) GetContacts(ctx context.Context, ownerID int64, pagingOpt *paging.Options, searchTerm *string) (*paging.Page[*sharing.Contact], error) {
-	whereCond := Contact.OwnerID.EQ(Int64(ownerID))
+func (r *SharingRepository) GetContacts(ctx context.Context, ownerID string, pagingOpt *paging.Options, searchTerm *string) (*paging.Page[*sharing.Contact], error) {
+	whereCond := Contact.OwnerID.EQ(UUID(UUIDStr(ownerID)))
 
 	if searchTerm != nil && *searchTerm != "" {
 		searchPattern := "%" + *searchTerm + "%"
@@ -78,7 +79,7 @@ func (r *SharingRepository) GetContacts(ctx context.Context, ownerID int64, pagi
 	return runSelectSlice[model.Contact, sharing.Contact](ctx, cursorQuery, stmt, r.repository.dbTx)
 }
 
-func (r *SharingRepository) UpdateContact(ctx context.Context, ownerID, contactID int64, email, name string) error {
+func (r *SharingRepository) UpdateContact(ctx context.Context, ownerID, contactID, email, name string) error {
 	now := time.Now().UTC()
 	contact := model.Contact{
 		Email:     email,
@@ -89,18 +90,18 @@ func (r *SharingRepository) UpdateContact(ctx context.Context, ownerID, contactI
 	stmt := Contact.UPDATE(Contact.Email, Contact.Name, Contact.UpdatedAt).
 		MODEL(contact).
 		WHERE(
-			Contact.ID.EQ(Int64(contactID)).
-				AND(Contact.OwnerID.EQ(Int64(ownerID))),
+			Contact.ID.EQ(UUID(UUIDStr(contactID))).
+				AND(Contact.OwnerID.EQ(UUID(UUIDStr(ownerID)))),
 		)
 
 	return runUpdateOrDelete(ctx, stmt, r.repository.dbTx)
 }
 
-func (r *SharingRepository) DeleteContact(ctx context.Context, ownerID, contactID int64) error {
+func (r *SharingRepository) DeleteContact(ctx context.Context, ownerID, contactID string) error {
 	stmt := Contact.DELETE().
 		WHERE(
-			Contact.ID.EQ(Int64(contactID)).
-				AND(Contact.OwnerID.EQ(Int64(ownerID))),
+			Contact.ID.EQ(UUID(UUIDStr(contactID))).
+				AND(Contact.OwnerID.EQ(UUID(UUIDStr(ownerID)))),
 		)
 
 	return runUpdateOrDelete(ctx, stmt, r.repository.dbTx)
@@ -117,23 +118,23 @@ func (r *SharingRepository) CreateContactGroup(ctx context.Context, group *shari
 		return nil, apperror.NewAppError(err, "repository.CreateContactGroup:copier.Copy")
 	}
 
-	stmt := ContactGroup.INSERT(ContactGroup.MutableColumns).MODEL(dbModel).RETURNING(ContactGroup.AllColumns)
+	stmt := ContactGroup.INSERT(ContactGroup.AllColumns).MODEL(dbModel).RETURNING(ContactGroup.AllColumns)
 
 	return runInsert[model.ContactGroup, sharing.ContactGroup](ctx, stmt, r.repository.dbTx)
 }
 
-func (r *SharingRepository) GetContactGroup(ctx context.Context, ownerID, groupID int64) (*sharing.ContactGroup, error) {
+func (r *SharingRepository) GetContactGroup(ctx context.Context, ownerID, groupID string) (*sharing.ContactGroup, error) {
 	stmt := SELECT(ContactGroup.AllColumns).
 		FROM(ContactGroup).
-		WHERE(ContactGroup.ID.EQ(Int64(groupID)).
-			AND(ContactGroup.OwnerID.EQ(Int64(ownerID))),
+		WHERE(ContactGroup.ID.EQ(UUID(UUIDStr(groupID))).
+			AND(ContactGroup.OwnerID.EQ(UUID(UUIDStr(ownerID)))),
 		)
 
 	return runSelect[model.ContactGroup, sharing.ContactGroup](ctx, stmt, r.repository.dbTx)
 }
 
-func (r *SharingRepository) GetContactGroups(ctx context.Context, ownerID int64, pagingOpt *paging.Options, searchTerm *string) (*paging.Page[*sharing.ContactGroup], error) {
-	whereCond := ContactGroup.OwnerID.EQ(Int64(ownerID))
+func (r *SharingRepository) GetContactGroups(ctx context.Context, ownerID string, pagingOpt *paging.Options, searchTerm *string) (*paging.Page[*sharing.ContactGroup], error) {
+	whereCond := ContactGroup.OwnerID.EQ(UUID(UUIDStr(ownerID)))
 
 	if searchTerm != nil && *searchTerm != "" {
 		searchPattern := "%" + *searchTerm + "%"
@@ -157,9 +158,9 @@ func (r *SharingRepository) GetContactGroups(ctx context.Context, ownerID int64,
 	return runSelectSlice[model.ContactGroup, sharing.ContactGroup](ctx, cursorQuery, stmt, r.repository.dbTx)
 }
 
-func (r *SharingRepository) GetContactGroupMembers(ctx context.Context, ownerID int64, pagingOpt *paging.Options, groupID int64) (*paging.Page[*sharing.Contact], error) {
-	whereCond := ContactGroupMember.GroupID.EQ(Int64(groupID)).
-		AND(Contact.OwnerID.EQ(Int64(ownerID)))
+func (r *SharingRepository) GetContactGroupMembers(ctx context.Context, ownerID string, pagingOpt *paging.Options, groupID string) (*paging.Page[*sharing.Contact], error) {
+	whereCond := ContactGroupMember.GroupID.EQ(UUID(UUIDStr(groupID))).
+		AND(Contact.OwnerID.EQ(UUID(UUIDStr(ownerID))))
 
 	orderBy := []OrderByClause{Contact.Name.ASC(), Contact.Email.ASC()}
 
@@ -179,7 +180,7 @@ func (r *SharingRepository) GetContactGroupMembers(ctx context.Context, ownerID 
 	return runSelectSlice[model.Contact, sharing.Contact](ctx, cursorQuery, stmt, r.repository.dbTx)
 }
 
-func (r *SharingRepository) UpdateContactGroup(ctx context.Context, ownerID, groupID int64, name string) error {
+func (r *SharingRepository) UpdateContactGroup(ctx context.Context, ownerID, groupID string, name string) error {
 	now := time.Now().UTC()
 	group := model.ContactGroup{
 		Name:      name,
@@ -189,29 +190,29 @@ func (r *SharingRepository) UpdateContactGroup(ctx context.Context, ownerID, gro
 	stmt := ContactGroup.UPDATE(ContactGroup.Name, ContactGroup.UpdatedAt).
 		MODEL(group).
 		WHERE(
-			ContactGroup.ID.EQ(Int64(groupID)).
-				AND(ContactGroup.OwnerID.EQ(Int64(ownerID))),
+			ContactGroup.ID.EQ(UUID(UUIDStr(groupID))).
+				AND(ContactGroup.OwnerID.EQ(UUID(UUIDStr(ownerID)))),
 		)
 
 	return runUpdateOrDelete(ctx, stmt, r.repository.dbTx)
 }
 
-func (r *SharingRepository) DeleteContactGroup(ctx context.Context, ownerID, groupID int64) error {
+func (r *SharingRepository) DeleteContactGroup(ctx context.Context, ownerID, groupID string) error {
 	stmt := ContactGroup.DELETE().
 		WHERE(
-			ContactGroup.ID.EQ(Int64(groupID)).
-				AND(ContactGroup.OwnerID.EQ(Int64(ownerID))),
+			ContactGroup.ID.EQ(UUID(UUIDStr(groupID))).
+				AND(ContactGroup.OwnerID.EQ(UUID(UUIDStr(ownerID)))),
 		)
 
 	return runUpdateOrDelete(ctx, stmt, r.repository.dbTx)
 }
 
-func (r *SharingRepository) AddContactToGroup(ctx context.Context, ownerID, groupID, contactID int64) error {
+func (r *SharingRepository) AddContactToGroup(ctx context.Context, ownerID, groupID, contactID string) error {
 	validContact := SELECT(Contact.ID).
 		FROM(Contact).
 		WHERE(
-			Contact.ID.EQ(Int64(contactID)).
-				AND(Contact.OwnerID.EQ(Int64(ownerID))),
+			Contact.ID.EQ(UUID(UUIDStr(contactID))).
+				AND(Contact.OwnerID.EQ(UUID(UUIDStr(ownerID)))),
 		).AsTable("valid_contact")
 
 	validContactID := Contact.ID.From(validContact)
@@ -219,31 +220,36 @@ func (r *SharingRepository) AddContactToGroup(ctx context.Context, ownerID, grou
 	validGroup := SELECT(ContactGroup.ID).
 		FROM(ContactGroup).
 		WHERE(
-			ContactGroup.ID.EQ(Int64(groupID)).
-				AND(ContactGroup.OwnerID.EQ(Int64(ownerID))),
+			ContactGroup.ID.EQ(UUID(UUIDStr(groupID))).
+				AND(ContactGroup.OwnerID.EQ(UUID(UUIDStr(ownerID)))),
 		).AsTable("valid_group")
 
 	validGroupID := ContactGroup.ID.From(validGroup)
 
-	now := time.Now().UTC()
+	id, err := utils.ID()
+	if err != nil {
+		return apperror.NewAppError(err, "repository.AddContactToGroup:utils.ID")
+	}
+
 	stmt := ContactGroupMember.INSERT(
+		ContactGroupMember.ID,
 		ContactGroupMember.GroupID,
 		ContactGroupMember.ContactID,
 		ContactGroupMember.CreatedAt,
 	).
-		QUERY(SELECT(validGroupID, validContactID, TimestampT(now)).
+		QUERY(SELECT(UUID(UUIDStr(id)), validGroupID, validContactID, TimestampT(time.Now().UTC())).
 			FROM(validGroup, validContact),
 		)
 
 	return runInsertNoReturn(ctx, stmt, r.repository.dbTx)
 }
 
-func (r *SharingRepository) RemoveContactFromGroup(ctx context.Context, ownerID, groupID, contactID int64) error {
+func (r *SharingRepository) RemoveContactFromGroup(ctx context.Context, ownerID, groupID, contactID string) error {
 	validContact := SELECT(Contact.ID).
 		FROM(Contact).
 		WHERE(
-			Contact.ID.EQ(Int64(contactID)).
-				AND(Contact.OwnerID.EQ(Int64(ownerID))),
+			Contact.ID.EQ(UUID(UUIDStr(contactID))).
+				AND(Contact.OwnerID.EQ(UUID(UUIDStr(ownerID)))),
 		).AsTable("valid_contact")
 
 	validContactID := Contact.ID.From(validContact)
@@ -251,8 +257,8 @@ func (r *SharingRepository) RemoveContactFromGroup(ctx context.Context, ownerID,
 	validGroup := SELECT(ContactGroup.ID).
 		FROM(ContactGroup).
 		WHERE(
-			ContactGroup.ID.EQ(Int64(groupID)).
-				AND(ContactGroup.OwnerID.EQ(Int64(ownerID))),
+			ContactGroup.ID.EQ(UUID(UUIDStr(groupID))).
+				AND(ContactGroup.OwnerID.EQ(UUID(UUIDStr(ownerID)))),
 		).AsTable("valid_group")
 
 	validGroupID := ContactGroup.ID.From(validGroup)
@@ -278,27 +284,17 @@ func (r *SharingRepository) CreateShareConfig(ctx context.Context, config *shari
 		return nil, apperror.NewAppError(err, "repository.CreateShareConfig:copier.Copy")
 	}
 
-	stmt := ShareConfig.INSERT(
-		ShareConfig.CustomID,
-		ShareConfig.OwnerID,
-		ShareConfig.FileID,
-		ShareConfig.FolderID,
-		ShareConfig.PasswordHash,
-		ShareConfig.MaxDownloads,
-		ShareConfig.ExpiresAt,
-		ShareConfig.CreatedAt,
-		ShareConfig.UpdatedAt,
-	).MODEL(dbModel).RETURNING(ShareConfig.AllColumns)
+	stmt := ShareConfig.INSERT(ShareConfig.AllColumns).MODEL(dbModel).RETURNING(ShareConfig.AllColumns)
 
 	return runInsert[model.ShareConfig, sharing.ShareConfig](ctx, stmt, r.repository.dbTx)
 }
 
-func (r *SharingRepository) GetShareConfig(ctx context.Context, ownerID, shareID int64) (*sharing.ShareConfig, error) {
+func (r *SharingRepository) GetShareConfig(ctx context.Context, ownerID, shareID string) (*sharing.ShareConfig, error) {
 	stmt := SELECT(ShareConfig.AllColumns).
 		FROM(ShareConfig).
 		WHERE(
-			ShareConfig.ID.EQ(Int64(shareID)).
-				AND(ShareConfig.OwnerID.EQ(Int64(ownerID))),
+			ShareConfig.ID.EQ(UUID(UUIDStr(shareID))).
+				AND(ShareConfig.OwnerID.EQ(UUID(UUIDStr(ownerID)))),
 		)
 
 	config, err := runSelect[model.ShareConfig, sharing.ShareConfig](ctx, stmt, r.repository.dbTx)
@@ -316,33 +312,10 @@ func (r *SharingRepository) GetShareConfig(ctx context.Context, ownerID, shareID
 	return config, nil
 }
 
-func (r *SharingRepository) GetShareConfigByCustomID(ctx context.Context, ownerID int64, customID string) (*sharing.ShareConfig, error) {
-	stmt := SELECT(ShareConfig.AllColumns).
-		FROM(ShareConfig).
-		WHERE(
-			ShareConfig.CustomID.EQ(String(customID)).
-				AND(ShareConfig.OwnerID.EQ(Int64(ownerID))),
-		)
-
-	config, err := runSelect[model.ShareConfig, sharing.ShareConfig](ctx, stmt, r.repository.dbTx)
-	if err != nil {
-		return nil, err
-	}
-
-	// Get recipients
-	recipients, err := r.getShareRecipients(ctx, config.ID)
-	if err != nil {
-		return nil, err
-	}
-
-	config.Recipients = recipients
-	return config, nil
-}
-
-func (r *SharingRepository) getShareRecipients(ctx context.Context, shareConfigID int64) ([]*sharing.ShareRecipient, error) {
+func (r *SharingRepository) getShareRecipients(ctx context.Context, shareConfigID string) ([]*sharing.ShareRecipient, error) {
 	stmt := SELECT(ShareRecipient.AllColumns).
 		FROM(ShareRecipient).
-		WHERE(ShareRecipient.ShareConfigID.EQ(Int64(shareConfigID)))
+		WHERE(ShareRecipient.ShareConfigID.EQ(UUID(UUIDStr(shareConfigID))))
 
 	var dbRecipients []*model.ShareRecipient
 	err := stmt.QueryContext(ctx, r.repository.dbTx, &dbRecipients)
@@ -363,7 +336,7 @@ func (r *SharingRepository) getShareRecipients(ctx context.Context, shareConfigI
 	return recipients, nil
 }
 
-func (r *SharingRepository) UpdateShareExpiry(ctx context.Context, ownerID, shareID int64, maxDownloads *int64, expiresAt *time.Time) error {
+func (r *SharingRepository) UpdateShareExpiry(ctx context.Context, ownerID, shareID string, maxDownloads *int64, expiresAt *time.Time) error {
 	now := time.Now().UTC()
 	config := model.ShareConfig{
 		MaxDownloads: maxDownloads,
@@ -374,14 +347,14 @@ func (r *SharingRepository) UpdateShareExpiry(ctx context.Context, ownerID, shar
 	stmt := ShareConfig.UPDATE(ShareConfig.MaxDownloads, ShareConfig.ExpiresAt, ShareConfig.UpdatedAt).
 		MODEL(config).
 		WHERE(
-			ShareConfig.ID.EQ(Int64(shareID)).
-				AND(ShareConfig.OwnerID.EQ(Int64(ownerID))),
+			ShareConfig.ID.EQ(UUID(UUIDStr(shareID))).
+				AND(ShareConfig.OwnerID.EQ(UUID(UUIDStr(ownerID)))),
 		)
 
 	return runUpdateOrDelete(ctx, stmt, r.repository.dbTx)
 }
 
-func (r *SharingRepository) UpdateSharePassword(ctx context.Context, ownerID, shareID int64, passwordHash *string) error {
+func (r *SharingRepository) UpdateSharePassword(ctx context.Context, ownerID, shareID string, passwordHash *string) error {
 	now := time.Now().UTC()
 	config := model.ShareConfig{
 		PasswordHash: passwordHash,
@@ -391,18 +364,18 @@ func (r *SharingRepository) UpdateSharePassword(ctx context.Context, ownerID, sh
 	stmt := ShareConfig.UPDATE(ShareConfig.PasswordHash, ShareConfig.UpdatedAt).
 		MODEL(config).
 		WHERE(
-			ShareConfig.ID.EQ(Int64(shareID)).
-				AND(ShareConfig.OwnerID.EQ(Int64(ownerID))),
+			ShareConfig.ID.EQ(UUID(UUIDStr(shareID))).
+				AND(ShareConfig.OwnerID.EQ(UUID(UUIDStr(ownerID)))),
 		)
 
 	return runUpdateOrDelete(ctx, stmt, r.repository.dbTx)
 }
 
-func (r *SharingRepository) DeleteShareConfig(ctx context.Context, ownerID, shareID int64) error {
+func (r *SharingRepository) DeleteShareConfig(ctx context.Context, ownerID, shareID string) error {
 	stmt := ShareConfig.DELETE().
 		WHERE(
-			ShareConfig.ID.EQ(Int64(shareID)).
-				AND(ShareConfig.OwnerID.EQ(Int64(ownerID))),
+			ShareConfig.ID.EQ(UUID(UUIDStr(shareID))).
+				AND(ShareConfig.OwnerID.EQ(UUID(UUIDStr(ownerID)))),
 		)
 
 	return runUpdateOrDelete(ctx, stmt, r.repository.dbTx)
@@ -412,13 +385,13 @@ func (r *SharingRepository) DeleteShareConfig(ctx context.Context, ownerID, shar
 // Share Recipients
 //--------------------------------
 
-func (r *SharingRepository) CreateShareRecipient(ctx context.Context, ownerID int64, recipient *sharing.ShareRecipient) (*sharing.ShareRecipient, error) {
+func (r *SharingRepository) CreateShareRecipient(ctx context.Context, ownerID string, recipient *sharing.ShareRecipient) (*sharing.ShareRecipient, error) {
 	// First verify that the share config belongs to the owner
 	shareStmt := SELECT(ShareConfig.ID).
 		FROM(ShareConfig).
 		WHERE(
-			ShareConfig.ID.EQ(Int64(recipient.ShareConfigID)).
-				AND(ShareConfig.OwnerID.EQ(Int64(ownerID))),
+			ShareConfig.ID.EQ(UUID(UUIDStr(recipient.ShareConfigID))).
+				AND(ShareConfig.OwnerID.EQ(UUID(UUIDStr(ownerID)))),
 		)
 
 	var shareExists bool
@@ -436,42 +409,34 @@ func (r *SharingRepository) CreateShareRecipient(ctx context.Context, ownerID in
 		return nil, apperror.NewAppError(err, "repository.CreateShareRecipient:copier.Copy")
 	}
 
-	stmt := ShareRecipient.INSERT(
-		ShareRecipient.ShareConfigID,
-		ShareRecipient.ContactID,
-		ShareRecipient.GroupID,
-		ShareRecipient.Email,
-		ShareRecipient.DownloadsCount,
-		ShareRecipient.CreatedAt,
-		ShareRecipient.UpdatedAt,
-	).MODEL(dbModel).RETURNING(ShareRecipient.AllColumns)
+	stmt := ShareRecipient.INSERT(ShareRecipient.AllColumns).MODEL(dbModel).RETURNING(ShareRecipient.AllColumns)
 
 	return runInsert[model.ShareRecipient, sharing.ShareRecipient](ctx, stmt, r.repository.dbTx)
 }
 
-func (r *SharingRepository) DeleteShareRecipient(ctx context.Context, ownerID, shareID, recipientID int64) error {
+func (r *SharingRepository) DeleteShareRecipient(ctx context.Context, ownerID, shareID, recipientID string) error {
 	// First verify that the recipient belongs to a share config owned by the owner
 	shareSubTable := SELECT(ShareConfig.ID).
 		FROM(ShareConfig).
-		WHERE(ShareConfig.ID.EQ(Int64(shareID)).
-			AND(ShareConfig.OwnerID.EQ(Int64(ownerID))),
+		WHERE(ShareConfig.ID.EQ(UUID(UUIDStr(shareID))).
+			AND(ShareConfig.OwnerID.EQ(UUID(UUIDStr(ownerID)))),
 		).AsTable("share_sub_table")
 
 	shareConfigID := ShareConfig.ID.From(shareSubTable)
 
 	stmt := ShareRecipient.DELETE().
-		WHERE(ShareRecipient.ID.EQ(Int64(recipientID)).
+		WHERE(ShareRecipient.ID.EQ(UUID(UUIDStr(recipientID))).
 			AND(ShareRecipient.ShareConfigID.EQ(shareConfigID)),
 		)
 
 	return runUpdateOrDelete(ctx, stmt, r.repository.dbTx)
 }
 
-func (r *SharingRepository) GetShareRecipientByEmail(ctx context.Context, shareID int64, email string) (*sharing.ShareRecipient, error) {
+func (r *SharingRepository) GetShareRecipientByEmail(ctx context.Context, shareID string, email string) (*sharing.ShareRecipient, error) {
 	stmt := SELECT(ShareRecipient.AllColumns).
 		FROM(ShareRecipient).
 		WHERE(
-			ShareRecipient.ShareConfigID.EQ(Int64(shareID)).
+			ShareRecipient.ShareConfigID.EQ(UUID(UUIDStr(shareID))).
 				AND(ShareRecipient.Email.EQ(String(email))),
 		)
 

@@ -16,7 +16,7 @@ func TestNewFileInfo(t *testing.T) {
 	tests := []struct {
 		name         string
 		config       FileConfig
-		ownerID      int64
+		ownerID      string
 		parentFolder *FolderInfo
 		fileName     string
 		size         int64
@@ -26,7 +26,7 @@ func TestNewFileInfo(t *testing.T) {
 		{
 			name:         "valid file info without parent",
 			config:       FileConfig{MaxSizeMB: 10},
-			ownerID:      100,
+			ownerID:      "100",
 			parentFolder: nil,
 			fileName:     "test.txt",
 			size:         1024,
@@ -36,10 +36,10 @@ func TestNewFileInfo(t *testing.T) {
 		{
 			name:    "valid file info with parent",
 			config:  FileConfig{MaxSizeMB: 10},
-			ownerID: 100,
+			ownerID: "100",
 			parentFolder: &FolderInfo{
-				ID:      1,
-				OwnerID: 100,
+				ID:      "1",
+				OwnerID: "100",
 			},
 			fileName:    "test.txt",
 			size:        1024,
@@ -49,7 +49,7 @@ func TestNewFileInfo(t *testing.T) {
 		{
 			name:         "exceeds max size",
 			config:       FileConfig{MaxSizeMB: 1},
-			ownerID:      100,
+			ownerID:      "100",
 			parentFolder: nil,
 			fileName:     "test.txt",
 			size:         2 * BytesPerMB,
@@ -59,10 +59,10 @@ func TestNewFileInfo(t *testing.T) {
 		{
 			name:    "parent folder different owner",
 			config:  FileConfig{MaxSizeMB: 10},
-			ownerID: 100,
+			ownerID: "100",
 			parentFolder: &FolderInfo{
-				ID:      1,
-				OwnerID: 200,
+				ID:      "1",
+				OwnerID: "200",
 			},
 			fileName:    "test.txt",
 			size:        1024,
@@ -81,8 +81,8 @@ func TestNewFileInfo(t *testing.T) {
 			} else {
 				assert.NoError(t, err)
 				assert.NotNil(t, fileInfo)
-				assert.NotEmpty(t, fileInfo.GeneratedName)
-				assert.NotEmpty(t, tt.mimeType, fileInfo.MimeType)
+				assert.NotEmpty(t, fileInfo.ID)
+				assert.NotEmpty(t, fileInfo.MimeType)
 				assert.NotEmpty(t, fileInfo.Category)
 			}
 		})
@@ -94,25 +94,25 @@ func TestFileInfo_ValidateAccess(t *testing.T) {
 	tests := []struct {
 		name        string
 		file        FileInfo
-		ownerID     int64
+		ownerID     string
 		expectError bool
 	}{
 		{
 			name: "owner has access",
 			file: FileInfo{
-				ID:      1,
-				OwnerID: 100,
+				ID:      "1",
+				OwnerID: "100",
 			},
-			ownerID:     100,
+			ownerID:     "100",
 			expectError: false,
 		},
 		{
 			name: "non-owner has no access",
 			file: FileInfo{
-				ID:      1,
-				OwnerID: 100,
+				ID:      "1",
+				OwnerID: "100",
 			},
-			ownerID:     200,
+			ownerID:     "200",
 			expectError: true,
 		},
 	}
@@ -141,20 +141,20 @@ func TestFileInfo_MoveTo(t *testing.T) {
 		{
 			name: "move to valid folder",
 			file: FileInfo{
-				OwnerID:  100,
+				OwnerID:  "100",
 				FolderID: nil,
 			},
 			destFolder: &FolderInfo{
-				ID:      1,
-				OwnerID: 100,
+				ID:      "1",
+				OwnerID: "100",
 			},
 			expectError: false,
 		},
 		{
 			name: "move to root folder",
 			file: FileInfo{
-				OwnerID:  100,
-				FolderID: utils.Ptr(int64(1)),
+				OwnerID:  "100",
+				FolderID: utils.Ptr("1"),
 			},
 			destFolder:  nil,
 			expectError: false,
@@ -162,31 +162,31 @@ func TestFileInfo_MoveTo(t *testing.T) {
 		{
 			name: "move to folder with different owner",
 			file: FileInfo{
-				OwnerID:  100,
+				OwnerID:  "100",
 				FolderID: nil,
 			},
 			destFolder: &FolderInfo{
-				ID:      1,
-				OwnerID: 200,
+				ID:      "1",
+				OwnerID: "200",
 			},
 			expectError: true,
 		},
 		{
 			name: "move to same folder",
 			file: FileInfo{
-				OwnerID:  100,
-				FolderID: utils.Ptr(int64(1)),
+				OwnerID:  "100",
+				FolderID: utils.Ptr("1"),
 			},
 			destFolder: &FolderInfo{
-				ID:      1,
-				OwnerID: 100,
+				ID:      "1",
+				OwnerID: "100",
 			},
 			expectError: true,
 		},
 		{
 			name: "move to root folder from root folder",
 			file: FileInfo{
-				OwnerID:  100,
+				OwnerID:  "100",
 				FolderID: nil,
 			},
 			destFolder:  nil,
@@ -218,21 +218,21 @@ func TestFileInfo_Restore(t *testing.T) {
 		name                  string
 		file                  FileInfo
 		parentFolderIsTrashed bool
-		expectedFolderID      *int64
+		expectedFolderID      *string
 	}{
 		{
 			name: "restore with valid parent",
 			file: FileInfo{
-				FolderID:  utils.Ptr(int64(1)),
+				FolderID:  utils.Ptr("1"),
 				TrashedAt: utils.Ptr(time.Now()),
 			},
 			parentFolderIsTrashed: false,
-			expectedFolderID:      utils.Ptr(int64(1)),
+			expectedFolderID:      utils.Ptr("1"),
 		},
 		{
 			name: "restore with trashed parent",
 			file: FileInfo{
-				FolderID:  utils.Ptr(int64(1)),
+				FolderID:  utils.Ptr("1"),
 				TrashedAt: utils.Ptr(time.Now()),
 			},
 			parentFolderIsTrashed: true,

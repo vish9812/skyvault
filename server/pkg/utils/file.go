@@ -61,11 +61,11 @@ func ScaleDownImageTo(format string, reader io.ReadSeeker, maxWidth, maxHeight i
 	}
 
 	resized := image.NewRGBA(image.Rect(0, 0, maxWidth, maxHeight))
-	draw.NearestNeighbor.Scale(resized, resized.Bounds(), img, img.Bounds(), draw.Over, nil)
+	draw.CatmullRom.Scale(resized, resized.Bounds(), img, img.Bounds(), draw.Over, nil)
 
 	buf := bytes.NewBuffer(nil)
 	if format == "jpeg" {
-		err = jpeg.Encode(buf, resized, nil)
+		err = jpeg.Encode(buf, resized, &jpeg.Options{Quality: 100})
 	} else {
 		err = png.Encode(buf, resized)
 	}

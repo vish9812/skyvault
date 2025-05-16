@@ -72,7 +72,7 @@ func (h *QueryHandlers) GetShareConfig(ctx context.Context, query *GetShareConfi
 
 func (h *QueryHandlers) ValidateShareAccess(ctx context.Context, query *ValidateShareAccessQuery) error {
 	profileID := common.GetProfileIDFromContext(ctx)
-	config, err := h.repository.GetShareConfigByCustomID(ctx, profileID, query.CustomID)
+	config, err := h.repository.GetShareConfig(ctx, profileID, query.ShareID)
 	if err != nil {
 		return apperror.NewAppError(err, "sharing.QueryHandlers.ValidateShareAccess:GetShareConfig")
 	}

@@ -17,8 +17,8 @@ type contactTable struct {
 	postgres.Table
 
 	// Columns
-	ID        postgres.ColumnInteger
-	OwnerID   postgres.ColumnInteger
+	ID        postgres.ColumnString
+	OwnerID   postgres.ColumnString
 	Email     postgres.ColumnString
 	Name      postgres.ColumnString
 	CreatedAt postgres.ColumnTimestamp
@@ -63,8 +63,8 @@ func newContactTable(schemaName, tableName, alias string) *ContactTable {
 
 func newContactTableImpl(schemaName, tableName, alias string) contactTable {
 	var (
-		IDColumn        = postgres.IntegerColumn("id")
-		OwnerIDColumn   = postgres.IntegerColumn("owner_id")
+		IDColumn        = postgres.StringColumn("id")
+		OwnerIDColumn   = postgres.StringColumn("owner_id")
 		EmailColumn     = postgres.StringColumn("email")
 		NameColumn      = postgres.StringColumn("name")
 		CreatedAtColumn = postgres.TimestampColumn("created_at")

@@ -5,7 +5,7 @@ import (
 )
 
 type Claims interface {
-	GetProfileID() int64
+	GetProfileID() string
 }
 
 // CredKey is a key for credentials map.
@@ -19,7 +19,7 @@ const (
 
 // Authenticator is implemented by each Provider.
 type Authenticator interface {
-	GenerateToken(ctx context.Context, profileID int64) (string, error)
+	GenerateToken(ctx context.Context, profileID string) (string, error)
 
 	// App Errors:
 	// - ErrAuthInvalidToken

@@ -1,12 +1,10 @@
 package api
 
 import (
-	"fmt"
 	"net/http"
 	"skyvault/internal/api/helper"
 	"skyvault/internal/domain/profile"
 	"skyvault/pkg/apperror"
-	"strconv"
 
 	"github.com/go-chi/chi/v5"
 )
@@ -36,9 +34,9 @@ func (a *ProfileAPI) InitRoutes() *ProfileAPI {
 	return a
 }
 func (a *ProfileAPI) DeleteProfile(w http.ResponseWriter, r *http.Request) {
-	profileID, err := strconv.ParseInt(chi.URLParam(r, "id"), 10, 64)
-	if err != nil {
-		helper.RespondError(w, r, apperror.NewAppError(fmt.Errorf("%w: %w", apperror.ErrCommonInvalidValue, err), "profileAPI.DeleteProfile:ParseInt"))
+	profileID := chi.URLParam(r, "id")
+	if profileID == "" {
+		helper.RespondError(w, r, apperror.NewAppError(apperror.ErrCommonInvalidValue, "profileAPI.DeleteProfile:profileID"))
 		return
 	}
 
@@ -46,7 +44,7 @@ func (a *ProfileAPI) DeleteProfile(w http.ResponseWriter, r *http.Request) {
 		ID: profileID,
 	}
 
-	err = a.commands.Delete(r.Context(), cmd)
+	err := a.commands.Delete(r.Context(), cmd)
 	if err != nil {
 		helper.RespondError(w, r, apperror.NewAppError(err, "profileAPI.DeleteProfile:Delete"))
 		return

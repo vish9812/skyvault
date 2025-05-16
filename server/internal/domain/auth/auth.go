@@ -8,8 +8,8 @@ import (
 )
 
 type Auth struct {
-	ID             int64
-	ProfileID      int64
+	ID             string
+	ProfileID      string
 	Provider       Provider // E.g., "email", "oidc", "ldap"
 	ProviderUserID string   // userID provided by the provider
 	PasswordHash   *string  // Nil if not using email provider
@@ -27,7 +27,7 @@ const (
 
 // App Errors:
 // - ErrCommonInvalidValue
-func NewAuth(profileID int64, provider Provider, providerUserID string, password *string) (*Auth, error) {
+func NewAuth(profileID string, provider Provider, providerUserID string, password *string) (*Auth, error) {
 	var passwordHash *string
 	if provider == ProviderEmail {
 		if password == nil {
@@ -48,8 +48,14 @@ func NewAuth(profileID int64, provider Provider, providerUserID string, password
 		passwordHash = &hash
 	}
 
+	id, err := utils.ID()
+	if err != nil {
+		return nil, apperror.NewAppError(err, "auth.NewAuth:ID")
+	}
+
 	now := time.Now().UTC()
 	return &Auth{
+		ID:             id,
 		ProfileID:      profileID,
 		Provider:       provider,
 		ProviderUserID: providerUserID,
@@ -61,7 +67,7 @@ func NewAuth(profileID int64, provider Provider, providerUserID string, password
 
 // App Errors:
 // - ErrCommonNoAccess
-func (a *Auth) ValidateAccess(accessedByID int64) error {
+func (a *Auth) ValidateAccess(accessedByID string) error {
 	if a.ProfileID != accessedByID {
 		return apperror.ErrCommonNoAccess
 	}

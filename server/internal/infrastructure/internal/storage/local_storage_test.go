@@ -30,7 +30,7 @@ func setupTestApp() *appconfig.App {
 	}
 }
 
-func createTestFile(t *testing.T, baseDir string, ownerID int64, fileName string, fileContent []byte) string {
+func createTestFile(t *testing.T, baseDir string, ownerID string, fileName string, fileContent []byte) string {
 	ownerDir := getOwnerDir(baseDir, ownerID)
 	err := os.MkdirAll(ownerDir, 0750)
 	if err != nil {
@@ -61,7 +61,7 @@ func TestSaveFile(t *testing.T) {
 	ls := NewLocalStorage(app)
 	ctx := context.Background()
 
-	ownerID := int64(1)
+	ownerID := "1"
 	fileName := "testfile.txt"
 	fileContent := []byte("testing save file")
 	fileReader := bytes.NewReader(fileContent)
@@ -88,7 +88,7 @@ func TestDeleteFile(t *testing.T) {
 	local := NewLocalStorage(app)
 	ctx := context.Background()
 
-	ownerID := int64(1)
+	ownerID := "1"
 	fileName := "testfile.txt"
 	fileContent := []byte("testing delete file")
 	savePath := createTestFile(t, local.baseDir, ownerID, fileName, fileContent)
@@ -110,7 +110,7 @@ func TestOpenFile(t *testing.T) {
 	local := NewLocalStorage(app)
 	ctx := context.Background()
 
-	ownerID := int64(1)
+	ownerID := "1"
 	fileName := "testfile.txt"
 	fileContent := []byte("testing open file")
 

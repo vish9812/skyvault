@@ -2,15 +2,16 @@ package media
 
 import (
 	"skyvault/pkg/apperror"
+	"skyvault/pkg/utils"
 	"slices"
 	"time"
 )
 
 type FolderInfo struct {
-	ID             int64
-	OwnerID        int64
+	ID             string
+	OwnerID        string
 	Name           string
-	ParentFolderID *int64 // null if folder is in root folder
+	ParentFolderID *string // null if folder is in root folder
 	CreatedAt      time.Time
 	UpdatedAt      time.Time
 	TrashedAt      *time.Time
@@ -19,8 +20,8 @@ type FolderInfo struct {
 // App Errors:
 // - ErrCommonInvalidValue
 // - ErrCommonNoAccess
-func NewFolderInfo(ownerID int64, name string, parentFolder *FolderInfo) (*FolderInfo, error) {
-	var parentFolderID *int64
+func NewFolderInfo(ownerID string, name string, parentFolder *FolderInfo) (*FolderInfo, error) {
+	var parentFolderID *string
 	if parentFolder != nil {
 		if err := parentFolder.ValidateAccess(ownerID); err != nil {
 			return nil, apperror.NewAppError(err, "media.NewFolderInfo:ValidateParentAccess")
@@ -28,8 +29,14 @@ func NewFolderInfo(ownerID int64, name string, parentFolder *FolderInfo) (*Folde
 		parentFolderID = &parentFolder.ID
 	}
 
+	id, err := utils.ID()
+	if err != nil {
+		return nil, apperror.NewAppError(err, "media.NewFolderInfo:ID")
+	}
+
 	now := time.Now().UTC()
 	return &FolderInfo{
+		ID:             id,
 		OwnerID:        ownerID,
 		Name:           name,
 		ParentFolderID: parentFolderID,
@@ -40,7 +47,7 @@ func NewFolderInfo(ownerID int64, name string, parentFolder *FolderInfo) (*Folde
 
 // App Errors:
 // - ErrCommonNoAccess
-func (f *FolderInfo) ValidateAccess(ownerID int64) error {
+func (f *FolderInfo) ValidateAccess(ownerID string) error {
 	if f.OwnerID != ownerID {
 		return apperror.ErrCommonNoAccess
 	}
@@ -55,7 +62,7 @@ func (f *FolderInfo) Rename(newName string) {
 // App Errors:
 // - ErrCommonNoAccess
 // - ErrCommonInvalidValue
-func (f *FolderInfo) MoveTo(destFolderInfo *FolderInfo, descendantFolderIDs []int64) error {
+func (f *FolderInfo) MoveTo(destFolderInfo *FolderInfo, descendantFolderIDs []string) error {
 	if destFolderInfo != nil {
 		if err := destFolderInfo.ValidateAccess(f.OwnerID); err != nil {
 			return apperror.NewAppError(err, "media.FolderInfo.MoveTo:ValidateAccess")

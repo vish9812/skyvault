@@ -40,24 +40,24 @@ func (r *AuthRepository) Create(ctx context.Context, au *auth.Auth) (*auth.Auth,
 	}
 
 	stmt := Auth.INSERT(
-		Auth.MutableColumns,
+		Auth.AllColumns,
 	).MODEL(dbModel).RETURNING(Auth.AllColumns)
 
 	return runInsert[model.Auth, auth.Auth](ctx, stmt, r.repository.dbTx)
 }
 
-func (r *AuthRepository) Get(ctx context.Context, id int64) (*auth.Auth, error) {
+func (r *AuthRepository) Get(ctx context.Context, id string) (*auth.Auth, error) {
 	stmt := SELECT(Auth.AllColumns).
 		FROM(Auth).
-		WHERE(Auth.ID.EQ(Int(id)))
+		WHERE(Auth.ID.EQ(UUID(UUIDStr(id))))
 
 	return runSelect[model.Auth, auth.Auth](ctx, stmt, r.repository.dbTx)
 }
 
-func (r *AuthRepository) GetByProfileID(ctx context.Context, id int64) ([]*auth.Auth, error) {
+func (r *AuthRepository) GetByProfileID(ctx context.Context, id string) ([]*auth.Auth, error) {
 	stmt := SELECT(Auth.AllColumns).
 		FROM(Auth).
-		WHERE(Auth.ProfileID.EQ(Int(id)))
+		WHERE(Auth.ProfileID.EQ(UUID(UUIDStr(id))))
 
 	return runSelectSliceAll[model.Auth, auth.Auth](ctx, stmt, r.repository.dbTx)
 }
@@ -83,14 +83,14 @@ func (r *AuthRepository) Update(ctx context.Context, au *auth.Auth) error {
 
 	stmt := Auth.UPDATE(Auth.MutableColumns).
 		MODEL(dbModel).
-		WHERE(Auth.ID.EQ(Int(au.ID)))
+		WHERE(Auth.ID.EQ(UUID(UUIDStr(au.ID))))
 
 	return runUpdateOrDelete(ctx, stmt, r.repository.dbTx)
 }
 
-func (r *AuthRepository) Delete(ctx context.Context, id int64) error {
+func (r *AuthRepository) Delete(ctx context.Context, id string) error {
 	stmt := Auth.DELETE().
-		WHERE(Auth.ID.EQ(Int(id)))
+		WHERE(Auth.ID.EQ(UUID(UUIDStr(id))))
 
 	return runUpdateOrDelete(ctx, stmt, r.repository.dbTx)
 }

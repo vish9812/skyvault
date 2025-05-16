@@ -19,15 +19,15 @@ type Repository interface {
 
 	// App Errors:
 	// - ErrCommonNoData
-	GetFileInfo(ctx context.Context, fileID int64) (*FileInfo, error)
+	GetFileInfo(ctx context.Context, fileID string) (*FileInfo, error)
 
 	// App Errors:
 	// - ErrCommonNoData
-	GetFileInfoTrashed(ctx context.Context, fileID int64) (*FileInfo, error)
+	GetFileInfoTrashed(ctx context.Context, fileID string) (*FileInfo, error)
 
-	GetFileInfos(ctx context.Context, pagingOpt *paging.Options, ownerID int64, folderID *int64) (*paging.Page[*FileInfo], error)
+	GetFileInfos(ctx context.Context, pagingOpt *paging.Options, ownerID string, folderID *string) (*paging.Page[*FileInfo], error)
 
-	GetFileInfosByCategory(ctx context.Context, pagingOpt *paging.Options, ownerID int64, category Category) (*paging.Page[*FileInfo], error)
+	GetFileInfosByCategory(ctx context.Context, pagingOpt *paging.Options, ownerID string, category Category) (*paging.Page[*FileInfo], error)
 
 	// App Errors:
 	// - ErrCommonNoData
@@ -35,7 +35,7 @@ type Repository interface {
 
 	// App Errors:
 	// - ErrCommonNoData
-	DeleteFileInfo(ctx context.Context, fileID int64) error
+	DeleteFileInfo(ctx context.Context, fileID string) error
 
 	// TODO: Once, sharing/permissions feature is implemented,
 	// replace the ownerID param with deletableBy to check appropriate permissions.
@@ -43,7 +43,7 @@ type Repository interface {
 
 	// App Errors:
 	// - ErrCommonNoData
-	TrashFileInfos(ctx context.Context, ownerID int64, fileIDs []int64) error
+	TrashFileInfos(ctx context.Context, ownerID string, fileIDs []string) error
 
 	//--------------------------------
 	// Folders
@@ -55,13 +55,13 @@ type Repository interface {
 
 	// App Errors:
 	// - ErrCommonNoData
-	GetFolderInfo(ctx context.Context, folderID int64) (*FolderInfo, error)
+	GetFolderInfo(ctx context.Context, folderID string) (*FolderInfo, error)
 
 	// App Errors:
 	// - ErrCommonNoData
-	GetFolderInfoTrashed(ctx context.Context, folderID int64) (*FolderInfo, error)
+	GetFolderInfoTrashed(ctx context.Context, folderID string) (*FolderInfo, error)
 
-	GetFolderInfos(ctx context.Context, pagingOpt *paging.Options, ownerID int64, parentFolderID *int64) (*paging.Page[*FolderInfo], error)
+	GetFolderInfos(ctx context.Context, pagingOpt *paging.Options, ownerID string, parentFolderID *string) (*paging.Page[*FolderInfo], error)
 
 	// App Errors:
 	// - ErrCommonNoData
@@ -69,23 +69,23 @@ type Repository interface {
 
 	// App Errors:
 	// - ErrCommonNoData
-	DeleteFolderInfo(ctx context.Context, folderID int64) error
+	DeleteFolderInfo(ctx context.Context, folderID string) error
 
 	// Recursively trash all files and sub-folders.
 	//
 	// App Errors:
 	// - ErrCommonNoData
-	TrashFolderInfos(ctx context.Context, ownerID int64, folderIDs []int64) error
+	TrashFolderInfos(ctx context.Context, ownerID string, folderIDs []string) error
 
 	// Recursively restore all files and sub-folders.
 	//
 	// App Errors:
 	// - ErrCommonNoData
-	RestoreFolderInfo(ctx context.Context, ownerID, folderID int64) error
+	RestoreFolderInfo(ctx context.Context, ownerID string, folderID string) error
 
 	// GetDescendantFolderIDs returns all descendant folder IDs of the given folder ID, excluding the folder itself.
 	//
 	// App Errors:
 	// - ErrCommonNoData
-	GetDescendantFolderIDs(ctx context.Context, ownerID, folderID int64) ([]int64, error)
+	GetDescendantFolderIDs(ctx context.Context, ownerID string, folderID string) ([]string, error)
 }

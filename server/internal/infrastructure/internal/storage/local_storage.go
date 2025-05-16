@@ -33,7 +33,7 @@ func NewLocalStorage(app *appconfig.App) *LocalStorage {
 	return &LocalStorage{app: app, baseDir: baseDir}
 }
 
-func (s *LocalStorage) SaveFile(ctx context.Context, file io.ReadSeeker, name string, ownerID int64) error {
+func (s *LocalStorage) SaveFile(ctx context.Context, file io.ReadSeeker, name, ownerID string) error {
 	// Create the owner directory
 	ownerDir := getOwnerDir(s.baseDir, ownerID)
 	err := os.MkdirAll(ownerDir, 0750)
@@ -89,7 +89,7 @@ func (s *LocalStorage) SaveFile(ctx context.Context, file io.ReadSeeker, name st
 	return nil
 }
 
-func (s *LocalStorage) DeleteFile(ctx context.Context, name string, ownerID int64) error {
+func (s *LocalStorage) DeleteFile(ctx context.Context, name, ownerID string) error {
 	deletePath := getFilePath(getOwnerDir(s.baseDir, ownerID), name)
 	if err := os.Remove(deletePath); err != nil {
 		if errors.Is(err, fs.ErrNotExist) {
@@ -101,7 +101,7 @@ func (s *LocalStorage) DeleteFile(ctx context.Context, name string, ownerID int6
 	return nil
 }
 
-func (s *LocalStorage) OpenFile(ctx context.Context, name string, ownerID int64) (io.ReadSeekCloser, error) {
+func (s *LocalStorage) OpenFile(ctx context.Context, name, ownerID string) (io.ReadSeekCloser, error) {
 	openPath := getFilePath(getOwnerDir(s.baseDir, ownerID), name)
 	f, err := os.Open(openPath)
 	if err != nil {
@@ -114,8 +114,8 @@ func (s *LocalStorage) OpenFile(ctx context.Context, name string, ownerID int64)
 	return f, nil
 }
 
-func getOwnerDir(baseDir string, ownerID int64) string {
-	return filepath.Join(baseDir, fmt.Sprintf("%d", ownerID))
+func getOwnerDir(baseDir string, ownerID string) string {
+	return filepath.Join(baseDir, ownerID)
 }
 
 func getFilePath(ownerDir string, name string) string {

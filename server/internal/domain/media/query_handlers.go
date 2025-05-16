@@ -28,7 +28,7 @@ func (h *QueryHandlers) GetFile(ctx context.Context, query *GetFileQuery) (*GetF
 		return nil, apperror.NewAppError(err, "QueryHandlers.GetFile:ValidateAccess")
 	}
 
-	file, err := h.storage.OpenFile(ctx, info.GeneratedName, query.OwnerID)
+	file, err := h.storage.OpenFile(ctx, info.ID, query.OwnerID)
 	if err != nil {
 		return nil, apperror.NewAppError(err, "QueryHandlers.GetFile:OpenFile")
 	}

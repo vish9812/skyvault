@@ -21,9 +21,12 @@ func (h *CommandHandlers) WithTxRepository(ctx context.Context, repository Repos
 }
 
 func (h *CommandHandlers) Create(ctx context.Context, cmd *CreateCommand) (*Profile, error) {
-	pro := NewProfile(cmd.Email, cmd.FullName)
+	pro, err := NewProfile(cmd.Email, cmd.FullName)
+	if err != nil {
+		return nil, apperror.NewAppError(err, "profile.CommandHandlers.Create:NewProfile")
+	}
 
-	pro, err := h.repository.Create(ctx, pro)
+	pro, err = h.repository.Create(ctx, pro)
 	if err != nil {
 		return nil, apperror.NewAppError(err, "profile.CommandHandlers.Create:Create")
 	}

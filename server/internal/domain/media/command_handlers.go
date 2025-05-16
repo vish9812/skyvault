@@ -51,9 +51,9 @@ func (h *CommandHandlers) UploadFile(ctx context.Context, cmd *UploadFileCommand
 	defer tx.Rollback()
 
 	// Saving to storage first to validate the file size once again, when actually reading and writing the file
-	err = h.storage.SaveFile(ctx, cmd.File, info.GeneratedName, cmd.OwnerID)
+	err = h.storage.SaveFile(ctx, cmd.File, info.ID, cmd.OwnerID)
 	if err != nil {
-		return nil, apperror.NewAppError(err, "media.CommandHandlers.UploadFile:SaveFile").WithMetadata("generated_name", info.GeneratedName)
+		return nil, apperror.NewAppError(err, "media.CommandHandlers.UploadFile:SaveFile").WithMetadata("file_id", info.ID)
 	}
 
 	// TODO: Generate previews asynchronously via background job
@@ -300,7 +300,7 @@ func (h *CommandHandlers) RestoreFolder(ctx context.Context, cmd *RestoreFolderC
 	return nil
 }
 
-func (h *CommandHandlers) isParentFolderTrashed(ctx context.Context, folderID *int64) (bool, error) {
+func (h *CommandHandlers) isParentFolderTrashed(ctx context.Context, folderID *string) (bool, error) {
 	// If folderID is nil, it means it's a root folder
 	if folderID == nil {
 		return false, nil

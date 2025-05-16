@@ -8,12 +8,13 @@
 package model
 
 import (
+	"github.com/google/uuid"
 	"time"
 )
 
 type ContactGroupMember struct {
-	ID        int64 `sql:"primary_key"`
-	GroupID   int64
-	ContactID int64
+	ID        uuid.UUID `sql:"primary_key"`
+	GroupID   uuid.UUID
+	ContactID uuid.UUID
 	CreatedAt time.Time
 }

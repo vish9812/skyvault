@@ -98,13 +98,13 @@ type CreateContactCommand struct {
 }
 
 type UpdateContactCommand struct {
-	ContactID int64
+	ContactID string
 	Name      string
 	Email     string
 }
 
 type DeleteContactCommand struct {
-	ContactID int64
+	ContactID string
 }
 
 //--------------------------------
@@ -116,22 +116,22 @@ type CreateContactGroupCommand struct {
 }
 
 type RenameContactGroupCommand struct {
-	GroupID int64
+	GroupID string
 	NewName string
 }
 
 type DeleteContactGroupCommand struct {
-	GroupID int64
+	GroupID string
 }
 
 type AddContactToGroupCommand struct {
-	GroupID   int64
-	ContactID int64
+	GroupID   string
+	ContactID string
 }
 
 type RemoveContactFromGroupCommand struct {
-	GroupID   int64
-	ContactID int64
+	GroupID   string
+	ContactID string
 }
 
 //--------------------------------
@@ -140,8 +140,8 @@ type RemoveContactFromGroupCommand struct {
 
 // Only one of FileID or FolderID must be set.
 type CreateShareCommand struct {
-	FileID       *int64
-	FolderID     *int64
+	FileID       *string
+	FolderID     *string
 	Recipients   []*ShareRecipientInput
 	Password     *string
 	MaxDownloads *int64
@@ -151,36 +151,36 @@ type CreateShareCommand struct {
 // Only one of ContactID, ContactGroupID or Email can be set.
 // If SaveAsContact is true, then Email and Name must be set. Otherwise, Name is ignored.
 type ShareRecipientInput struct {
-	ContactID      *int64
-	ContactGroupID *int64
+	ContactID      *string
+	ContactGroupID *string
 	Email          *string
 	Name           *string
 	SaveAsContact  bool
 }
 
 type UpdateShareExpiryCommand struct {
-	ShareID      int64
+	ShareID      string
 	MaxDownloads *int64
 	ExpiresAt    *time.Time
 }
 
 type UpdateSharePasswordCommand struct {
-	ShareID  int64
+	ShareID  string
 	Password *string
 }
 
 type DeleteShareCommand struct {
-	ShareID int64
+	ShareID string
 }
 
 // Only one of ContactID, ContactGroupID or Email can be set.
 // If SaveAsContact is true, then Email and Name must be set. Otherwise, Name is ignored.
 type AddShareRecipientCommand struct {
-	ShareID int64
+	ShareID string
 	*ShareRecipientInput
 }
 
 type RemoveShareRecipientCommand struct {
-	ShareID     int64
-	RecipientID int64
+	ShareID     string
+	RecipientID string
 }

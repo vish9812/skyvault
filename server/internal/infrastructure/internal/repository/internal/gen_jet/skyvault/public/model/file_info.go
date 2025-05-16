@@ -8,21 +8,21 @@
 package model
 
 import (
+	"github.com/google/uuid"
 	"time"
 )
 
 type FileInfo struct {
-	ID            int64 `sql:"primary_key"`
-	OwnerID       int64
-	FolderID      *int64
-	Name          string
-	GeneratedName string
-	Size          int64
-	Extension     *string
-	MimeType      string
-	Category      *string
-	Preview       *[]byte
-	TrashedAt     *time.Time
-	CreatedAt     time.Time
-	UpdatedAt     time.Time
+	ID        uuid.UUID `sql:"primary_key"`
+	OwnerID   uuid.UUID
+	FolderID  *uuid.UUID
+	Name      string
+	Size      int64
+	Extension *string
+	MimeType  string
+	Category  *string
+	Preview   *[]byte
+	TrashedAt *time.Time
+	CreatedAt time.Time
+	UpdatedAt time.Time
 }

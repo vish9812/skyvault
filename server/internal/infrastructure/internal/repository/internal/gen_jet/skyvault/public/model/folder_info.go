@@ -8,14 +8,15 @@
 package model
 
 import (
+	"github.com/google/uuid"
 	"time"
 )
 
 type FolderInfo struct {
-	ID             int64 `sql:"primary_key"`
-	OwnerID        int64
+	ID             uuid.UUID `sql:"primary_key"`
+	OwnerID        uuid.UUID
 	Name           string
-	ParentFolderID *int64
+	ParentFolderID *uuid.UUID
 	TrashedAt      *time.Time
 	CreatedAt      time.Time
 	UpdatedAt      time.Time

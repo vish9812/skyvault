@@ -3,7 +3,6 @@ package paging
 import (
 	"errors"
 	"fmt"
-	"strconv"
 	"strings"
 	"time"
 )
@@ -54,7 +53,7 @@ func (o *Options) Validate() {
 
 // Cursor holds the column values that make up the cursor.
 type Cursor struct {
-	ID      int64
+	ID      string
 	Name    string
 	Updated time.Time
 }
@@ -65,14 +64,14 @@ func (o *Options) CreateCursor(cursor *Cursor) string {
 	}
 
 	if o.SortBy == SortByID {
-		return fmt.Sprintf("%d", cursor.ID)
+		return fmt.Sprintf("%s", cursor.ID)
 	}
 
 	if o.SortBy == SortByName {
-		return fmt.Sprintf("%d,%s", cursor.ID, cursor.Name)
+		return fmt.Sprintf("%s,%s", cursor.ID, cursor.Name)
 	}
 
-	return fmt.Sprintf("%d,%s", cursor.ID, cursor.Updated.Format(time.RFC3339))
+	return fmt.Sprintf("%s,%s", cursor.ID, cursor.Updated.Format(time.RFC3339))
 }
 
 func (o *Options) GetCursor() (*Cursor, error) {
@@ -91,10 +90,7 @@ func (o *Options) GetCursor() (*Cursor, error) {
 
 	vals := strings.Split(cursorStr, ",")
 
-	id, err := strconv.ParseInt(vals[0], 10, 64)
-	if err != nil {
-		return nil, fmt.Errorf("%w: %w", ErrInvalidCursor, err)
-	}
+	id := vals[0]
 
 	cursor := &Cursor{ID: id}
 

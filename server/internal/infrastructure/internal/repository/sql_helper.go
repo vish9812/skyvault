@@ -14,12 +14,18 @@ import (
 	"github.com/jinzhu/copier"
 )
 
+type UUIDStr string
+
+func (u UUIDStr) String() string {
+	return string(u)
+}
+
 func ILIKE(lhs, rhs StringExpression) BoolExpression {
 	return BoolExp(CustomExpression(lhs, Token("ILIKE"), rhs))
 }
 
 type cursorQuery struct {
-	ID        ColumnInteger
+	ID        ColumnString
 	Name      ColumnString
 	Updated   ColumnTimestamp
 	where     BoolExpression
@@ -90,12 +96,12 @@ func (o *cursorQuery) buildIDClauses(cursor *paging.Cursor, forward bool) {
 
 		if forward {
 			o.orderBy = append(o.orderBy, o.ID.ASC())
-			o.where = o.where.AND(o.ID.GT(Int64(cursor.ID)))
+			o.where = o.where.AND(o.ID.GT(UUID(UUIDStr(cursor.ID))))
 			return
 		}
 
 		o.orderBy = append(o.orderBy, o.ID.DESC())
-		o.where = o.where.AND(o.ID.LT(Int64(cursor.ID)))
+		o.where = o.where.AND(o.ID.LT(UUID(UUIDStr(cursor.ID))))
 		return
 	}
 
@@ -106,12 +112,12 @@ func (o *cursorQuery) buildIDClauses(cursor *paging.Cursor, forward bool) {
 
 	if forward {
 		o.orderBy = append(o.orderBy, o.ID.DESC())
-		o.where = o.where.AND(o.ID.LT(Int64(cursor.ID)))
+		o.where = o.where.AND(o.ID.LT(UUID(UUIDStr(cursor.ID))))
 		return
 	}
 
 	o.orderBy = append(o.orderBy, o.ID.ASC())
-	o.where = o.where.AND(o.ID.GT(Int64(cursor.ID)))
+	o.where = o.where.AND(o.ID.GT(UUID(UUIDStr(cursor.ID))))
 }
 
 func (o *cursorQuery) buildNameClauses(cursor *paging.Cursor, forward bool) {
@@ -126,7 +132,7 @@ func (o *cursorQuery) buildNameClauses(cursor *paging.Cursor, forward bool) {
 			o.where = o.where.AND(
 				o.Name.GT(String(cursor.Name)).
 					OR(o.Name.EQ(String(cursor.Name)).AND(
-						o.ID.GT(Int64(cursor.ID)),
+						o.ID.GT(UUID(UUIDStr(cursor.ID))),
 					)),
 			)
 			return
@@ -136,7 +142,7 @@ func (o *cursorQuery) buildNameClauses(cursor *paging.Cursor, forward bool) {
 		o.where = o.where.AND(
 			o.Name.LT(String(cursor.Name)).
 				OR(o.Name.EQ(String(cursor.Name)).AND(
-					o.ID.LT(Int64(cursor.ID)),
+					o.ID.LT(UUID(UUIDStr(cursor.ID))),
 				)),
 		)
 		return
@@ -152,7 +158,7 @@ func (o *cursorQuery) buildNameClauses(cursor *paging.Cursor, forward bool) {
 		o.where = o.where.AND(
 			o.Name.LT(String(cursor.Name)).
 				OR(o.Name.EQ(String(cursor.Name)).AND(
-					o.ID.LT(Int64(cursor.ID)),
+					o.ID.LT(UUID(UUIDStr(cursor.ID))),
 				)),
 		)
 		return
@@ -162,7 +168,7 @@ func (o *cursorQuery) buildNameClauses(cursor *paging.Cursor, forward bool) {
 	o.where = o.where.AND(
 		o.Name.GT(String(cursor.Name)).
 			OR(o.Name.EQ(String(cursor.Name)).AND(
-				o.ID.GT(Int64(cursor.ID)),
+				o.ID.GT(UUID(UUIDStr(cursor.ID))),
 			)),
 	)
 }
@@ -179,7 +185,7 @@ func (o *cursorQuery) buildUpdatedClauses(cursor *paging.Cursor, forward bool) {
 			o.where = o.where.AND(
 				o.Updated.GT(TimestampT(cursor.Updated)).
 					OR(o.Updated.EQ(TimestampT(cursor.Updated)).AND(
-						o.ID.GT(Int64(cursor.ID)),
+						o.ID.GT(UUID(UUIDStr(cursor.ID))),
 					)),
 			)
 			return
@@ -189,7 +195,7 @@ func (o *cursorQuery) buildUpdatedClauses(cursor *paging.Cursor, forward bool) {
 		o.where = o.where.AND(
 			o.Updated.LT(TimestampT(cursor.Updated)).
 				OR(o.Updated.EQ(TimestampT(cursor.Updated)).AND(
-					o.ID.LT(Int64(cursor.ID)),
+					o.ID.LT(UUID(UUIDStr(cursor.ID))),
 				)),
 		)
 		return
@@ -205,7 +211,7 @@ func (o *cursorQuery) buildUpdatedClauses(cursor *paging.Cursor, forward bool) {
 		o.where = o.where.AND(
 			o.Updated.LT(TimestampT(cursor.Updated)).
 				OR(o.Updated.EQ(TimestampT(cursor.Updated)).AND(
-					o.ID.LT(Int64(cursor.ID)),
+					o.ID.LT(UUID(UUIDStr(cursor.ID))),
 				)),
 		)
 		return
@@ -215,7 +221,7 @@ func (o *cursorQuery) buildUpdatedClauses(cursor *paging.Cursor, forward bool) {
 	o.where = o.where.AND(
 		o.Updated.GT(TimestampT(cursor.Updated)).
 			OR(o.Updated.EQ(TimestampT(cursor.Updated)).AND(
-				o.ID.GT(Int64(cursor.ID)),
+				o.ID.GT(UUID(UUIDStr(cursor.ID))),
 			)),
 	)
 }

@@ -1,6 +1,8 @@
 package auth
 
-import "context"
+import (
+	"context"
+)
 
 type Commands interface {
 	// WithTxRepository creates a new instance of Commands with the given Repository.
@@ -26,19 +28,19 @@ type Commands interface {
 }
 
 type SignUpCommand struct {
-	ProfileID      int64
+	ProfileID      string
 	Provider       Provider
 	ProviderUserID string
 	Password       *string
 }
 
 type SignInCommand struct {
-	ProfileID    int64
+	ProfileID    string
 	Provider     Provider
 	Password     *string
 	PasswordHash *string
 }
 
 type DeleteCommand struct {
-	ID int64
+	ID string
 }

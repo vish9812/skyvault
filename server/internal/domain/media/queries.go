@@ -20,14 +20,14 @@ type Queries interface {
 }
 
 type GetFileInfosByCategoryQuery struct {
-	OwnerID   int64
+	OwnerID   string
 	Category  Category
 	PagingOpt *paging.Options
 }
 
 type GetFolderContentQuery struct {
-	OwnerID         int64
-	FolderID        *int64
+	OwnerID         string
+	FolderID        *string
 	FilePagingOpt   *paging.Options
 	FolderPagingOpt *paging.Options
 }
@@ -38,8 +38,8 @@ type GetFolderContentRes struct {
 }
 
 type GetFileQuery struct {
-	OwnerID int64
-	FileID  int64
+	OwnerID string
+	FileID  string
 }
 
 type GetFileRes struct {

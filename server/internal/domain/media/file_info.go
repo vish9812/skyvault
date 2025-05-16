@@ -29,27 +29,26 @@ type FileConfig struct {
 
 // TODO: Generate preview asynchronously via worker
 type FileInfo struct {
-	ID            int64
-	OwnerID       int64
-	FolderID      *int64 // null if file is in root folder
-	Name          string
-	GeneratedName string
-	Size          int64 // bytes
-	Extension     *string
-	MimeType      string
-	Category      Category
-	Preview       []byte
-	CreatedAt     time.Time
-	UpdatedAt     time.Time
-	TrashedAt     *time.Time
+	ID        string
+	OwnerID   string
+	FolderID  *string // null if file is in root folder
+	Name      string
+	Size      int64 // bytes
+	Extension *string
+	MimeType  string
+	Category  Category
+	Preview   []byte
+	CreatedAt time.Time
+	UpdatedAt time.Time
+	TrashedAt *time.Time
 }
 
 // App Errors:
 // - ErrCommonNoAccess
 // - ErrCommonInvalidValue
 // - ErrMediaFileSizeLimitExceeded
-func NewFileInfo(config FileConfig, ownerID int64, parentFolder *FolderInfo, name string, size int64, mimeType string) (*FileInfo, error) {
-	var folderID *int64
+func NewFileInfo(config FileConfig, ownerID string, parentFolder *FolderInfo, name string, size int64, mimeType string) (*FileInfo, error) {
+	var folderID *string
 	if parentFolder != nil {
 		if err := parentFolder.ValidateAccess(ownerID); err != nil {
 			return nil, apperror.NewAppError(err, "media.NewFileInfo:ValidateParentAccess")
@@ -65,25 +64,28 @@ func NewFileInfo(config FileConfig, ownerID int64, parentFolder *FolderInfo, nam
 		mimeType = "application/octet-stream"
 	}
 
-	generatedName := utils.UUID()
-
 	var ext *string
 	if e := filepath.Ext(name); e != "" {
 		ext = &e
 	}
 
+	id, err := utils.ID()
+	if err != nil {
+		return nil, apperror.NewAppError(err, "media.NewFileInfo:ID")
+	}
+
 	now := time.Now().UTC()
 	return &FileInfo{
-		OwnerID:       ownerID,
-		FolderID:      folderID,
-		Name:          name,
-		GeneratedName: generatedName,
-		Size:          size,
-		Extension:     ext,
-		MimeType:      mimeType,
-		Category:      getCategory(mimeType),
-		CreatedAt:     now,
-		UpdatedAt:     now,
+		ID:        id,
+		OwnerID:   ownerID,
+		FolderID:  folderID,
+		Name:      name,
+		Size:      size,
+		Extension: ext,
+		MimeType:  mimeType,
+		Category:  getCategory(mimeType),
+		CreatedAt: now,
+		UpdatedAt: now,
 	}, nil
 }
 
@@ -140,7 +142,7 @@ func (f *FileInfo) Restore(parentFolderIsTrashed bool) {
 
 // App Errors:
 // - ErrCommonNoAccess
-func (f *FileInfo) ValidateAccess(ownerID int64) error {
+func (f *FileInfo) ValidateAccess(ownerID string) error {
 	if f.OwnerID != ownerID {
 		return apperror.NewAppError(apperror.ErrCommonNoAccess, "media.FileInfo.ValidateAccess").WithMetadata("owner_id", ownerID).WithMetadata("file_owner_id", f.OwnerID)
 	}
