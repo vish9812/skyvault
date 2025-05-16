@@ -1,7 +1,7 @@
 import { Show, For } from "solid-js";
 import { Button } from "@kobalte/core/button";
 import { A } from "@solidjs/router";
-import FolderContent from "@sv/components/folder-content";
+import FolderContent from "@sv/components/folderContent";
 import useViewModel from "./useViewModel";
 
 const folderParentPath = ["Home", "Folder 1", "Folder 11"];

@@ -1,10 +1,10 @@
 import { Show } from "solid-js";
 import { FolderContent as FolderContentType } from "@sv/apis/media/models";
-import EmptyState from "./empty-state";
-import GridSkeleton from "./grid-skeleton";
-import ListSkeleton from "./list-skeleton";
-import ListView from "./list-view";
-import GridView from "./grid-view";
+import EmptyState from "./emptyState";
+import GridSkeleton from "./gridSkeleton";
+import ListSkeleton from "./listSkeleton";
+import ListView from "./listView";
+import GridView from "./gridView";
 
 interface FolderContentProps {
   content: FolderContentType | undefined;

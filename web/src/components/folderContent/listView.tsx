@@ -1,6 +1,10 @@
-import { FolderContent } from "@sv/apis/media/models";
+import type {
+  FileInfo,
+  FolderInfo,
+  FolderContent,
+} from "@sv/apis/media/models";
 import { For } from "solid-js";
-import ListItem from "./list-item";
+import ListItem from "./listItem";
 
 interface ListViewProps {
   content: FolderContent;
@@ -21,24 +25,14 @@ function ListView(props: ListViewProps) {
       {/* Folder list items */}
       <For each={props.content.folderPage.items}>
         {(folder) => (
-          <ListItem
-            type="folder"
-            name={folder.name}
-            updatedAt={folder.updatedAt}
-          />
+          <ListItem type="folder" item={folder as FileInfo & FolderInfo} />
         )}
       </For>
 
       {/* File list items */}
       <For each={props.content.filePage.items}>
         {(file) => (
-          <ListItem
-            type="file"
-            name={file.name}
-            size={file.size}
-            fileCategory={file.category}
-            updatedAt={file.updatedAt}
-          />
+          <ListItem type="file" item={file as FileInfo & FolderInfo} />
         )}
       </For>
     </div>

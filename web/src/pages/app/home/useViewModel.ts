@@ -1,8 +1,8 @@
-import { createResource, createSignal } from "solid-js";
+import { createEffect, createResource, createSignal } from "solid-js";
 import { CONTENT_VIEWS, LOCAL_STORAGE_KEYS } from "@sv/utils/consts";
 import { fetchFolderContent } from "@sv/apis/media";
 import type { FolderContent as FolderContentType } from "@sv/apis/media/models";
-import { useLocation } from "@solidjs/router";
+import { useParams } from "@solidjs/router";
 
 const defaultView =
   (localStorage.getItem(
@@ -11,11 +11,11 @@ const defaultView =
   CONTENT_VIEWS.LIST;
 
 function useViewModel() {
-  const location = useLocation();
-  const folderId = location.pathname.split("/").pop();
+  const params = useParams();
 
-  const [folderContentRes] = createResource<FolderContentType>(() =>
-    fetchFolderContent(folderId)
+  const [folderContentRes] = createResource(
+    () => params.folderId || "0",
+    fetchFolderContent
   );
 
   const [isListView, setIsListView] = createSignal(

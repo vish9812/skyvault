@@ -1,5 +1,5 @@
 import { A, useLocation } from "@solidjs/router";
-import CreateUpload from "@sv/components/create-upload";
+import CreateUpload from "@sv/components/createUpload";
 import { createEffect, createSignal, For, Show } from "solid-js";
 
 const menuItems = [

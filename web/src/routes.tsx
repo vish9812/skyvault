@@ -13,7 +13,7 @@ export default function AppRoutes() {
         <Route path="/sign-up" component={SignUp} />
       </Route>
       <Route path="/" component={AppLayout}>
-        <Route path="/" component={Home} />
+        <Route path="/:folderId?" component={Home} />
       </Route>
     </Router>
   );
