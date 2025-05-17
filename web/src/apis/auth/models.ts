@@ -1,5 +1,5 @@
 export interface Profile {
-  id: number;
+  id: string;
   email: string;
   fullName: string;
   avatarBase64?: string;

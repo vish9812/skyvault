@@ -1,5 +1,5 @@
-import type { FolderContent } from "./models";
-import { getJSON, handleJSONResponse } from "@sv/apis/common";
+import type { FolderContent, FolderInfo } from "./models";
+import { getJSON, handleJSONResponse, postJSON } from "@sv/apis/common";
 
 const urlMedia = "media";
 const urlFolders = `${urlMedia}/folders`;
@@ -18,4 +18,13 @@ export async function fetchFolderContent(
       resolve(data);
     }, 700);
   });
+}
+
+export async function createFolder(
+  parentFolderId: string | undefined,
+  name: string
+): Promise<FolderInfo> {
+  const id = parentFolderId || "0";
+  const res = await postJSON(`${urlFolders}/${id}/`, { name });
+  return handleJSONResponse(res);
 }

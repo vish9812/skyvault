@@ -1,7 +1,7 @@
 export interface FileInfo {
-  id: number;
-  ownerId: number;
-  folderId?: number;
+  id: string;
+  ownerId: string;
+  folderId?: string;
   name: string;
   size: number;
   extension?: string;
@@ -13,9 +13,9 @@ export interface FileInfo {
 }
 
 export interface FolderInfo {
-  id: number;
-  ownerId: number;
-  parentFolderId?: number;
+  id: string;
+  ownerId: string;
+  parentFolderId?: string;
   name: string;
   createdAt: string;
   updatedAt: string;

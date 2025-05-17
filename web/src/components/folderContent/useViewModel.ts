@@ -8,13 +8,13 @@ function useViewModel() {
   const navigate = useNavigate();
   const [tapTimer, setTapTimer] = createSignal<number | null>(null);
 
-  const handleFolderNavigation = (id: number) => {
+  const handleFolderNavigation = (id: string) => {
     navigate(`${CLIENT_URLS.HOME}${id}`);
   };
 
   const handleTap = (
     type: string,
-    id: number,
+    id: string,
     singleTapAction?: () => void
   ) => {
     if (tapTimer() === null) {
