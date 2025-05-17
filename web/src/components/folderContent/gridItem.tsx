@@ -12,18 +12,16 @@ interface GridItemProps {
 
 function GridItem(props: GridItemProps) {
   const formattedSize = formatFileSize(props.item.size);
-  const { handleFolderNavigation } = useViewModel();
+  const { handleTap } = useViewModel();
 
-  const handleDoubleClick = () => {
-    if (props.type === FOLDER_CONTENT_TYPES.FOLDER) {
-      handleFolderNavigation(props.item.id);
-    }
+  const handleClick = () => {
+    handleTap(props.type, props.item.id);
   };
 
   return (
     <div
       class="w-40 h-40 md:w-48 md:h-48 bg-white rounded-lg border border-border shadow-sm hover:border-primary hover:shadow-md transition-all cursor-pointer"
-      onDblClick={handleDoubleClick}
+      onClick={handleClick}
     >
       {/* File/folder icon or preview */}
       <div class="flex-center h-28 md:h-34 rounded-t-lg border-b border-border bg-bg-subtle">

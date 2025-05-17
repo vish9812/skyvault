@@ -10,18 +10,16 @@ interface ListItemProps {
 }
 
 function ListItem(props: ListItemProps) {
-  const { handleFolderNavigation } = useViewModel();
+  const { handleTap } = useViewModel();
 
-  const handleDoubleClick = () => {
-    if (props.type === FOLDER_CONTENT_TYPES.FOLDER) {
-      handleFolderNavigation(props.item.id);
-    }
+  const handleClick = () => {
+    handleTap(props.type, props.item.id);
   };
 
   return (
     <div
       class="grid grid-cols-[2rem_1fr_6rem] md:grid-cols-[2rem_1fr_6rem_9rem] items-center py-3 px-3 hover:bg-bg-muted border-t border-border first:border-t-0 cursor-pointer"
-      onDblClick={handleDoubleClick}
+      onClick={handleClick}
     >
       <span>
         {getFileIcon(
