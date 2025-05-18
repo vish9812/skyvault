@@ -1,28 +1,15 @@
 import { Dialog } from "@kobalte/core/dialog";
-import { createEffect } from "solid-js";
+import useCtx from "./ctxProvider";
+import { useParams } from "@solidjs/router";
 
-interface CreateFolderModalProps {
-  isOpen: boolean;
-  onClose: () => void;
-  folderName: string;
-  setFolderName: (name: string) => void;
-  onCreateFolder: () => void;
-  isCreating: boolean;
-  error: string | null;
-}
-
-export function CreateFolderModal(props: CreateFolderModalProps) {
-  // Reset the folder name when the modal opens
-  createEffect(() => {
-    if (props.isOpen) {
-      props.setFolderName("");
-    }
-  });
+export function CreateFolder() {
+  const ctx = useCtx();
+  const params = useParams();
 
   return (
     <Dialog
-      open={props.isOpen}
-      onOpenChange={(isOpen) => !isOpen && props.onClose()}
+      open={ctx.isFolderModalOpen()}
+      onOpenChange={(isOpen) => !isOpen && ctx.setIsFolderModalOpen(false)}
     >
       <Dialog.Portal>
         <Dialog.Overlay class="fixed inset-0 bg-black/20 z-50" />
@@ -43,28 +30,28 @@ export function CreateFolderModal(props: CreateFolderModalProps) {
                 id="folder-name"
                 class="input input-b-std w-full"
                 type="text"
-                value={props.folderName}
-                onInput={(e) => props.setFolderName(e.currentTarget.value)}
+                value={ctx.folderName()}
+                onInput={(e) => ctx.setFolderName(e.currentTarget.value)}
                 placeholder="Enter folder name"
                 autofocus
               />
-              {props.error && <p class="input-t-error mt-1">{props.error}</p>}
+              {ctx.error() && <p class="input-t-error mt-1">{ctx.error()}</p>}
             </div>
 
             <div class="flex justify-end gap-2 mt-4">
               <button
                 class="btn btn-outline"
-                onClick={props.onClose}
-                disabled={props.isCreating}
+                onClick={() => ctx.setIsFolderModalOpen(false)}
+                disabled={ctx.isCreating()}
               >
                 Cancel
               </button>
               <button
                 class="btn btn-primary"
-                onClick={props.onCreateFolder}
-                disabled={props.isCreating}
+                onClick={() => ctx.handleCreateFolder(params.folderId)}
+                disabled={ctx.isCreating()}
               >
-                {props.isCreating ? "Creating..." : "Create Folder"}
+                {ctx.isCreating() ? "Creating..." : "Create Folder"}
               </button>
             </div>
           </div>

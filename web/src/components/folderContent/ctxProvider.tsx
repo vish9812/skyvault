@@ -1,10 +1,11 @@
-import { useNavigate } from "@solidjs/router";
+import { createSignal, ParentProps, useContext } from "solid-js";
+import CTX from "./ctx";
 import { CLIENT_URLS, FOLDER_CONTENT_TYPES } from "@sv/utils/consts";
-import { createSignal } from "solid-js";
+import { useNavigate } from "@solidjs/router";
 
 const DOUBLE_TAP_DELAY = 500; // ms
 
-function useViewModel() {
+export function CtxProvider(props: ParentProps) {
   const navigate = useNavigate();
   const [tapTimer, setTapTimer] = createSignal<number | null>(null);
 
@@ -40,9 +41,19 @@ function useViewModel() {
     }
   };
 
-  return {
+  const val = {
     handleTap,
   };
+
+  return <CTX.Provider value={val}>{props.children}</CTX.Provider>;
 }
 
-export default useViewModel;
+function useCtx() {
+  const ctx = useContext(CTX);
+  if (!ctx) {
+    throw new Error("folderContent: useCtx must be used within a CtxProvider");
+  }
+  return ctx;
+}
+
+export default useCtx;

@@ -7,7 +7,6 @@ import (
 	"image/jpeg"
 	"image/png"
 	"io"
-	"strings"
 
 	"golang.org/x/image/draw"
 )
@@ -15,20 +14,6 @@ import (
 var (
 	ErrUnsupportedImageFormat = errors.New("unsupported image format")
 )
-
-func CleanFileName(name string) string {
-	// Remove any path separators to prevent directory traversal
-	name = strings.ReplaceAll(name, "/", "")
-	name = strings.ReplaceAll(name, "\\", "")
-
-	// Remove any null bytes that could be used to truncate strings
-	name = strings.ReplaceAll(name, "\x00", "")
-
-	// Trim spaces from start/end
-	name = strings.TrimSpace(name)
-
-	return name
-}
 
 // ScaleDownImageTo resizes an image of type jpeg or png to the given width and height
 //

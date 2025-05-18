@@ -1,20 +1,9 @@
 import { DropdownMenu } from "@kobalte/core/dropdown-menu";
-import useViewModel from "./useViewModel";
-import { CreateFolderModal } from "./createFolderModal";
+import { CreateFolder } from "./createFolder";
+import useCtx, { CtxProvider } from "./ctxProvider";
 
-function CreateUpload() {
-  const vm = useViewModel();
-
-  const handleCreateFolderOption = () => {
-    vm.setIsFolderModalOpen(true);
-  };
-
-  const handleCreateFolder = () => {
-    vm.handleCreateFolder();
-    if (!vm.error()) {
-      vm.setIsFolderModalOpen(false);
-    }
-  };
+function CreateUploadWithCtx() {
+  const ctx = useCtx();
 
   return (
     <>
@@ -63,7 +52,7 @@ function CreateUpload() {
           <DropdownMenu.Content class="bg-white rounded-lg shadow-md border border-border-strong min-w-[180px] py-2">
             <DropdownMenu.Item
               class="dropdown-item"
-              onSelect={handleCreateFolderOption}
+              onSelect={() => ctx.setIsFolderModalOpen(true)}
             >
               <div class="flex items-center gap-2">
                 <svg
@@ -128,16 +117,16 @@ function CreateUpload() {
         </DropdownMenu.Portal>
       </DropdownMenu>
 
-      <CreateFolderModal
-        isOpen={vm.isFolderModalOpen()}
-        onClose={() => vm.setIsFolderModalOpen(false)}
-        folderName={vm.folderName()}
-        setFolderName={vm.setFolderName}
-        onCreateFolder={handleCreateFolder}
-        isCreating={vm.isCreating()}
-        error={vm.error()}
-      />
+      <CreateFolder />
     </>
+  );
+}
+
+function CreateUpload() {
+  return (
+    <CtxProvider>
+      <CreateUploadWithCtx />
+    </CtxProvider>
   );
 }
 

@@ -5,6 +5,7 @@ import GridSkeleton from "./gridSkeleton";
 import ListSkeleton from "./listSkeleton";
 import ListView from "./listView";
 import GridView from "./gridView";
+import { CtxProvider } from "./ctxProvider";
 
 interface FolderContentProps {
   content: FolderContentType | undefined;
@@ -12,7 +13,7 @@ interface FolderContentProps {
   loading: boolean;
 }
 
-function FolderContent(props: FolderContentProps) {
+function FolderContentWithCtx(props: FolderContentProps) {
   return (
     <Show
       when={!props.loading}
@@ -37,6 +38,14 @@ function FolderContent(props: FolderContentProps) {
         </Show>
       </Show>
     </Show>
+  );
+}
+
+function FolderContent(props: FolderContentProps) {
+  return (
+    <CtxProvider>
+      <FolderContentWithCtx {...props} />
+    </CtxProvider>
   );
 }
 

@@ -2,13 +2,13 @@ import { Show, For } from "solid-js";
 import { Button } from "@kobalte/core/button";
 import { A } from "@solidjs/router";
 import FolderContent from "@sv/components/folderContent";
-import useViewModel from "./useViewModel";
+import useVM from "./useVM";
 
 const folderParentPath = ["Home", "Folder 1", "Folder 11"];
 const currentFolder = "Folder 111";
 
 export default function Home() {
-  const { isListView, handleListViewChange, folderContentRes } = useViewModel();
+  const vm = useVM();
 
   return (
     <>
@@ -28,9 +28,9 @@ export default function Home() {
           <span class="font-bold text-neutral">{currentFolder}</span>
         </div>
         <div>
-          <Button class="btn btn-ghost" onClick={handleListViewChange}>
+          <Button class="btn btn-ghost" onClick={vm.handleListViewChange}>
             <Show
-              when={isListView()}
+              when={vm.isListView()}
               fallback={
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
@@ -69,9 +69,9 @@ export default function Home() {
 
       {/* Files & Folders */}
       <FolderContent
-        loading={folderContentRes.loading}
-        content={folderContentRes.latest}
-        isListView={isListView()}
+        loading={vm.folderContentRes.loading}
+        content={vm.folderContentRes.latest}
+        isListView={vm.isListView()}
       />
     </>
   );

@@ -2,7 +2,7 @@ import { FOLDER_CONTENT_TYPES } from "@sv/utils/consts";
 import { formatFileSize } from "@sv/utils/format";
 import { getFileIcon } from "@sv/utils/icons";
 import { Show } from "solid-js";
-import useViewModel from "./useViewModel";
+import useCtx from "./ctxProvider";
 import type { FileInfo, FolderInfo } from "@sv/apis/media/models";
 
 interface GridItemProps {
@@ -12,10 +12,10 @@ interface GridItemProps {
 
 function GridItem(props: GridItemProps) {
   const formattedSize = formatFileSize(props.item.size);
-  const { handleTap } = useViewModel();
+  const ctx = useCtx();
 
   const handleClick = () => {
-    handleTap(props.type, props.item.id);
+    ctx.handleTap(props.type, props.item.id);
   };
 
   return (

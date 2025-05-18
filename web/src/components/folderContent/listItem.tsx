@@ -1,8 +1,8 @@
 import { FOLDER_CONTENT_TYPES } from "@sv/utils/consts";
 import { formatDate, formatFileSize } from "@sv/utils/format";
 import { getFileIcon } from "@sv/utils/icons";
-import useViewModel from "./useViewModel";
 import type { FileInfo, FolderInfo } from "@sv/apis/media/models";
+import useCtx from "./ctxProvider";
 
 interface ListItemProps {
   type: typeof FOLDER_CONTENT_TYPES.FILE | typeof FOLDER_CONTENT_TYPES.FOLDER;
@@ -10,10 +10,10 @@ interface ListItemProps {
 }
 
 function ListItem(props: ListItemProps) {
-  const { handleTap } = useViewModel();
+  const ctx = useCtx();
 
   const handleClick = () => {
-    handleTap(props.type, props.item.id);
+    ctx.handleTap(props.type, props.item.id);
   };
 
   return (

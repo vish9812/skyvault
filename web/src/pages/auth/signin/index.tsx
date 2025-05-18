@@ -1,4 +1,4 @@
-import useViewModel from "./useViewModel";
+import useVM from "./useVM";
 import { Link } from "@kobalte/core/link";
 import { CLIENT_URLS } from "@sv/utils/consts";
 import { TextField } from "@kobalte/core/text-field";
@@ -6,19 +6,10 @@ import { Show } from "solid-js";
 import { Button } from "@kobalte/core/button";
 
 function SignIn() {
-  const {
-    apiError,
-    formErrors,
-    loading,
-    formValues,
-    handleInput,
-    handleSubmit,
-    showPassword,
-    setShowPassword,
-  } = useViewModel();
+  const vm = useVM();
 
-  const hasFieldError = () => !!(formErrors.email || formErrors.password);
-  const isDisabled = () => loading() || hasFieldError();
+  const hasFieldError = () => !!(vm.formErrors.email || vm.formErrors.password);
+  const isDisabled = () => vm.loading() || hasFieldError();
 
   return (
     <>
@@ -27,15 +18,15 @@ function SignIn() {
         class="w-full flex flex-col gap-4"
         onSubmit={(e) => {
           e.preventDefault();
-          handleSubmit();
+          vm.handleSubmit();
         }}
         autocomplete="off"
       >
         <TextField
           name="email"
-          value={formValues.email}
-          onChange={(value) => handleInput("email", value)}
-          validationState={formErrors.email ? "invalid" : "valid"}
+          value={vm.formValues.email}
+          onChange={(value) => vm.handleInput("email", value)}
+          validationState={vm.formErrors.email ? "invalid" : "valid"}
         >
           <TextField.Label class="label">Email</TextField.Label>
           <TextField.Input
@@ -44,40 +35,40 @@ function SignIn() {
             autocomplete="email"
             class="input"
             classList={{
-              "input-b-std": !formErrors.email,
-              "input-b-error": !!formErrors.email,
+              "input-b-std": !vm.formErrors.email,
+              "input-b-error": !!vm.formErrors.email,
             }}
           />
           <TextField.ErrorMessage class="input-t-error">
-            {formErrors.email}
+            {vm.formErrors.email}
           </TextField.ErrorMessage>
         </TextField>
 
         <TextField
           name="password"
-          value={formValues.password}
-          onChange={(value) => handleInput("password", value)}
-          validationState={formErrors.password ? "invalid" : "valid"}
+          value={vm.formValues.password}
+          onChange={(value) => vm.handleInput("password", value)}
+          validationState={vm.formErrors.password ? "invalid" : "valid"}
         >
           <TextField.Label class="label">Password</TextField.Label>
           <div class="relative">
             <TextField.Input
               id="password"
-              type={showPassword() ? "text" : "password"}
+              type={vm.showPassword() ? "text" : "password"}
               class="input"
               classList={{
-                "input-b-std": !formErrors.password,
-                "input-b-error": !!formErrors.password,
+                "input-b-std": !vm.formErrors.password,
+                "input-b-error": !!vm.formErrors.password,
               }}
               autocomplete="current-password"
             />
             <Button
               class="absolute inset-y-0 right-2 flex-center text-neutral-lighter hover:text-neutral-light cursor-pointer"
               tabindex="-1"
-              onClick={() => setShowPassword((v) => !v)}
-              aria-label={showPassword() ? "Hide password" : "Show password"}
+              onClick={() => vm.setShowPassword((v) => !v)}
+              aria-label={vm.showPassword() ? "Hide password" : "Show password"}
             >
-              {showPassword() ? (
+              {vm.showPassword() ? (
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
                   fill="none"
@@ -116,12 +107,12 @@ function SignIn() {
             </Button>
           </div>
           <TextField.ErrorMessage class="input-t-error">
-            {formErrors.password}
+            {vm.formErrors.password}
           </TextField.ErrorMessage>
         </TextField>
 
-        <Show when={apiError()}>
-          <div class="text-error text-sm text-center mt-2">{apiError()}</div>
+        <Show when={vm.apiError()}>
+          <div class="text-error text-sm text-center mt-2">{vm.apiError()}</div>
         </Show>
 
         <Button
@@ -133,7 +124,7 @@ function SignIn() {
           }}
           disabled={isDisabled()}
         >
-          {loading() ? "Signing In..." : "Sign In"}
+          {vm.loading() ? "Signing In..." : "Sign In"}
         </Button>
       </form>
 

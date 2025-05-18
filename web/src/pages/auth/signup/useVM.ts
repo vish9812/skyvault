@@ -32,7 +32,7 @@ const emptyFields: Fields = {
   password: "",
 } as const;
 
-function useViewModel() {
+function useVM() {
   const [formValues, setFormValues] = createStore({ ...emptyFields });
   const [formErrors, setFormErrors] = createStore({ ...emptyFields });
   const [apiError, setApiError] = createSignal("");
@@ -93,4 +93,4 @@ function useViewModel() {
   };
 }
 
-export default useViewModel;
+export default useVM;

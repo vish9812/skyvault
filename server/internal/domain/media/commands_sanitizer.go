@@ -3,7 +3,7 @@ package media
 import (
 	"context"
 	"skyvault/pkg/apperror"
-	"skyvault/pkg/utils"
+	"skyvault/pkg/validate"
 )
 
 var _ Commands = (*CommandsSanitizer)(nil)
@@ -17,9 +17,10 @@ func NewCommandsSanitizer(commands Commands) Commands {
 }
 
 func (s *CommandsSanitizer) UploadFile(ctx context.Context, cmd *UploadFileCommand) (*FileInfo, error) {
-	cmd.Name = utils.CleanFileName(cmd.Name)
-	if cmd.Name == "" {
-		return nil, apperror.NewAppError(apperror.ErrCommonInvalidValue, "media.CommandsSanitizer.UploadFile:Name")
+	if n, err := validate.FileName(cmd.Name); err != nil {
+		return nil, apperror.NewAppError(err, "media.CommandsSanitizer.UploadFile:FileName")
+	} else {
+		cmd.Name = n
 	}
 
 	if cmd.File == nil {
@@ -30,27 +31,30 @@ func (s *CommandsSanitizer) UploadFile(ctx context.Context, cmd *UploadFileComma
 }
 
 func (s *CommandsSanitizer) RenameFile(ctx context.Context, cmd *RenameFileCommand) error {
-	cmd.Name = utils.CleanFileName(cmd.Name)
-	if cmd.Name == "" {
-		return apperror.NewAppError(apperror.ErrCommonInvalidValue, "media.CommandsSanitizer.RenameFile:Name")
+	if n, err := validate.FileName(cmd.Name); err != nil {
+		return apperror.NewAppError(err, "media.CommandsSanitizer.RenameFile:FileName")
+	} else {
+		cmd.Name = n
 	}
 
 	return s.Commands.RenameFile(ctx, cmd)
 }
 
 func (s *CommandsSanitizer) CreateFolder(ctx context.Context, cmd *CreateFolderCommand) (*FolderInfo, error) {
-	cmd.Name = utils.CleanFileName(cmd.Name)
-	if cmd.Name == "" {
-		return nil, apperror.NewAppError(apperror.ErrCommonInvalidValue, "media.CommandsSanitizer.CreateFolder:Name")
+	if n, err := validate.FileName(cmd.Name); err != nil {
+		return nil, apperror.NewAppError(err, "media.CommandsSanitizer.CreateFolder:FileName")
+	} else {
+		cmd.Name = n
 	}
 
 	return s.Commands.CreateFolder(ctx, cmd)
 }
 
 func (s *CommandsSanitizer) RenameFolder(ctx context.Context, cmd *RenameFolderCommand) error {
-	cmd.Name = utils.CleanFileName(cmd.Name)
-	if cmd.Name == "" {
-		return apperror.NewAppError(apperror.ErrCommonInvalidValue, "media.CommandsSanitizer.RenameFolder:Name")
+	if n, err := validate.FileName(cmd.Name); err != nil {
+		return apperror.NewAppError(err, "media.CommandsSanitizer.RenameFolder:FileName")
+	} else {
+		cmd.Name = n
 	}
 
 	return s.Commands.RenameFolder(ctx, cmd)

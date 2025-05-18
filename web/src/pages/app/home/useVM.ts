@@ -1,7 +1,6 @@
-import { createEffect, createResource, createSignal } from "solid-js";
+import { createResource, createSignal } from "solid-js";
 import { CONTENT_VIEWS, LOCAL_STORAGE_KEYS } from "@sv/utils/consts";
 import { fetchFolderContent } from "@sv/apis/media";
-import type { FolderContent as FolderContentType } from "@sv/apis/media/models";
 import { useParams } from "@solidjs/router";
 
 const defaultView =
@@ -10,7 +9,7 @@ const defaultView =
   ) as (typeof CONTENT_VIEWS)[keyof typeof CONTENT_VIEWS]) ||
   CONTENT_VIEWS.LIST;
 
-function useViewModel() {
+function useVM() {
   const params = useParams();
 
   const [folderContentRes] = createResource(
@@ -39,4 +38,4 @@ function useViewModel() {
   };
 }
 
-export default useViewModel;
+export default useVM;
