@@ -5,7 +5,7 @@ import type {
   SignUpReq,
   SignUpRes,
 } from "./models";
-import { postJSONPub, handleJSONResponse } from "@sv/apis/common";
+import { postPub, handleJSONResponse } from "@sv/apis/common";
 import { LOCAL_STORAGE_KEYS } from "@sv/utils/consts";
 
 const urlAuth = "auth";
@@ -21,8 +21,10 @@ export function signOut() {
   localStorage.removeItem(LOCAL_STORAGE_KEYS.PROFILE);
 }
 
-async function handleAuthResponse(res: Response) {
-  const data: SignInRes | SignUpRes = await handleJSONResponse(res);
+async function handleAuthResponse<T extends SignInRes | SignUpRes>(
+  res: Response
+): Promise<void> {
+  const data = await handleJSONResponse<T>(res);
   localStorage.setItem(LOCAL_STORAGE_KEYS.TOKEN, data.token);
   localStorage.setItem(
     LOCAL_STORAGE_KEYS.PROFILE,
@@ -31,12 +33,12 @@ async function handleAuthResponse(res: Response) {
 }
 
 export async function signIn({ email, password }: SignInReq): Promise<void> {
-  const res = await postJSONPub(`${urlAuth}/sign-in`, {
+  const res = await postPub(`${urlAuth}/sign-in`, {
     provider: "email",
     providerUserId: email,
     password,
   });
-  return handleAuthResponse(res);
+  return handleAuthResponse<SignInRes>(res);
 }
 
 export async function signUp({
@@ -44,11 +46,11 @@ export async function signUp({
   email,
   password,
 }: SignUpReq): Promise<void> {
-  const res = await postJSONPub(`${urlAuth}/sign-up`, {
+  const res = await postPub(`${urlAuth}/sign-up`, {
     fullName,
     email,
     password,
     provider: "email",
   });
-  return handleAuthResponse(res);
+  return handleAuthResponse<SignUpRes>(res);
 }

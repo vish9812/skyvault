@@ -1,12 +1,12 @@
 import { Accessor, createContext, Setter } from "solid-js";
 
 interface CtxType {
-  isFolderModalOpen: Accessor<boolean>;
-  setIsFolderModalOpen: Setter<boolean>;
-  folderName: Accessor<string>;
-  setFolderName: Setter<string>;
+  isCreateFolderModalOpen: Accessor<boolean>;
+  setIsCreateFolderModalOpen: Setter<boolean>;
+  createFolderName: Accessor<string>;
   isCreating: Accessor<boolean>;
-  error: Accessor<string | null>;
+  error: Accessor<string>;
+  handleCreateFolderNameChange: (name: string) => void;
   handleCreateFolder: (parentFolderId?: string) => Promise<void>;
 }
 

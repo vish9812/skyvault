@@ -1,7 +1,8 @@
 import { createEffect, createSignal, ParentProps, useContext } from "solid-js";
 import CTX from "./ctx";
 import { createFolder } from "@sv/apis/media";
-import { VALIDATIONS } from "@sv/utils/consts";
+import { VALIDATIONS } from "@sv/utils/validate";
+import { COMMON_ERR_KEYS } from "@sv/utils/errors";
 
 export function CtxProvider(props: ParentProps) {
   const [isCreateFolderModalOpen, setIsCreateFolderModalOpen] =
@@ -18,25 +19,41 @@ export function CtxProvider(props: ParentProps) {
     }
   });
 
-  const handleCreateFolder = async (parentFolderId?: string) => {
+  const handleCreateFolderNameChange = (name: string) => {
+    setCreateFolderName(name);
+    isInvalidFolderName();
+  };
+
+  const isInvalidFolderName = (): boolean => {
     if (!createFolderName() || createFolderName().trim() === "") {
       setError("Folder name is required");
-      return;
+      return true;
     }
-
     if (createFolderName().length > VALIDATIONS.MAX_LENGTH) {
       setError("Folder name is too long");
+      return true;
+    }
+
+    setError("");
+    return false;
+  };
+
+  const handleCreateFolder = async (parentFolderId?: string) => {
+    if (isInvalidFolderName()) {
       return;
     }
 
     setIsCreating(true);
-    setError("");
 
     try {
-      await createFolder(parentFolderId, createFolderName());
+      await createFolder(parentFolderId, createFolderName().trim());
       setCreateFolderName(""); // Reset the name after successful creation
     } catch (err) {
-      setError("Failed to create folder");
+      if (err instanceof Error && err.message === COMMON_ERR_KEYS.DUPLICATE) {
+        setError("Folder already exists");
+      } else {
+        setError("Failed to create folder");
+      }
     } finally {
       setIsCreating(false);
     }
@@ -47,12 +64,12 @@ export function CtxProvider(props: ParentProps) {
   };
 
   const val = {
-    isFolderModalOpen: isCreateFolderModalOpen,
-    setIsFolderModalOpen: setIsCreateFolderModalOpen,
-    folderName: createFolderName,
-    setFolderName: setCreateFolderName,
+    isCreateFolderModalOpen,
+    setIsCreateFolderModalOpen,
+    createFolderName,
     isCreating,
     error,
+    handleCreateFolderNameChange,
     handleCreateFolder,
   };
 

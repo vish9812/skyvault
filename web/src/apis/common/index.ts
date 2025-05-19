@@ -1,9 +1,14 @@
 import { LOCAL_STORAGE_KEYS } from "@sv/utils/consts";
 
-export const ROOT_URL = "http://localhost:8090/api/v1";
+export const ROOT_URL = `${import.meta.env.VITE_SERVER_URL}/api/v1`;
+// public api root url
 export const ROOT_URL_PUB = `${ROOT_URL}/pub`;
 
-export function postJSONPub(url: string, data: any) {
+interface ErrRes {
+  code: string;
+}
+
+export function postPub(url: string, data: any) {
   return fetch(`${ROOT_URL_PUB}/${url}`, {
     method: "POST",
     headers: {
@@ -13,7 +18,7 @@ export function postJSONPub(url: string, data: any) {
   });
 }
 
-export function postJSON(url: string, data: any) {
+export function post(url: string, data: any) {
   const token = localStorage.getItem(LOCAL_STORAGE_KEYS.TOKEN);
   if (!token) throw new Error("No token found");
 
@@ -27,7 +32,7 @@ export function postJSON(url: string, data: any) {
   });
 }
 
-export function getJSON(url: string) {
+export function get(url: string) {
   const token = localStorage.getItem(LOCAL_STORAGE_KEYS.TOKEN);
   if (!token) throw new Error("No token found");
 
@@ -39,20 +44,25 @@ export function getJSON(url: string) {
   });
 }
 
-export async function handleJSONResponse(res: Response) {
-  if (!res.ok) {
-    let msg = "";
-    try {
-      const data = await res.json();
-      msg = data.code;
-    } catch (e) {
-      // If the response is not JSON, try to parse it as text
-      if (e instanceof SyntaxError) {
-        msg = await res.text();
+export async function handleJSONResponse<T>(res: Response): Promise<T> {
+  // Simulate a slow response
+  return new Promise((resolve, reject) => {
+    setTimeout(async () => {
+      if (!res.ok) {
+        let msg = "";
+        try {
+          const data = (await res.json()) as ErrRes;
+          msg = data.code;
+        } catch (e) {
+          // If the response is not JSON, try to parse it as text
+          if (e instanceof SyntaxError) {
+            msg = await res.text();
+          }
+        }
+        reject(new Error(msg));
       }
-    }
-    throw new Error(msg);
-  }
 
-  return res.json();
+      resolve(res.json() as T);
+    }, 700);
+  });
 }

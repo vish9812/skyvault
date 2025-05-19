@@ -1,4 +1,6 @@
 .aider*
 .ai
 .cursor
+.env
+*.env
 skyvault

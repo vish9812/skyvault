@@ -2,26 +2,15 @@ import { useNavigate } from "@solidjs/router";
 import { createSignal } from "solid-js";
 import { getAuthErrorMessage } from "@sv/utils/errors";
 import { signUp } from "@sv/apis/auth";
-import { CLIENT_URLS, VALIDATIONS } from "@sv/utils/consts";
+import { CLIENT_URLS } from "@sv/utils/consts";
 import { z } from "zod";
 import { createStore, unwrap } from "solid-js/store";
+import Validators from "@sv/utils/validate";
 
 export const schema = z.object({
-  fullName: z
-    .string()
-    .min(1, "Full name is required")
-    .max(VALIDATIONS.MAX_LENGTH, "Full name is too long"),
-  email: z
-    .string()
-    .email("Invalid email address")
-    .max(VALIDATIONS.MAX_LENGTH, "Email is too long"),
-  password: z
-    .string()
-    .min(
-      VALIDATIONS.PASSWORD_MIN_LENGTH,
-      "Password must be at least 4 characters"
-    )
-    .max(VALIDATIONS.MAX_LENGTH, "Password is too long"),
+  fullName: Validators.z.name,
+  email: Validators.z.email,
+  password: Validators.z.password,
 });
 
 type Fields = z.infer<typeof schema>;
@@ -62,7 +51,6 @@ function useVM() {
     if (!result.success) {
       for (const err of result.error.errors) {
         if (err.path[0]) {
-          console.log("err at path: ", err.path[0]);
           setFormErrors(err.path[0] as keyof typeof formErrors, err.message);
         }
       }

@@ -1,5 +1,5 @@
 import { DropdownMenu } from "@kobalte/core/dropdown-menu";
-import { CreateFolder } from "./createFolder";
+import CreateFolder from "./createFolder";
 import useCtx, { CtxProvider } from "./ctxProvider";
 
 function CreateUploadWithCtx() {
@@ -52,7 +52,7 @@ function CreateUploadWithCtx() {
           <DropdownMenu.Content class="bg-white rounded-lg shadow-md border border-border-strong min-w-[180px] py-2">
             <DropdownMenu.Item
               class="dropdown-item"
-              onSelect={() => ctx.setIsFolderModalOpen(true)}
+              onSelect={() => ctx.setIsCreateFolderModalOpen(true)}
             >
               <div class="flex items-center gap-2">
                 <svg

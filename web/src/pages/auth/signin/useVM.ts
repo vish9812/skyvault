@@ -2,28 +2,17 @@ import { useNavigate } from "@solidjs/router";
 import { createSignal } from "solid-js";
 import { getAuthErrorMessage } from "@sv/utils/errors";
 import { signIn } from "@sv/apis/auth";
-import { CLIENT_URLS, VALIDATIONS } from "@sv/utils/consts";
+import { CLIENT_URLS } from "@sv/utils/consts";
 import { createStore, unwrap } from "solid-js/store";
 import { z } from "zod";
+import Validators from "@sv/utils/validate";
 
 export const schema = z.object({
-  email: z
-    .string()
-    .email("Invalid email address")
-    .max(VALIDATIONS.MAX_LENGTH, "Email is too long"),
-  password: z
-    .string()
-    .min(
-      VALIDATIONS.PASSWORD_MIN_LENGTH,
-      "Password must be at least 4 characters"
-    )
-    .max(VALIDATIONS.MAX_LENGTH, "Password is too long"),
+  email: Validators.z.email,
+  password: Validators.z.password,
 });
 
-type Fields = {
-  email: string;
-  password: string;
-};
+type Fields = z.infer<typeof schema>;
 
 const emptyFields: Fields = {
   email: "",
