@@ -12,17 +12,15 @@ export function CreateFolder() {
       onOpenChange={(isOpen) => !isOpen && ctx.setIsFolderModalOpen(false)}
     >
       <Dialog.Portal>
-        <Dialog.Overlay class="fixed inset-0 bg-black/20 z-50" />
-        <Dialog.Content class="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 bg-white rounded-lg p-6 shadow-xl z-50 w-full max-w-md">
-          <div class="flex flex-col gap-4">
-            <Dialog.Title class="text-xl font-bold">
-              Create New Folder
-            </Dialog.Title>
-            <Dialog.Description class="subtitle text-neutral-light">
+        <Dialog.Overlay class="dialog-overlay" />
+        <Dialog.Content class="dialog-content">
+          <div class="flex flex-col">
+            <Dialog.Title class="dialog-title">Create New Folder</Dialog.Title>
+            <Dialog.Description class="dialog-description">
               Enter a name for your new folder
             </Dialog.Description>
 
-            <div class="mt-2">
+            <div class="mt-4">
               <label for="folder-name" class="label">
                 Folder Name
               </label>

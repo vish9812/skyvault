@@ -46,7 +46,7 @@ function GridItem(props: GridItemProps) {
       <div class="p-2 flex flex-col">
         <div class="font-medium text-neutral truncate">{props.item.name}</div>
         <Show when={formattedSize !== "-"}>
-          <div class="caption">{formattedSize}</div>
+          <div class="text-xs">{formattedSize}</div>
         </Show>
       </div>
     </div>
