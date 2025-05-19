@@ -32,6 +32,49 @@ export function post(url: string, data: any) {
   });
 }
 
+export function postFormData(
+  url: string,
+  formData: FormData,
+  onProgress?: (progress: number) => void
+) {
+  const token = localStorage.getItem(LOCAL_STORAGE_KEYS.TOKEN);
+  if (!token) throw new Error("No token found");
+
+  return new Promise<Response>((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open("POST", `${ROOT_URL}/${url}`);
+    xhr.setRequestHeader("Authorization", `Bearer ${token}`);
+
+    xhr.upload.onprogress = (event) => {
+      if (event.lengthComputable && onProgress) {
+        const progress = Math.round((event.loaded / event.total) * 100);
+        onProgress(progress);
+      }
+    };
+
+    xhr.onload = () => {
+      if (xhr.status >= 200 && xhr.status < 300) {
+        const response = new Response(xhr.response, {
+          status: xhr.status,
+          statusText: xhr.statusText,
+          headers: new Headers({
+            "Content-Type":
+              xhr.getResponseHeader("Content-Type") || "application/json",
+          }),
+        });
+        resolve(response);
+      } else {
+        reject(new Error(`HTTP Error: ${xhr.status}`));
+      }
+    };
+
+    xhr.onerror = () => reject(new Error("Network Error"));
+    xhr.ontimeout = () => reject(new Error("Request Timeout"));
+
+    xhr.send(formData);
+  });
+}
+
 export function get(url: string) {
   const token = localStorage.getItem(LOCAL_STORAGE_KEYS.TOKEN);
   if (!token) throw new Error("No token found");
