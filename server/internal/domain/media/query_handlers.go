@@ -3,6 +3,7 @@ package media
 import (
 	"context"
 	"skyvault/pkg/apperror"
+	"skyvault/pkg/common"
 	"skyvault/pkg/paging"
 )
 
@@ -45,6 +46,22 @@ func (h *QueryHandlers) GetFileInfosByCategory(ctx context.Context, query *GetFi
 	}
 
 	return files, nil
+}
+
+func (h *QueryHandlers) GetFolderInfo(ctx context.Context, query *GetFolderInfoQuery) (*FolderInfo, error) {
+	info, err := h.repository.GetFolderInfo(ctx, query.OwnerID, query.FolderID)
+	if err != nil {
+		return nil, apperror.NewAppError(err, "QueryHandlers.GetFolderInfo:GetFolderInfo")
+	}
+	return info, nil
+}
+
+func (h *QueryHandlers) GetAncestors(ctx context.Context, ownerID, folderID string) ([]*common.BaseInfo, error) {
+	ancestors, err := h.repository.GetAncestors(ctx, ownerID, folderID)
+	if err != nil {
+		return nil, apperror.NewAppError(err, "QueryHandlers.GetAncestors:GetAncestors")
+	}
+	return ancestors, nil
 }
 
 func (h *QueryHandlers) GetFolderContent(ctx context.Context, query *GetFolderContentQuery) (*GetFolderContentRes, error) {

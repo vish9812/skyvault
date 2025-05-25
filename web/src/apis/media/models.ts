@@ -1,3 +1,5 @@
+import { FILE_CATEGORIES } from "@sv/utils/consts";
+
 export interface FileInfo {
   id: string;
   ownerId: string;
@@ -6,7 +8,7 @@ export interface FileInfo {
   size: number;
   extension?: string;
   mimeType: string;
-  category: string;
+  category: FILE_CATEGORIES;
   preview?: string;
   createdAt: string;
   updatedAt: string;
@@ -15,10 +17,11 @@ export interface FileInfo {
 export interface FolderInfo {
   id: string;
   ownerId: string;
-  parentFolderId?: string;
   name: string;
+  parentFolderId?: string;
   createdAt: string;
   updatedAt: string;
+  ancestors: BaseInfo[];
 }
 
 export interface Page<T> {
@@ -26,6 +29,11 @@ export interface Page<T> {
   prevCursor: string;
   nextCursor: string;
   hasMore: boolean;
+}
+
+export interface BaseInfo {
+  id: string;
+  name: string;
 }
 
 export interface FolderContent {

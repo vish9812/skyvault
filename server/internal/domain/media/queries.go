@@ -3,11 +3,16 @@ package media
 import (
 	"context"
 	"io"
+	"skyvault/pkg/common"
 	"skyvault/pkg/paging"
 )
 
 type Queries interface {
 	GetFileInfosByCategory(ctx context.Context, query *GetFileInfosByCategoryQuery) (*paging.Page[*FileInfo], error)
+
+	GetFolderInfo(ctx context.Context, query *GetFolderInfoQuery) (*FolderInfo, error)
+
+	GetAncestors(ctx context.Context, ownerID, folderID string) ([]*common.BaseInfo, error)
 
 	GetFolderContent(ctx context.Context, query *GetFolderContentQuery) (*GetFolderContentRes, error)
 
@@ -23,6 +28,11 @@ type GetFileInfosByCategoryQuery struct {
 	OwnerID   string
 	Category  Category
 	PagingOpt *paging.Options
+}
+
+type GetFolderInfoQuery struct {
+	OwnerID  string
+	FolderID string
 }
 
 type GetFolderContentQuery struct {

@@ -1,11 +1,12 @@
-import { ParentComponent } from "solid-js";
 import { useNavigate } from "@solidjs/router";
 import { getProfile } from "@sv/apis/auth";
+import { AppCtxProvider } from "@sv/store/appCtxProvider";
 import { CLIENT_URLS } from "@sv/utils/consts";
-import Header from "./header";
-import Navigation from "./navigation";
+import { ParentProps } from "solid-js";
+import AppHeader from "./appHeader";
+import AppNavigation from "./appNavigation";
 
-const AppLayout: ParentComponent = (props) => {
+function AppLayoutWithCtx(props: ParentProps) {
   const navigate = useNavigate();
   const profile = getProfile();
   if (!profile) {
@@ -15,17 +16,22 @@ const AppLayout: ParentComponent = (props) => {
 
   return (
     <div class="bg-bg-subtle min-h-screen">
-      {/* Navigation */}
-      <Navigation />
-
-      <Header />
-
+      <AppNavigation />
+      <AppHeader />
       {/* Main Content */}
       <div class="md:ml-64 pl-2 pr-2 pt-16 pb-16 min-h-screen">
         <main>{props.children}</main>
       </div>
     </div>
   );
-};
+}
+
+function AppLayout(props: ParentProps) {
+  return (
+    <AppCtxProvider>
+      <AppLayoutWithCtx {...props} />
+    </AppCtxProvider>
+  );
+}
 
 export default AppLayout;

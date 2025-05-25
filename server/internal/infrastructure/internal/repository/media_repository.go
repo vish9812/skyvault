@@ -11,6 +11,7 @@ import (
 	"skyvault/internal/infrastructure/internal/repository/internal/gen_jet/skyvault/public/model"
 	. "skyvault/internal/infrastructure/internal/repository/internal/gen_jet/skyvault/public/table"
 	"skyvault/pkg/apperror"
+	"skyvault/pkg/common"
 	"skyvault/pkg/paging"
 
 	. "github.com/go-jet/jet/v2/postgres"
@@ -199,8 +200,8 @@ func (r *MediaRepository) CreateFolderInfo(ctx context.Context, info *media.Fold
 	return runInsert[model.FolderInfo, media.FolderInfo](ctx, stmt, r.repository.dbTx)
 }
 
-func (r *MediaRepository) getFolderInfo(ctx context.Context, folderID string, onlyTrashed bool) (*media.FolderInfo, error) {
-	whereCond := FolderInfo.ID.EQ(UUID(UUIDStr(folderID)))
+func (r *MediaRepository) getFolderInfo(ctx context.Context, ownerID, folderID string, onlyTrashed bool) (*media.FolderInfo, error) {
+	whereCond := FolderInfo.ID.EQ(UUID(UUIDStr(folderID))).AND(FolderInfo.OwnerID.EQ(UUID(UUIDStr(ownerID))))
 
 	if onlyTrashed {
 		whereCond = whereCond.AND(FolderInfo.TrashedAt.IS_NOT_NULL())
@@ -215,12 +216,12 @@ func (r *MediaRepository) getFolderInfo(ctx context.Context, folderID string, on
 	return runSelect[model.FolderInfo, media.FolderInfo](ctx, stmt, r.repository.dbTx)
 }
 
-func (r *MediaRepository) GetFolderInfo(ctx context.Context, folderID string) (*media.FolderInfo, error) {
-	return r.getFolderInfo(ctx, folderID, false)
+func (r *MediaRepository) GetFolderInfo(ctx context.Context, ownerID, folderID string) (*media.FolderInfo, error) {
+	return r.getFolderInfo(ctx, ownerID, folderID, false)
 }
 
-func (r *MediaRepository) GetFolderInfoTrashed(ctx context.Context, folderID string) (*media.FolderInfo, error) {
-	return r.getFolderInfo(ctx, folderID, true)
+func (r *MediaRepository) GetFolderInfoTrashed(ctx context.Context, ownerID, folderID string) (*media.FolderInfo, error) {
+	return r.getFolderInfo(ctx, ownerID, folderID, true)
 }
 
 func (r *MediaRepository) GetFolderInfos(ctx context.Context, pagingOpt *paging.Options, ownerID string, parentFolderID *string) (*paging.Page[*media.FolderInfo], error) {
@@ -419,4 +420,60 @@ func (r *MediaRepository) GetDescendantFolderIDs(ctx context.Context, ownerID, f
 	return slices.DeleteFunc(folderIDs, func(id string) bool {
 		return id == folderID
 	}), nil
+}
+
+func (r *MediaRepository) getAncestorsCTE(ownerID, folderID string) CommonTableExpression {
+	ancestorsCTE := CTE("ancestors")
+
+	// Create a recursive CTE to traverse up the folder hierarchy
+	return ancestorsCTE.AS(
+		// Base case: Get the parent folder of the given folder (if it exists)
+		SELECT(
+			FolderInfo.ID,
+			FolderInfo.Name,
+			FolderInfo.ParentFolderID,
+		).FROM(
+			FolderInfo,
+		).WHERE(
+			FolderInfo.ID.IN(
+				SELECT(FolderInfo.ParentFolderID).
+					FROM(FolderInfo).
+					WHERE(
+						FolderInfo.ID.EQ(UUID(UUIDStr(folderID))).
+							AND(FolderInfo.OwnerID.EQ(UUID(UUIDStr(ownerID)))).
+							AND(FolderInfo.TrashedAt.IS_NULL()).
+							AND(FolderInfo.ParentFolderID.IS_NOT_NULL()),
+					),
+			).AND(
+				FolderInfo.OwnerID.EQ(UUID(UUIDStr(ownerID))).
+					AND(FolderInfo.TrashedAt.IS_NULL()),
+			),
+		).UNION(
+			// Recursive case: Get parent folders of current ancestors
+			SELECT(
+				FolderInfo.ID,
+				FolderInfo.Name,
+				FolderInfo.ParentFolderID,
+			).FROM(
+				FolderInfo.
+					INNER_JOIN(ancestorsCTE, FolderInfo.ID.EQ(FolderInfo.ParentFolderID.From(ancestorsCTE))),
+			).WHERE(
+				FolderInfo.OwnerID.EQ(UUID(UUIDStr(ownerID))).
+					AND(FolderInfo.TrashedAt.IS_NULL()),
+			),
+		),
+	)
+}
+
+func (r *MediaRepository) GetAncestors(ctx context.Context, ownerID, folderID string) ([]*common.BaseInfo, error) {
+	ancestorsCTE := r.getAncestorsCTE(ownerID, folderID)
+
+	stmt := WITH_RECURSIVE(ancestorsCTE)(
+		SELECT(
+			FolderInfo.ID.From(ancestorsCTE),
+			FolderInfo.Name.From(ancestorsCTE),
+		).FROM(ancestorsCTE),
+	)
+
+	return runSelectSliceAll[model.FolderInfo, common.BaseInfo](ctx, stmt, r.repository.dbTx)
 }

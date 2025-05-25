@@ -1,6 +1,6 @@
 import { createContext } from "solid-js";
 
-interface CtxType {
+export interface CtxType {
   handleTap: (type: string, id: string, singleTapAction?: () => void) => void;
 }
 

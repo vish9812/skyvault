@@ -61,6 +61,7 @@ func (a *MediaAPI) InitRoutes() *MediaAPI {
 
 			// Single folder operations
 			r.Route(fmt.Sprintf("/{%s}", urlParamFolderID), func(r chi.Router) {
+				r.Get("/", a.GetFolderInfo)
 				r.Get("/content", a.GetFolderContent)
 				r.Post("/", a.CreateFolder)
 				r.Patch("/rename", a.RenameFolder)
@@ -497,6 +498,49 @@ func (a *MediaAPI) RestoreFolder(w http.ResponseWriter, r *http.Request) {
 	}
 
 	helper.RespondEmpty(w, http.StatusNoContent)
+}
+
+func (a *MediaAPI) GetFolderInfo(w http.ResponseWriter, r *http.Request) {
+	profileID := common.GetProfileIDFromContext(r.Context())
+	folderID := chi.URLParam(r, urlParamFolderID)
+	if !validate.UUID(folderID) {
+		helper.RespondError(w, r, apperror.NewAppError(apperror.ErrCommonInvalidValue, "mediaAPI.GetFolderInfo:folderID"))
+		return
+	}
+
+	query := &media.GetFolderInfoQuery{
+		OwnerID:  profileID,
+		FolderID: folderID,
+	}
+
+	folder, err := a.queries.GetFolderInfo(r.Context(), query)
+	if err != nil {
+		helper.RespondError(w, r, apperror.NewAppError(err, "mediaAPI.GetFolderInfo:GetFolderInfo"))
+		return
+	}
+
+	ancestors, err := a.queries.GetAncestors(r.Context(), profileID, folderID)
+	if err != nil {
+		helper.RespondError(w, r, apperror.NewAppError(err, "mediaAPI.GetFolderInfo:GetAncestors"))
+		return
+	}
+
+	var dto dtos.GetFolderInfo
+	err = copier.Copy(&dto, &folder)
+	if err != nil {
+		helper.RespondError(w, r, apperror.NewAppError(err, "mediaAPI.GetFolderInfo:Copy"))
+		return
+	}
+
+	dto.Ancestors = make([]dtos.BaseInfo, len(ancestors))
+	for i, ancestor := range ancestors {
+		dto.Ancestors[i] = dtos.BaseInfo{
+			ID:   ancestor.ID,
+			Name: ancestor.Name,
+		}
+	}
+
+	helper.RespondJSON(w, http.StatusOK, &dto)
 }
 
 func (a *MediaAPI) GetFolderContent(w http.ResponseWriter, r *http.Request) {

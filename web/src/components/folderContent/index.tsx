@@ -16,7 +16,7 @@ interface FolderContentProps {
 function FolderContentWithCtx(props: FolderContentProps) {
   return (
     <Show
-      when={!props.loading}
+      when={!props.loading && props.content}
       fallback={
         <Show when={props.isListView} fallback={<GridSkeleton />}>
           <ListSkeleton />
@@ -25,8 +25,8 @@ function FolderContentWithCtx(props: FolderContentProps) {
     >
       <Show
         when={
-          (props.content?.folderPage?.items?.length ?? 0) > 0 ||
-          (props.content?.filePage?.items?.length ?? 0) > 0
+          props.content!.folderPage.items.length ||
+          props.content!.filePage.items.length
         }
         fallback={<EmptyState />}
       >

@@ -1,5 +1,5 @@
 // Format file size to human-readable format
-export function formatFileSize(bytes?: number) {
+function size(bytes?: number) {
   if (bytes === undefined) return "-";
   if (bytes === 0) return "0 B";
 
@@ -9,7 +9,7 @@ export function formatFileSize(bytes?: number) {
 }
 
 // Format date to readable format
-export function formatDate(dateString?: string) {
+function date(dateString?: string) {
   if (!dateString) return "-";
   const date = new Date(dateString);
   return date.toLocaleDateString("en-US", {
@@ -18,3 +18,25 @@ export function formatDate(dateString?: string) {
     day: "numeric",
   });
 }
+
+// Format name to initials
+function initials(name: string) {
+  const parts = name.split(" ");
+  const firstChar = String.fromCodePoint(parts[0].codePointAt(0)!);
+
+  if (parts.length < 2) return firstChar.toUpperCase();
+
+  const lastChar = String.fromCodePoint(
+    parts[parts.length - 1].codePointAt(0)!
+  );
+
+  return `${firstChar}${lastChar}`.toUpperCase();
+}
+
+const format = {
+  initials,
+  size,
+  date,
+};
+
+export default format;

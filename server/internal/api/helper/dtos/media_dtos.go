@@ -33,10 +33,11 @@ type GetFolderContent struct {
 }
 
 type GetFolderInfo struct {
-	ID             string    `json:"id" copier:"must,nopanic"`
-	OwnerID        string    `json:"ownerId" copier:"must,nopanic"`
-	ParentFolderID *string   `json:"parentFolderId,omitempty"`
-	Name           string    `json:"name" copier:"must,nopanic"`
-	CreatedAt      time.Time `json:"createdAt" copier:"must,nopanic"`
-	UpdatedAt      time.Time `json:"updatedAt" copier:"must,nopanic"`
+	ID             string     `json:"id" copier:"must,nopanic"`
+	OwnerID        string     `json:"ownerId" copier:"must,nopanic"`
+	Name           string     `json:"name" copier:"must,nopanic"`
+	ParentFolderID *string    `json:"parentFolderId,omitempty"`
+	CreatedAt      time.Time  `json:"createdAt" copier:"must,nopanic"`
+	UpdatedAt      time.Time  `json:"updatedAt" copier:"must,nopanic"`
+	Ancestors      []BaseInfo `json:"ancestors" copier:"nopanic"`
 }

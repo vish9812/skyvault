@@ -8,6 +8,8 @@ export const COMMON_ERR_KEYS = {
 const errorMessages: Record<string, string> = {
   [COMMON_ERR_KEYS.GENERIC]: "Something went wrong. Please try again.",
   [COMMON_ERR_KEYS.INVALID]: "Please check your input and try again.",
+  [COMMON_ERR_KEYS.DUPLICATE]: "This data already exists.",
+  [COMMON_ERR_KEYS.NO_DATA]: "Data not found.",
 };
 
 const authErrorMessages: Record<string, string> = {
@@ -20,12 +22,10 @@ const authErrorMessages: Record<string, string> = {
   AUTH_WRONG_PROVIDER: "Please use the correct sign-in method.",
 };
 
-export function getAuthErrorMessage(code?: string): string {
-  if (!code) return errorMessages.COMMON_GENERIC_ERROR;
+export function defaultErrorMessage(code: string): string {
+  return errorMessages[code] || errorMessages.COMMON_GENERIC_ERROR;
+}
 
-  return (
-    authErrorMessages[code] ||
-    errorMessages[code] ||
-    errorMessages.COMMON_GENERIC_ERROR
-  );
+export function getAuthErrorMessage(code: string): string {
+  return authErrorMessages[code] || defaultErrorMessage(code);
 }

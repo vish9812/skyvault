@@ -2,21 +2,9 @@ import { DropdownMenu } from "@kobalte/core/dropdown-menu";
 import { getProfile, signOut } from "@sv/apis/auth";
 import { useNavigate } from "@solidjs/router";
 import { CLIENT_URLS } from "@sv/utils/consts";
+import format from "@sv/utils/format";
 
-function initials(name: string) {
-  const parts = name.split(" ");
-  const firstChar = String.fromCodePoint(parts[0].codePointAt(0)!);
-
-  if (parts.length < 2) return firstChar.toUpperCase();
-
-  const lastChar = String.fromCodePoint(
-    parts[parts.length - 1].codePointAt(0)!
-  );
-
-  return `${firstChar}${lastChar}`.toUpperCase();
-}
-
-function Profile() {
+function ProfileDropdown() {
   const navigate = useNavigate();
   const profile = getProfile()!;
 
@@ -39,7 +27,9 @@ function Profile() {
             alt="avatar"
           />
         ) : (
-          <span class="font-bold text-lg">{initials(profile.fullName)}</span>
+          <span class="font-bold text-lg">
+            {format.initials(profile.fullName)}
+          </span>
         )}
       </DropdownMenu.Trigger>
       <DropdownMenu.Portal>
@@ -69,4 +59,4 @@ function Profile() {
   );
 }
 
-export default Profile;
+export default ProfileDropdown;

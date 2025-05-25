@@ -1,17 +1,40 @@
+import { Match, mergeProps, Show, Switch } from "solid-js";
 import { FILE_CATEGORIES } from "./consts";
+import { Dynamic } from "solid-js/web";
 
-interface IconProps {
+interface IconSvgProps {
   size?: number;
   color?: string;
 }
 
-const defaultProps: IconProps = {
+const defaultProps: IconSvgProps = {
   size: 5,
   color: "text-neutral-light",
 };
 
 const icons = {
-  folder: (props?: IconProps) => {
+  navDrive: (props?: IconSvgProps) => {
+    const size = props?.size ?? defaultProps.size;
+    const color = props?.color ?? defaultProps.color;
+
+    return (
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        fill="none"
+        viewBox="0 0 24 24"
+        stroke-width="1.5"
+        stroke="currentColor"
+        class={`w-${size} h-${size} ${color}`}
+      >
+        <path
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          d="m2.25 12 8.954-8.955c.44-.439 1.152-.439 1.591 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75M8.25 21h8.25"
+        />
+      </svg>
+    );
+  },
+  folder: (props?: IconSvgProps) => {
     const size = props?.size ?? defaultProps.size;
     const color = props?.color ?? defaultProps.color;
 
@@ -33,7 +56,7 @@ const icons = {
     );
   },
 
-  image: (props?: IconProps) => {
+  [FILE_CATEGORIES.IMAGES]: (props?: IconSvgProps) => {
     const size = props?.size ?? defaultProps.size;
     const color = props?.color ?? defaultProps.color;
 
@@ -55,7 +78,7 @@ const icons = {
     );
   },
 
-  video: (props?: IconProps) => {
+  [FILE_CATEGORIES.VIDEOS]: (props?: IconSvgProps) => {
     const size = props?.size ?? defaultProps.size;
     const color = props?.color ?? defaultProps.color;
 
@@ -77,7 +100,7 @@ const icons = {
     );
   },
 
-  audio: (props?: IconProps) => {
+  [FILE_CATEGORIES.AUDIOS]: (props?: IconSvgProps) => {
     const size = props?.size ?? defaultProps.size;
     const color = props?.color ?? defaultProps.color;
 
@@ -99,7 +122,7 @@ const icons = {
     );
   },
 
-  document: (props?: IconProps) => {
+  [FILE_CATEGORIES.DOCUMENTS]: (props?: IconSvgProps) => {
     const size = props?.size ?? defaultProps.size;
     const color = props?.color ?? defaultProps.color;
 
@@ -121,7 +144,7 @@ const icons = {
     );
   },
 
-  file: (props?: IconProps) => {
+  [FILE_CATEGORIES.OTHERS]: (props?: IconSvgProps) => {
     const size = props?.size ?? defaultProps.size;
     const color = props?.color ?? defaultProps.color;
 
@@ -142,29 +165,138 @@ const icons = {
       </svg>
     );
   },
+  eyeOpen: (props?: IconSvgProps) => {
+    const size = props?.size ?? defaultProps.size;
+    const color = props?.color ?? defaultProps.color;
+
+    return (
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        fill="none"
+        viewBox="0 0 24 24"
+        stroke-width="1.5"
+        stroke="currentColor"
+        class={`w-${size} h-${size} ${color}`}
+      >
+        <path
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          d="M2.036 12.322a1.012 1.012 0 0 1 0-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178Z"
+        />
+        <path
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"
+        />
+      </svg>
+    );
+  },
+  eyeClosed: (props?: IconSvgProps) => {
+    const size = props?.size ?? defaultProps.size;
+    const color = props?.color ?? defaultProps.color;
+
+    return (
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        fill="none"
+        viewBox="0 0 24 24"
+        stroke-width="1.5"
+        stroke="currentColor"
+        class={`w-${size} h-${size} ${color}`}
+      >
+        <path
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          d="M3.98 8.223A10.477 10.477 0 0 0 1.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.451 10.451 0 0 1 12 4.5c4.756 0 8.773 3.162 10.065 7.498a10.522 10.522 0 0 1-4.293 5.774M6.228 6.228 3 3m3.228 3.228 3.65 3.65m7.894 7.894L21 21m-3.228-3.228-3.65-3.65m0 0a3 3 0 1 0-4.243-4.243m4.242 4.242L9.88 9.88"
+        />
+      </svg>
+    );
+  },
+  list: (props?: IconSvgProps) => {
+    const size = props?.size ?? defaultProps.size;
+    const color = props?.color ?? defaultProps.color;
+
+    return (
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        fill="none"
+        viewBox="0 0 24 24"
+        stroke-width="1.5"
+        stroke="currentColor"
+        class={`w-${size} h-${size} ${color}`}
+      >
+        <path
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          d="M8.25 6.75h12M8.25 12h12m-12 5.25h12M3.75 6.75h.007v.008H3.75V6.75Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0ZM3.75 12h.007v.008H3.75V12Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm-.375 5.25h.007v.008H3.75v-.008Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Z"
+        />
+      </svg>
+    );
+  },
+  grid: (props?: IconSvgProps) => {
+    const size = props?.size ?? defaultProps.size;
+    const color = props?.color ?? defaultProps.color;
+
+    return (
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        fill="none"
+        viewBox="0 0 24 24"
+        stroke-width="1.5"
+        stroke="currentColor"
+        class={`w-${size} h-${size} ${color}`}
+      >
+        <path
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          d="M3.75 6A2.25 2.25 0 0 1 6 3.75h2.25A2.25 2.25 0 0 1 10.5 6v2.25a2.25 2.25 0 0 1-2.25 2.25H6a2.25 2.25 0 0 1-2.25-2.25V6ZM3.75 15.75A2.25 2.25 0 0 1 6 13.5h2.25a2.25 2.25 0 0 1 2.25 2.25V18a2.25 2.25 0 0 1-2.25 2.25H6A2.25 2.25 0 0 1 3.75 18v-2.25ZM13.5 6a2.25 2.25 0 0 1 2.25-2.25H18A2.25 2.25 0 0 1 20.25 6v2.25A2.25 2.25 0 0 1 18 10.5h-2.25a2.25 2.25 0 0 1-2.25-2.25V6ZM13.5 15.75a2.25 2.25 0 0 1 2.25-2.25H18a2.25 2.25 0 0 1 2.25 2.25V18A2.25 2.25 0 0 1 18 20.25h-2.25A2.25 2.25 0 0 1 13.5 18v-2.25Z"
+        />
+      </svg>
+    );
+  },
 };
 
-export function getFileIcon(
-  isFolder: boolean,
-  fileCategory?: string,
-  size?: number
-) {
-  if (isFolder) {
-    return icons.folder({ color: "text-primary", size: size });
-  }
-
-  switch (fileCategory) {
-    case FILE_CATEGORIES.IMAGES:
-      return icons.image({ size: size });
-    case FILE_CATEGORIES.VIDEOS:
-      return icons.video({ size: size });
-    case FILE_CATEGORIES.AUDIOS:
-      return icons.audio({ size: size });
-    case FILE_CATEGORIES.DOCUMENTS:
-      return icons.document({ size: size });
-    default:
-      return icons.file({ size: size });
-  }
+interface FileIconProps {
+  isFolder: boolean;
+  fileCategory: FILE_CATEGORIES;
+  size?: number;
 }
 
-export default icons;
+export function FileIcon(props: FileIconProps) {
+  const svgProps: IconSvgProps = { color: "text-primary", size: props.size };
+
+  return (
+    <Show
+      when={!props.isFolder}
+      fallback={<Icon {...svgProps} name="folder" />}
+    >
+      <Switch fallback={<Icon {...svgProps} name={props.fileCategory} />}>
+        <Match when={props.fileCategory === FILE_CATEGORIES.IMAGES}>
+          <Icon {...svgProps} name={FILE_CATEGORIES.IMAGES} />
+        </Match>
+        <Match when={props.fileCategory === FILE_CATEGORIES.VIDEOS}>
+          <Icon {...svgProps} name={FILE_CATEGORIES.VIDEOS} />
+        </Match>
+        <Match when={props.fileCategory === FILE_CATEGORIES.AUDIOS}>
+          <Icon {...svgProps} name={FILE_CATEGORIES.AUDIOS} />
+        </Match>
+        <Match when={props.fileCategory === FILE_CATEGORIES.DOCUMENTS}>
+          <Icon {...svgProps} name={FILE_CATEGORIES.DOCUMENTS} />
+        </Match>
+      </Switch>
+    </Show>
+  );
+}
+
+interface IconComponentProps {
+  name: keyof typeof icons;
+  size?: number;
+  color?: string;
+}
+
+function Icon(propsWithoutDefaultValues: IconComponentProps) {
+  const props = mergeProps(defaultProps, propsWithoutDefaultValues);
+  return icons[props.name](props);
+}
+
+export default Icon;

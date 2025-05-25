@@ -1,8 +1,8 @@
 import { FOLDER_CONTENT_TYPES } from "@sv/utils/consts";
-import { formatDate, formatFileSize } from "@sv/utils/format";
-import { getFileIcon } from "@sv/utils/icons";
 import type { FileInfo, FolderInfo } from "@sv/apis/media/models";
 import useCtx from "./ctxProvider";
+import format from "@sv/utils/format";
+import { FileIcon } from "@sv/utils/icons";
 
 interface ListItemProps {
   type: typeof FOLDER_CONTENT_TYPES.FILE | typeof FOLDER_CONTENT_TYPES.FOLDER;
@@ -22,10 +22,10 @@ function ListItem(props: ListItemProps) {
       onClick={handleClick}
     >
       <span>
-        {getFileIcon(
-          props.type === FOLDER_CONTENT_TYPES.FOLDER,
-          props.item.category
-        )}
+        <FileIcon
+          fileCategory={props.item.category}
+          isFolder={props.type === FOLDER_CONTENT_TYPES.FOLDER}
+        />
       </span>
       <div class="text-left font-medium text-neutral truncate">
         {props.item.name}
@@ -33,9 +33,9 @@ function ListItem(props: ListItemProps) {
       <div>
         {props.type === FOLDER_CONTENT_TYPES.FOLDER
           ? "-"
-          : formatFileSize(props.item.size)}
+          : format.size(props.item.size)}
       </div>
-      <div class="hidden md:block">{formatDate(props.item.updatedAt)}</div>
+      <div class="hidden md:block">{format.date(props.item.updatedAt)}</div>
     </div>
   );
 }

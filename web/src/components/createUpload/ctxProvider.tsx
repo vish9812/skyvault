@@ -17,6 +17,9 @@ export function CtxProvider(props: ParentProps) {
   const [fileUploads, setFileUploads] = createSignal<FileUploadState[]>([]);
   const [isUploading, setIsUploading] = createSignal(false);
   const [uploadError, setUploadError] = createSignal("");
+  const [currentFolderId, setCurrentFolderId] = createSignal<
+    string | undefined
+  >(undefined);
 
   // Reset the folder name when the modal is closed
   createEffect(() => {
@@ -90,7 +93,6 @@ export function CtxProvider(props: ParentProps) {
     }));
 
     setFileUploads(newUploads);
-    setIsFileUploadModalOpen(true);
   };
 
   const handleUploadFiles = async (folderId?: string) => {
@@ -98,6 +100,7 @@ export function CtxProvider(props: ParentProps) {
 
     setIsUploading(true);
     setUploadError("");
+    const targetFolderId = folderId || currentFolderId();
 
     try {
       // Mark all files as uploading
@@ -108,13 +111,15 @@ export function CtxProvider(props: ParentProps) {
       // Convert to simple File array
       const files = fileUploads().map((upload) => upload.file);
 
-      await uploadFiles(files, folderId, (fileIndex, progress) => {
+      await uploadFiles(files, targetFolderId, (fileIndex, progress) => {
         setFileUploads((prev) => {
           const updated = [...prev];
-          updated[fileIndex] = {
-            ...updated[fileIndex],
-            progress,
-          };
+          if (updated[fileIndex]) {
+            updated[fileIndex] = {
+              ...updated[fileIndex],
+              progress,
+            };
+          }
           return updated;
         });
       });
@@ -127,7 +132,7 @@ export function CtxProvider(props: ParentProps) {
       // Close the modal after a brief delay to show success state
       setTimeout(() => {
         setIsFileUploadModalOpen(false);
-      }, 1000);
+      }, 2000);
     } catch (err) {
       setUploadError(
         err instanceof Error ? err.message : "Failed to upload files"
@@ -153,6 +158,10 @@ export function CtxProvider(props: ParentProps) {
     }
   };
 
+  const setCurrentFolder = (folderId?: string) => {
+    setCurrentFolderId(folderId);
+  };
+
   const val = {
     // Create folder related values
     isCreateFolderModalOpen,
@@ -172,6 +181,7 @@ export function CtxProvider(props: ParentProps) {
     handleFileSelect,
     handleUploadFiles,
     clearUploads,
+    setCurrentFolder,
   };
 
   return <CTX.Provider value={val}>{props.children}</CTX.Provider>;

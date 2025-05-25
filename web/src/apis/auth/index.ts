@@ -25,6 +25,12 @@ async function handleAuthResponse<T extends SignInRes | SignUpRes>(
   res: Response
 ): Promise<void> {
   const data = await handleJSONResponse<T>(res);
+
+  // TODO: Temporary: Implement profile preferences on server side
+  data.profile.preferences = {
+    contentView: "list",
+  };
+
   localStorage.setItem(LOCAL_STORAGE_KEYS.TOKEN, data.token);
   localStorage.setItem(
     LOCAL_STORAGE_KEYS.PROFILE,

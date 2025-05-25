@@ -1,37 +1,49 @@
+import { ROOT_FOLDER_ID, ROOT_FOLDER_NAME } from "@sv/utils/consts";
 import type { FileInfo, FolderContent, FolderInfo } from "./models";
 import { get, handleJSONResponse, post, postFormData } from "@sv/apis/common";
 
 const urlMedia = "media";
 const urlFolders = `${urlMedia}/folders`;
 
-export async function fetchFolderContent(
-  folderId?: string
-): Promise<FolderContent> {
-  const id = folderId || "0";
+export async function fetchFolderInfo(id: string): Promise<FolderInfo> {
+  if (id === ROOT_FOLDER_ID) {
+    return Promise.resolve({
+      id: ROOT_FOLDER_ID,
+      name: ROOT_FOLDER_NAME,
+      ownerId: "",
+      ancestors: [],
+      createdAt: "",
+      updatedAt: "",
+    });
+  }
+
+  const res = await get(`${urlFolders}/${id}`);
+  return handleJSONResponse<FolderInfo>(res);
+}
+
+export async function fetchFolderContent(id: string): Promise<FolderContent> {
   const res = await get(`${urlFolders}/${id}/content`);
   return handleJSONResponse<FolderContent>(res);
 }
 
 export async function createFolder(
-  parentFolderId: string | undefined,
+  parentFolderId: string,
   name: string
 ): Promise<FolderInfo> {
-  const id = parentFolderId || "0";
-  const res = await post(`${urlFolders}/${id}/`, { name });
+  const res = await post(`${urlFolders}/${parentFolderId}/`, { name });
   return handleJSONResponse<FolderInfo>(res);
 }
 
 export async function uploadFile(
   file: File,
-  folderId: string | undefined,
+  folderId: string,
   onProgress?: (progress: number) => void
 ): Promise<FileInfo> {
-  const id = folderId || "0";
   const formData = new FormData();
   formData.append("file", file);
 
   const res = await postFormData(
-    `${urlFolders}/${id}/files`,
+    `${urlFolders}/${folderId}/files`,
     formData,
     onProgress
   );
@@ -40,7 +52,7 @@ export async function uploadFile(
 
 export async function uploadFiles(
   files: File[],
-  folderId: string | undefined,
+  folderId: string,
   onFileProgress?: (fileIndex: number, progress: number) => void
 ): Promise<FileInfo[]> {
   const results: FileInfo[] = [];

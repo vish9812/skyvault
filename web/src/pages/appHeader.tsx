@@ -1,7 +1,7 @@
-import Search from "@sv/pages/app/search";
-import Profile from "@sv/pages/app/profile";
+import ProfileDropdown from "@sv/components/profileDropdown";
+import Search from "@sv/components/search";
 
-function Header() {
+function AppHeader() {
   return (
     <header class="fixed top-0 left-0 right-0 md:ml-64 bg-white border-b border-border p-2">
       <div class="flex items-center justify-between">
@@ -9,10 +9,10 @@ function Header() {
         <div>
           <Search />
         </div>
-        <Profile />
+        <ProfileDropdown />
       </div>
     </header>
   );
 }
 
-export default Header;
+export default AppHeader;

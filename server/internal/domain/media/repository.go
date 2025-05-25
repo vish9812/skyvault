@@ -3,6 +3,7 @@ package media
 import (
 	"context"
 	"skyvault/internal/domain/internal"
+	"skyvault/pkg/common"
 	"skyvault/pkg/paging"
 )
 
@@ -55,11 +56,11 @@ type Repository interface {
 
 	// App Errors:
 	// - ErrCommonNoData
-	GetFolderInfo(ctx context.Context, folderID string) (*FolderInfo, error)
+	GetFolderInfo(ctx context.Context, ownerID, folderID string) (*FolderInfo, error)
 
 	// App Errors:
 	// - ErrCommonNoData
-	GetFolderInfoTrashed(ctx context.Context, folderID string) (*FolderInfo, error)
+	GetFolderInfoTrashed(ctx context.Context, ownerID, folderID string) (*FolderInfo, error)
 
 	GetFolderInfos(ctx context.Context, pagingOpt *paging.Options, ownerID string, parentFolderID *string) (*paging.Page[*FolderInfo], error)
 
@@ -88,4 +89,10 @@ type Repository interface {
 	// App Errors:
 	// - ErrCommonNoData
 	GetDescendantFolderIDs(ctx context.Context, ownerID string, folderID string) ([]string, error)
+
+	// GetAncestors returns the ancestor folders (basic info) of the given folder ID, excluding the folder itself.
+	//
+	// App Errors:
+	// - ErrCommonNoData
+	GetAncestors(ctx context.Context, ownerID string, folderID string) ([]*common.BaseInfo, error)
 }

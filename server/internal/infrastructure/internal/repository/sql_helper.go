@@ -293,7 +293,7 @@ func runSelectSlice[TDBModel any, TRes any](ctx context.Context, cursorQuery *cu
 }
 
 // runSelectSliceAll is to be used with Select statements that return multiple rows without pagination.
-func runSelectSliceAll[TDBModel any, TRes any](ctx context.Context, stmt SelectStatement, dbTx qrm.DB) ([]*TRes, error) {
+func runSelectSliceAll[TDBModel any, TRes any](ctx context.Context, stmt Statement, dbTx qrm.DB) ([]*TRes, error) {
 	var dbModels []*TDBModel
 	err := stmt.QueryContext(ctx, dbTx, &dbModels)
 	if err != nil {

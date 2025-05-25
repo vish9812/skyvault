@@ -140,7 +140,7 @@ func (h *CommandHandlers) CreateShare(ctx context.Context, cmd *CreateShareComma
 	}
 
 	if cmd.FolderID != nil {
-		folderInfo, err := h.mediaRepository.GetFolderInfo(ctx, *cmd.FolderID)
+		folderInfo, err := h.mediaRepository.GetFolderInfo(ctx, profileID, *cmd.FolderID)
 		if err != nil {
 			return nil, apperror.NewAppError(err, "sharing.CommandHandlers.CreateShare:GetFolderInfo")
 		}

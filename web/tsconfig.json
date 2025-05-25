@@ -3,7 +3,7 @@
     "strict": true,
     "target": "ESNext",
     "module": "ESNext",
-    "moduleResolution": "node",
+    "moduleResolution": "bundler",
     "allowSyntheticDefaultImports": true,
     "esModuleInterop": true,
     "jsx": "preserve",
@@ -16,7 +16,8 @@
       "@sv/components/*": ["components/*"],
       "@sv/utils/*": ["utils/*"],
       "@sv/pages/*": ["pages/*"],
-      "@sv/apis/*": ["apis/*"]
+      "@sv/apis/*": ["apis/*"],
+      "@sv/store/*": ["store/*"]
     }
   }
 }

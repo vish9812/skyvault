@@ -1,19 +1,11 @@
-import { Dialog } from "@kobalte/core/dialog";
-import { TextField } from "@kobalte/core/text-field";
-import useCtx from "./ctxProvider";
-import { useParams } from "@solidjs/router";
-import { Button } from "@kobalte/core/button";
-import { createEffect } from "solid-js";
+import useVM from "./useVM";
 
-function CreateFolder() {
-  const ctx = useCtx();
+function Create() {
+  const vm = useVM();
+
   const params = useParams();
 
   const isDisabled = () => !!ctx.error() || ctx.isCreating();
-
-  createEffect(() => {
-    console.log("isDisabled: ", isDisabled());
-  });
 
   return (
     <Dialog
@@ -82,4 +74,4 @@ function CreateFolder() {
   );
 }
 
-export default CreateFolder;
+export default Create;

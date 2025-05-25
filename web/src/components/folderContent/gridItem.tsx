@@ -1,9 +1,9 @@
 import { FOLDER_CONTENT_TYPES } from "@sv/utils/consts";
-import { formatFileSize } from "@sv/utils/format";
-import { getFileIcon } from "@sv/utils/icons";
 import { Show } from "solid-js";
 import useCtx from "./ctxProvider";
 import type { FileInfo, FolderInfo } from "@sv/apis/media/models";
+import format from "@sv/utils/format";
+import { FileIcon } from "@sv/utils/icons";
 
 interface GridItemProps {
   type: typeof FOLDER_CONTENT_TYPES.FILE | typeof FOLDER_CONTENT_TYPES.FOLDER;
@@ -11,7 +11,6 @@ interface GridItemProps {
 }
 
 function GridItem(props: GridItemProps) {
-  const formattedSize = formatFileSize(props.item.size);
   const ctx = useCtx();
 
   const handleClick = () => {
@@ -33,11 +32,11 @@ function GridItem(props: GridItemProps) {
           />
         ) : (
           <span>
-            {getFileIcon(
-              props.type === FOLDER_CONTENT_TYPES.FOLDER,
-              props.item.category,
-              10
-            )}
+            <FileIcon
+              fileCategory={props.item.category}
+              isFolder={props.type === FOLDER_CONTENT_TYPES.FOLDER}
+              size={10}
+            />
           </span>
         )}
       </div>
@@ -45,8 +44,8 @@ function GridItem(props: GridItemProps) {
       {/* File/folder info */}
       <div class="p-2 flex flex-col">
         <div class="font-medium text-neutral truncate">{props.item.name}</div>
-        <Show when={formattedSize !== "-"}>
-          <div class="text-xs">{formattedSize}</div>
+        <Show when={props.type === FOLDER_CONTENT_TYPES.FILE}>
+          <div class="text-xs">{format.size(props.item.size)}</div>
         </Show>
       </div>
     </div>

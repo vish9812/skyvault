@@ -1,5 +1,5 @@
 import { createSignal, ParentProps, useContext } from "solid-js";
-import CTX from "./ctx";
+import CTX, { CtxType } from "./ctx";
 import { CLIENT_URLS, FOLDER_CONTENT_TYPES } from "@sv/utils/consts";
 import { useNavigate } from "@solidjs/router";
 
@@ -10,7 +10,7 @@ export function CtxProvider(props: ParentProps) {
   const [tapTimer, setTapTimer] = createSignal<number | null>(null);
 
   const handleFolderNavigation = (id: string) => {
-    navigate(`${CLIENT_URLS.HOME}${id}`);
+    navigate(`${CLIENT_URLS.DRIVE}/${id}`);
   };
 
   const handleTap = (
@@ -41,7 +41,7 @@ export function CtxProvider(props: ParentProps) {
     }
   };
 
-  const val = {
+  const val: CtxType = {
     handleTap,
   };
 

@@ -1,19 +1,21 @@
 import { DropdownMenu } from "@kobalte/core/dropdown-menu";
 import { createSignal, onCleanup } from "solid-js";
-import CreateFolder from "./createFolder";
+// import CreateFolder from "./create/folder";
 import UploadFiles from "./uploadFiles";
 import useCtx, { CtxProvider } from "./ctxProvider";
 
 function CreateUploadWithCtx() {
   const ctx = useCtx();
-  const [fileInputRef, setFileInputRef] = createSignal<HTMLInputElement | null>(
-    null
-  );
   const [folderInputRef, setFolderInputRef] =
     createSignal<HTMLInputElement | null>(null);
 
+  // Set the current folder ID when the component is rendered
+  // if (props.currentFolderId) {
+  //   ctx.setCurrentFolder(props.currentFolderId);
+  // }
+
   const handleUploadFilesClick = () => {
-    fileInputRef()?.click();
+    ctx.setIsFileUploadModalOpen(true);
   };
 
   const handleUploadFolderClick = () => {
@@ -29,20 +31,12 @@ function CreateUploadWithCtx() {
 
   // Cleanup function to reset file inputs on component unmount
   onCleanup(() => {
-    if (fileInputRef()) fileInputRef()!.value = "";
     if (folderInputRef()) folderInputRef()!.value = "";
   });
 
   return (
     <>
-      {/* Hidden file inputs */}
-      <input
-        type="file"
-        ref={setFileInputRef}
-        onChange={(e) => ctx.handleFileSelect(e.target.files)}
-        multiple
-        style={{ display: "none" }}
-      />
+      {/* Hidden file input for folder upload */}
       <input
         type="file"
         ref={setupFolderInput}
@@ -166,7 +160,7 @@ function CreateUploadWithCtx() {
         </DropdownMenu.Portal>
       </DropdownMenu>
 
-      <CreateFolder />
+      {/* <CreateFolder /> */}
       <UploadFiles />
     </>
   );

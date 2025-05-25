@@ -28,6 +28,7 @@ interface CtxType {
   handleFileSelect: (files: FileList | null) => void;
   handleUploadFiles: (folderId?: string) => Promise<void>;
   clearUploads: () => void;
+  setCurrentFolder: (folderId?: string) => void;
 }
 
 const CTX = createContext<CtxType>();
