@@ -1,48 +1,46 @@
 import { DropdownMenu } from "@kobalte/core/dropdown-menu";
 import { createSignal, onCleanup } from "solid-js";
-// import CreateFolder from "./create/folder";
-import UploadFiles from "./uploadFiles";
-import useCtx, { CtxProvider } from "./ctxProvider";
+// import UploadFiles from "./uploadFiles";
+// import useCtx, { CtxProvider } from "./ctxProvider";
+import CreateFolder from "./createFolder";
 
-function CreateUploadWithCtx() {
-  const ctx = useCtx();
-  const [folderInputRef, setFolderInputRef] =
-    createSignal<HTMLInputElement | null>(null);
+function CreateUpload() {
+  // const ctx = useCtx();
+  // const [folderInputRef, setFolderInputRef] =
+  //   createSignal<HTMLInputElement | null>(null);
 
-  // Set the current folder ID when the component is rendered
-  // if (props.currentFolderId) {
-  //   ctx.setCurrentFolder(props.currentFolderId);
-  // }
+  const [isCreateFolderModalOpen, setIsCreateFolderModalOpen] =
+    createSignal(false);
 
-  const handleUploadFilesClick = () => {
-    ctx.setIsFileUploadModalOpen(true);
-  };
+  // const handleUploadFilesClick = () => {
+  //   ctx.setIsFileUploadModalOpen(true);
+  // };
 
-  const handleUploadFolderClick = () => {
-    folderInputRef()?.click();
-  };
+  // const handleUploadFolderClick = () => {
+  //   folderInputRef()?.click();
+  // };
 
   // Setup folder input to accept directory
-  const setupFolderInput = (el: HTMLInputElement) => {
-    el.setAttribute("webkitdirectory", "");
-    el.setAttribute("directory", "");
-    setFolderInputRef(el);
-  };
+  // const setupFolderInput = (el: HTMLInputElement) => {
+  //   el.setAttribute("webkitdirectory", "");
+  //   el.setAttribute("directory", "");
+  //   setFolderInputRef(el);
+  // };
 
   // Cleanup function to reset file inputs on component unmount
-  onCleanup(() => {
-    if (folderInputRef()) folderInputRef()!.value = "";
-  });
+  // onCleanup(() => {
+  //   if (folderInputRef()) folderInputRef()!.value = "";
+  // });
 
   return (
     <>
       {/* Hidden file input for folder upload */}
-      <input
+      {/* <input
         type="file"
         ref={setupFolderInput}
         onChange={(e) => ctx.handleFileSelect(e.target.files)}
         style={{ display: "none" }}
-      />
+      /> */}
 
       <DropdownMenu>
         <DropdownMenu.Trigger class="p-2 btn btn-gradient btn-gradient-d-expanded max-md:rounded-full md:w-full md:mb-4 md:mt-2">
@@ -89,7 +87,7 @@ function CreateUploadWithCtx() {
           <DropdownMenu.Content class="bg-white rounded-lg shadow-md border border-border-strong min-w-[180px] py-2">
             <DropdownMenu.Item
               class="dropdown-item"
-              onSelect={() => ctx.setIsCreateFolderModalOpen(true)}
+              onSelect={() => setIsCreateFolderModalOpen(true)}
             >
               <div class="flex items-center gap-2">
                 <svg
@@ -112,7 +110,7 @@ function CreateUploadWithCtx() {
             <DropdownMenu.Separator class="border-border-strong my-2" />
             <DropdownMenu.Item
               class="dropdown-item"
-              onSelect={handleUploadFilesClick}
+              // onSelect={handleUploadFilesClick}
             >
               <div class="flex items-center gap-2">
                 <svg
@@ -135,7 +133,7 @@ function CreateUploadWithCtx() {
             </DropdownMenu.Item>
             <DropdownMenu.Item
               class="dropdown-item"
-              onSelect={handleUploadFolderClick}
+              // onSelect={handleUploadFolderClick}
             >
               <div class="flex items-center gap-2">
                 <svg
@@ -160,18 +158,21 @@ function CreateUploadWithCtx() {
         </DropdownMenu.Portal>
       </DropdownMenu>
 
-      {/* <CreateFolder /> */}
-      <UploadFiles />
+      <CreateFolder
+        isModalOpen={isCreateFolderModalOpen()}
+        closeModal={() => setIsCreateFolderModalOpen(false)}
+      />
+      {/* <UploadFiles /> */}
     </>
   );
 }
 
-function CreateUpload() {
-  return (
-    <CtxProvider>
-      <CreateUploadWithCtx />
-    </CtxProvider>
-  );
-}
+// function CreateUpload() {
+//   return (
+//     <CtxProvider>
+//       <CreateUploadWithCtx />
+//     </CtxProvider>
+//   );
+// }
 
 export default CreateUpload;
