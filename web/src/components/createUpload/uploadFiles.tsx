@@ -1,102 +1,265 @@
 import { Dialog } from "@kobalte/core/dialog";
-import { Meter } from "@kobalte/core/meter";
-import { Details, FileField } from "@kobalte/core/file-field";
 import { createEffect, createSignal, For, Show } from "solid-js";
 import { Button } from "@kobalte/core/button";
 import { FileIcon } from "@sv/utils/icons";
-import { FILE_CATEGORIES } from "@sv/utils/consts";
+import { FILE_CATEGORIES, ROOT_FOLDER_ID } from "@sv/utils/consts";
+import { uploadFiles } from "@sv/apis/media";
+import useAppCtx from "@sv/store/appCtxProvider";
+import format from "@sv/utils/format";
 
 interface Props {
   isModalOpen: boolean;
   closeModal: () => void;
 }
 
+interface FileWithId {
+  id: string;
+  file: File;
+  progress: number;
+  status: "pending" | "uploading" | "success" | "error";
+  error?: string;
+}
+
 export default function UploadFiles(props: Props) {
-  const [acceptedFiles, setAcceptedFiles] = createSignal<File[]>([]);
+  const appCtx = useAppCtx();
+  const [selectedFiles, setSelectedFiles] = createSignal<FileWithId[]>([]);
   const [isLoading, setIsLoading] = createSignal(false);
   const [error, setError] = createSignal("");
+  const [isDragOver, setIsDragOver] = createSignal(false);
 
-  const isDisabled = () => isLoading() || acceptedFiles().length === 0;
+  let fileInputRef: HTMLInputElement | undefined;
+
+  const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+  const ALLOWED_TYPES = [
+    "image/*",
+    "video/*",
+    "audio/*",
+    "text/*",
+    "application/pdf",
+    "application/msword",
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    "application/vnd.ms-excel",
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    "application/zip",
+    "application/x-zip-compressed",
+  ];
+
+  const isDisabled = () => isLoading() || selectedFiles().length === 0;
 
   // Reset files when modal closes
   createEffect(() => {
     if (!props.isModalOpen) {
-      setAcceptedFiles([]);
+      setSelectedFiles([]);
       setError("");
       setIsLoading(false);
+      setIsDragOver(false);
+      if (fileInputRef) {
+        fileInputRef.value = "";
+      }
     }
   });
 
-  const handleFileChange = (details: Details) => {
-    console.log("File change details: ", details);
-    console.log("Current accepted files: ", acceptedFiles());
+  const generateFileId = () => Math.random().toString(36).substr(2, 9);
 
-    // const currentAccepted = acceptedFiles();
-    // const newAccepted = details.acceptedFiles;
-    // const newRejected = details.rejectedFiles;
-
-    // // Case 1: New files selected (new files are added to existing ones)
-    // // This happens when user selects additional files
-    // if (newAccepted.length > currentAccepted.length) {
-    //   // Add only the new files that aren't already in the accepted list
-    //   const filesToAdd = newAccepted.filter(
-    //     (newFile) =>
-    //       !currentAccepted.some(
-    //         (existingFile) =>
-    //           existingFile.name === newFile.name &&
-    //           existingFile.size === newFile.size &&
-    //           existingFile.lastModified === newFile.lastModified
-    //       )
-    //   );
-    //   setAcceptedFiles([...currentAccepted, ...filesToAdd]);
-    // }
-    // // Case 2: File removed (details.acceptedFiles contains all remaining files)
-    // // This happens when user clicks the delete trigger
-    // else if (newAccepted.length < currentAccepted.length) {
-    //   setAcceptedFiles(newAccepted);
-    // }
-    // // Case 3: Files rejected (details.acceptedFiles might be empty, focus on rejectedFiles)
-    // // This happens when files don't meet the criteria (size, type, etc.)
-    // // else if (newRejected.length > rejectedFiles().length) {
-    // //   // Keep existing accepted files, just update rejected files
-    // //   setAcceptedFiles(currentAccepted);
-    // // }
-    // // Edge case: Same number of files but different files (replacement)
-    // else {
-    //   setAcceptedFiles(newAccepted);
-    // }
-
-    // // Always update rejected files
-    // // setRejectedFiles(newRejected);
-
-    // // Clear error when files change
-    // setError("");
-
-    console.log("Final accepted files: ", acceptedFiles());
+  const getFileCategory = (mimeType: string): FILE_CATEGORIES => {
+    const type = mimeType.split("/")[0];
+    switch (type) {
+      case "image":
+        return FILE_CATEGORIES.IMAGE;
+      case "video":
+        return FILE_CATEGORIES.VIDEO;
+      case "audio":
+        return FILE_CATEGORIES.AUDIO;
+      case "text":
+        return FILE_CATEGORIES.TEXT;
+      default:
+        return FILE_CATEGORIES.OTHER;
+    }
   };
 
-  const handleUpload = () => {
-    const files = acceptedFiles();
+  const validateFile = (file: File): string | null => {
+    if (file.size > MAX_FILE_SIZE) {
+      return `File "${file.name}" is too large. Maximum size is ${format.size(
+        MAX_FILE_SIZE
+      )}.`;
+    }
+
+    // Check if file type is allowed
+    const isAllowed = ALLOWED_TYPES.some((type) => {
+      if (type.endsWith("/*")) {
+        return file.type.startsWith(type.slice(0, -1));
+      }
+      return file.type === type;
+    });
+
+    if (!isAllowed) {
+      return `File type "${file.type}" is not supported.`;
+    }
+
+    return null;
+  };
+
+  const processFiles = (files: FileList | File[]) => {
+    const fileArray = Array.from(files);
+    const newFiles: FileWithId[] = [];
+    const errors: string[] = [];
+
+    fileArray.forEach((file) => {
+      const validationError = validateFile(file);
+      if (validationError) {
+        errors.push(validationError);
+        return;
+      }
+
+      // Check for duplicates
+      const isDuplicate = selectedFiles().some(
+        (existing) =>
+          existing.file.name === file.name &&
+          existing.file.size === file.size &&
+          existing.file.lastModified === file.lastModified
+      );
+
+      if (!isDuplicate) {
+        newFiles.push({
+          id: generateFileId(),
+          file,
+          progress: 0,
+          status: "pending",
+        });
+      }
+    });
+
+    if (errors.length > 0) {
+      setError(errors.join(" "));
+    } else {
+      setError("");
+    }
+
+    if (newFiles.length > 0) {
+      setSelectedFiles((prev) => [...prev, ...newFiles]);
+    }
+  };
+
+  const handleFileInputChange = (event: Event) => {
+    const target = event.target as HTMLInputElement;
+    if (target.files && target.files.length > 0) {
+      processFiles(target.files);
+    }
+  };
+
+  const handleDragOver = (event: DragEvent) => {
+    event.preventDefault();
+    event.stopPropagation();
+    setIsDragOver(true);
+  };
+
+  const handleDragLeave = (event: DragEvent) => {
+    event.preventDefault();
+    event.stopPropagation();
+    setIsDragOver(false);
+  };
+
+  const handleDrop = (event: DragEvent) => {
+    event.preventDefault();
+    event.stopPropagation();
+    setIsDragOver(false);
+
+    const files = event.dataTransfer?.files;
+    if (files && files.length > 0) {
+      processFiles(files);
+    }
+  };
+
+  const removeFile = (fileId: string) => {
+    setSelectedFiles((prev) => prev.filter((f) => f.id !== fileId));
+    setError("");
+  };
+
+  const openFileDialog = () => {
+    fileInputRef?.click();
+  };
+
+  const createImagePreview = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      if (!file.type.startsWith("image/")) {
+        reject(new Error("Not an image file"));
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        resolve(e.target?.result as string);
+      };
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+  };
+
+  const handleUpload = async () => {
+    const files = selectedFiles();
 
     if (files.length === 0) {
       setError("Please select at least one file");
       return;
     }
 
-    console.log("Starting upload with files:", files);
+    setIsLoading(true);
+    setError("");
 
-    // TODO: Implement actual upload logic here
-    // You can now use the files array directly for upload
-    // Example:
-    // setIsLoading(true);
-    // try {
-    //   await uploadFiles(files);
-    //   props.closeModal();
-    // } catch (error) {
-    //   setError("Upload failed");
-    // } finally {
-    //   setIsLoading(false);
-    // }
+    try {
+      // Mark all files as uploading
+      setSelectedFiles((prev) =>
+        prev.map((item) => ({ ...item, status: "uploading" as const }))
+      );
+
+      // Convert to simple File array for the API
+      const fileArray = files.map((f) => f.file);
+
+      await uploadFiles(
+        fileArray,
+        appCtx.currentFolderId() || ROOT_FOLDER_ID,
+        (fileIndex, progress) => {
+          setSelectedFiles((prev) => {
+            const updated = [...prev];
+            if (updated[fileIndex]) {
+              updated[fileIndex] = {
+                ...updated[fileIndex],
+                progress,
+              };
+            }
+            return updated;
+          });
+        }
+      );
+
+      // Mark all as success
+      setSelectedFiles((prev) =>
+        prev.map((item) => ({
+          ...item,
+          status: "success" as const,
+          progress: 100,
+        }))
+      );
+
+      // Close modal after brief delay to show success
+      setTimeout(() => {
+        props.closeModal();
+      }, 1500);
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : "Upload failed";
+      setError(errorMessage);
+
+      // Mark files as failed
+      setSelectedFiles((prev) =>
+        prev.map((item) =>
+          item.status === "uploading"
+            ? { ...item, status: "error" as const, error: errorMessage }
+            : item
+        )
+      );
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -114,104 +277,172 @@ export default function UploadFiles(props: Props) {
             </Dialog.Description>
 
             <Show when={error()}>
-              <div class="input-t-error">{error()}</div>
+              <div class="input-t-error mb-4">{error()}</div>
             </Show>
 
-            <FileField
+            {/* Hidden file input */}
+            <input
+              ref={fileInputRef}
+              type="file"
               multiple
-              allowDragAndDrop
-              maxFileSize={1 * 1024 * 1024} // 1MB max per file
-              onFileChange={handleFileChange}
+              accept={ALLOWED_TYPES.join(",")}
+              onChange={handleFileInputChange}
+              style={{ display: "none" }}
               disabled={isLoading()}
+            />
+
+            {/* Drag and drop zone */}
+            <div
+              class={`border-2 border-dashed rounded-lg p-6 my-4 text-center transition-all cursor-pointer ${
+                isDragOver()
+                  ? "border-primary bg-primary-lighter"
+                  : "border-border hover:border-primary hover:bg-primary-lighter"
+              } ${isLoading() ? "opacity-50 cursor-not-allowed" : ""}`}
+              onDragOver={handleDragOver}
+              onDragLeave={handleDragLeave}
+              onDrop={handleDrop}
+              onClick={!isLoading() ? openFileDialog : undefined}
             >
-              <FileField.Dropzone class="border-2 border-dashed rounded-lg p-6 my-4 text-center transition-colors hover:border-primary hover:bg-primary-lighter hover:cursor-pointer">
-                <div class="flex-center flex-col gap-2">
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke-width="1.5"
-                    stroke="currentColor"
-                    class="size-10 text-neutral-light"
-                  >
-                    <path
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                      d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5m-13.5-9L12 3m0 0 4.5 4.5M12 3v13.5"
-                    />
-                  </svg>
-                  <p class="font-medium">Drag and drop files here</p>
-                  <p class="text-sm text-neutral-light">
-                    Or{" "}
-                    <span class="text-neutral font-medium">click anywhere</span>{" "}
-                    to select files
-                  </p>
-                </div>
-              </FileField.Dropzone>
-              <FileField.HiddenInput />
-              <div class="mt-4">
-                <FileField.Description class="text-sm text-neutral-light mb-2">
-                  <span class="text-neutral font-medium">
-                    {acceptedFiles().length}
-                  </span>{" "}
-                  file(s) selected. Click "Upload Files" to start the upload
-                  process.
-                </FileField.Description>
-
-                <FileField.ItemList class="max-h-[200px] md:max-h-[300px] overflow-y-auto space-y-2 mb-4">
-                  {(file) => (
-                    <FileField.Item class="flex items-center justify-between p-2 border border-border rounded">
-                      <div class="flex items-center gap-2">
-                        <FileField.ItemPreview
-                          type={file.type}
-                          class="size-8 md:size-12 rounded bg-bg-muted flex items-center justify-center"
-                        >
-                          <Show
-                            when={file.type.startsWith("image/")}
-                            fallback={
-                              <FileIcon
-                                fileCategory={
-                                  file.type.split("/")[0] as FILE_CATEGORIES
-                                }
-                                isFolder={false}
-                              />
-                            }
-                          >
-                            <FileField.ItemPreviewImage class="w-full h-full object-cover rounded" />
-                          </Show>
-                        </FileField.ItemPreview>
-
-                        <div class="flex flex-col">
-                          <FileField.ItemName class="font-medium text-sm truncate max-w-[200px] md:max-w-[300px]" />
-                          <FileField.ItemSize
-                            class="text-xs text-neutral-light"
-                            precision={1}
-                          />
-                        </div>
-                      </div>
-
-                      <FileField.ItemDeleteTrigger class="text-neutral-light hover:text-error p-1 rounded">
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          fill="none"
-                          viewBox="0 0 24 24"
-                          stroke-width="1.5"
-                          stroke="currentColor"
-                          class="size-5"
-                        >
-                          <path
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                            d="M6 18 18 6M6 6l12 12"
-                          />
-                        </svg>
-                      </FileField.ItemDeleteTrigger>
-                    </FileField.Item>
-                  )}
-                </FileField.ItemList>
+              <div class="flex-center flex-col gap-2">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke-width="1.5"
+                  stroke="currentColor"
+                  class="size-10 text-neutral-light"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5m-13.5-9L12 3m0 0 4.5 4.5M12 3v13.5"
+                  />
+                </svg>
+                <p class="font-medium">
+                  {isDragOver()
+                    ? "Drop files here"
+                    : "Drag and drop files here"}
+                </p>
+                <p class="text-sm text-neutral-light">
+                  Or{" "}
+                  <span class="text-neutral font-medium">click anywhere</span>{" "}
+                  to select files
+                </p>
+                <p class="text-xs text-neutral-light mt-1">
+                  Maximum file size: {format.size(MAX_FILE_SIZE)}
+                </p>
               </div>
-            </FileField>
+            </div>
 
+            {/* File list */}
+            <Show when={selectedFiles().length > 0}>
+              <div class="mt-4">
+                <p class="text-sm text-neutral-light mb-2">
+                  <span class="text-neutral font-medium">
+                    {selectedFiles().length}
+                  </span>{" "}
+                  file(s) selected
+                </p>
+
+                <div class="max-h-[200px] md:max-h-[300px] overflow-y-auto space-y-2 mb-4">
+                  <For each={selectedFiles()}>
+                    {(fileWithId) => (
+                      <div class="flex items-center justify-between p-3 border border-border rounded bg-white">
+                        <div class="flex items-center gap-3 flex-1 min-w-0">
+                          {/* File preview/icon */}
+                          <div class="size-10 md:size-12 rounded bg-bg-muted flex items-center justify-center flex-shrink-0">
+                            <Show
+                              when={fileWithId.file.type.startsWith("image/")}
+                              fallback={
+                                <FileIcon
+                                  fileCategory={getFileCategory(
+                                    fileWithId.file.type
+                                  )}
+                                  isFolder={false}
+                                  size={6}
+                                />
+                              }
+                            >
+                              <img
+                                src={URL.createObjectURL(fileWithId.file)}
+                                alt={fileWithId.file.name}
+                                class="w-full h-full object-cover rounded"
+                                onLoad={(e) => {
+                                  // Clean up object URL after image loads
+                                  setTimeout(() => {
+                                    URL.revokeObjectURL(
+                                      (e.target as HTMLImageElement).src
+                                    );
+                                  }, 1000);
+                                }}
+                              />
+                            </Show>
+                          </div>
+
+                          {/* File info */}
+                          <div class="flex flex-col min-w-0 flex-1">
+                            <div class="font-medium text-sm truncate">
+                              {fileWithId.file.name}
+                            </div>
+                            <div class="text-xs text-neutral-light">
+                              {format.size(fileWithId.file.size)}
+                            </div>
+
+                            {/* Progress bar for uploading files */}
+                            <Show when={fileWithId.status === "uploading"}>
+                              <div class="w-full bg-bg-muted rounded-full h-1.5 mt-1">
+                                <div
+                                  class="bg-primary h-1.5 rounded-full transition-all duration-300"
+                                  style={{ width: `${fileWithId.progress}%` }}
+                                />
+                              </div>
+                            </Show>
+
+                            {/* Status indicators */}
+                            <Show when={fileWithId.status === "success"}>
+                              <div class="text-xs text-green-600 mt-1">
+                                ✓ Uploaded
+                              </div>
+                            </Show>
+                            <Show when={fileWithId.status === "error"}>
+                              <div class="text-xs text-red-600 mt-1">
+                                ✗ {fileWithId.error || "Upload failed"}
+                              </div>
+                            </Show>
+                          </div>
+                        </div>
+
+                        {/* Remove button */}
+                        <Show when={fileWithId.status !== "uploading"}>
+                          <button
+                            class="text-neutral-light hover:text-error p-1 rounded ml-2 flex-shrink-0"
+                            onClick={() => removeFile(fileWithId.id)}
+                            disabled={isLoading()}
+                          >
+                            <svg
+                              xmlns="http://www.w3.org/2000/svg"
+                              fill="none"
+                              viewBox="0 0 24 24"
+                              stroke-width="1.5"
+                              stroke="currentColor"
+                              class="size-5"
+                            >
+                              <path
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                                d="M6 18 18 6M6 6l12 12"
+                              />
+                            </svg>
+                          </button>
+                        </Show>
+                      </div>
+                    )}
+                  </For>
+                </div>
+              </div>
+            </Show>
+
+            {/* Action buttons */}
             <div class="flex justify-end gap-2 mt-4">
               <Button
                 class="btn btn-outline"
