@@ -15,18 +15,18 @@ function CreateFolder(props: Props) {
   const appCtx = useAppCtx();
 
   const [name, setName] = createSignal("");
-  const [isCreating, setIsCreating] = createSignal(false);
+  const [isLoading, setIsLoading] = createSignal(false);
   const [error, setError] = createSignal("");
 
   const isInvalidName = () => name().trim() === "";
-  const isDisabled = () => isInvalidName() || isCreating();
+  const isDisabled = () => isInvalidName() || isLoading();
 
   // Reset state when the modal is closed
   createEffect(() => {
     if (!props.isModalOpen) {
       setName("");
       setError("");
-      setIsCreating(false);
+      setIsLoading(false);
     }
   });
 
@@ -36,9 +36,9 @@ function CreateFolder(props: Props) {
   };
 
   const handleCreateFolder = async () => {
-    setIsCreating(true);
+    setIsLoading(true);
     if (isInvalidName()) {
-      setIsCreating(false);
+      setIsLoading(false);
       return;
     }
 
@@ -52,7 +52,7 @@ function CreateFolder(props: Props) {
         setError("Failed to create the folder");
       }
     } finally {
-      setIsCreating(false);
+      setIsLoading(false);
     }
   };
 
@@ -98,7 +98,7 @@ function CreateFolder(props: Props) {
               <Button
                 class="btn btn-outline"
                 onClick={props.closeModal}
-                disabled={isCreating()}
+                disabled={isLoading()}
               >
                 Cancel
               </Button>
@@ -111,7 +111,7 @@ function CreateFolder(props: Props) {
                 onClick={handleCreateFolder}
                 disabled={isDisabled()}
               >
-                {isCreating() ? "Creating..." : "Create Folder"}
+                {isLoading() ? "Creating..." : "Create Folder"}
               </Button>
             </div>
           </div>

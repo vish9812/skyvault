@@ -56,7 +56,7 @@ const icons = {
     );
   },
 
-  [FILE_CATEGORIES.IMAGES]: (props?: IconSvgProps) => {
+  [FILE_CATEGORIES.IMAGE]: (props?: IconSvgProps) => {
     const size = props?.size ?? defaultProps.size;
     const color = props?.color ?? defaultProps.color;
 
@@ -78,7 +78,7 @@ const icons = {
     );
   },
 
-  [FILE_CATEGORIES.VIDEOS]: (props?: IconSvgProps) => {
+  [FILE_CATEGORIES.VIDEO]: (props?: IconSvgProps) => {
     const size = props?.size ?? defaultProps.size;
     const color = props?.color ?? defaultProps.color;
 
@@ -100,7 +100,7 @@ const icons = {
     );
   },
 
-  [FILE_CATEGORIES.AUDIOS]: (props?: IconSvgProps) => {
+  [FILE_CATEGORIES.AUDIO]: (props?: IconSvgProps) => {
     const size = props?.size ?? defaultProps.size;
     const color = props?.color ?? defaultProps.color;
 
@@ -122,7 +122,7 @@ const icons = {
     );
   },
 
-  [FILE_CATEGORIES.DOCUMENTS]: (props?: IconSvgProps) => {
+  [FILE_CATEGORIES.TEXT]: (props?: IconSvgProps) => {
     const size = props?.size ?? defaultProps.size;
     const color = props?.color ?? defaultProps.color;
 
@@ -144,7 +144,7 @@ const icons = {
     );
   },
 
-  [FILE_CATEGORIES.OTHERS]: (props?: IconSvgProps) => {
+  [FILE_CATEGORIES.OTHER]: (props?: IconSvgProps) => {
     const size = props?.size ?? defaultProps.size;
     const color = props?.color ?? defaultProps.color;
 
@@ -270,18 +270,18 @@ export function FileIcon(props: FileIconProps) {
       when={!props.isFolder}
       fallback={<Icon {...svgProps} name="folder" />}
     >
-      <Switch fallback={<Icon {...svgProps} name={props.fileCategory} />}>
-        <Match when={props.fileCategory === FILE_CATEGORIES.IMAGES}>
-          <Icon {...svgProps} name={FILE_CATEGORIES.IMAGES} />
+      <Switch fallback={<Icon {...svgProps} name={FILE_CATEGORIES.OTHER} />}>
+        <Match when={props.fileCategory === FILE_CATEGORIES.IMAGE}>
+          <Icon {...svgProps} name={FILE_CATEGORIES.IMAGE} />
         </Match>
-        <Match when={props.fileCategory === FILE_CATEGORIES.VIDEOS}>
-          <Icon {...svgProps} name={FILE_CATEGORIES.VIDEOS} />
+        <Match when={props.fileCategory === FILE_CATEGORIES.VIDEO}>
+          <Icon {...svgProps} name={FILE_CATEGORIES.VIDEO} />
         </Match>
-        <Match when={props.fileCategory === FILE_CATEGORIES.AUDIOS}>
-          <Icon {...svgProps} name={FILE_CATEGORIES.AUDIOS} />
+        <Match when={props.fileCategory === FILE_CATEGORIES.AUDIO}>
+          <Icon {...svgProps} name={FILE_CATEGORIES.AUDIO} />
         </Match>
-        <Match when={props.fileCategory === FILE_CATEGORIES.DOCUMENTS}>
-          <Icon {...svgProps} name={FILE_CATEGORIES.DOCUMENTS} />
+        <Match when={props.fileCategory === FILE_CATEGORIES.TEXT}>
+          <Icon {...svgProps} name={FILE_CATEGORIES.TEXT} />
         </Match>
       </Switch>
     </Show>

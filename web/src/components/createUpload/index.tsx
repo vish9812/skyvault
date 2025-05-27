@@ -1,15 +1,13 @@
 import { DropdownMenu } from "@kobalte/core/dropdown-menu";
-import { createSignal, onCleanup } from "solid-js";
-// import UploadFiles from "./uploadFiles";
-// import useCtx, { CtxProvider } from "./ctxProvider";
+import { createSignal } from "solid-js";
 import CreateFolder from "./createFolder";
 
+import UploadFiles from "./uploadFiles";
 function CreateUpload() {
-  // const ctx = useCtx();
-  // const [folderInputRef, setFolderInputRef] =
-  //   createSignal<HTMLInputElement | null>(null);
-
   const [isCreateFolderModalOpen, setIsCreateFolderModalOpen] =
+    createSignal(false);
+
+  const [isUploadFilesModalOpen, setIsUploadFilesModalOpen] =
     createSignal(false);
 
   // const handleUploadFilesClick = () => {
@@ -110,7 +108,7 @@ function CreateUpload() {
             <DropdownMenu.Separator class="border-border-strong my-2" />
             <DropdownMenu.Item
               class="dropdown-item"
-              // onSelect={handleUploadFilesClick}
+              onSelect={() => setIsUploadFilesModalOpen(true)}
             >
               <div class="flex items-center gap-2">
                 <svg
@@ -162,7 +160,10 @@ function CreateUpload() {
         isModalOpen={isCreateFolderModalOpen()}
         closeModal={() => setIsCreateFolderModalOpen(false)}
       />
-      {/* <UploadFiles /> */}
+      <UploadFiles
+        isModalOpen={isUploadFilesModalOpen()}
+        closeModal={() => setIsUploadFilesModalOpen(false)}
+      />
     </>
   );
 }

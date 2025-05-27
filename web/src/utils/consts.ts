@@ -11,11 +11,11 @@ export const CLIENT_URLS = {
 } as const;
 
 export enum FILE_CATEGORIES {
-  IMAGES = "images",
-  VIDEOS = "videos",
-  AUDIOS = "audios",
-  DOCUMENTS = "documents",
-  OTHERS = "others",
+  IMAGE = "image",
+  VIDEO = "video",
+  AUDIO = "audio",
+  TEXT = "text",
+  OTHER = "other",
 }
 
 export const FOLDER_CONTENT_TYPES = {

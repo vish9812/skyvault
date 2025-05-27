@@ -16,11 +16,11 @@ const (
 )
 
 const (
-	CategoryImages    = "images"
-	CategoryDocuments = "documents"
-	CategoryVideos    = "videos"
-	CategoryAudios    = "audios"
-	CategoryOthers    = "others"
+	CategoryImage = "image"
+	CategoryText  = "text"
+	CategoryVideo = "video"
+	CategoryAudio = "audio"
+	CategoryOther = "other"
 )
 
 type FileConfig struct {
@@ -96,21 +96,21 @@ func getCategory(mimeType string) Category {
 	baseMime := strings.Split(mimeType, "/")[0]
 	switch baseMime {
 	case "text":
-		category = CategoryDocuments
+		category = CategoryText
 	case "image":
-		category = CategoryImages
+		category = CategoryImage
 	case "audio":
-		category = CategoryAudios
+		category = CategoryAudio
 	case "video":
-		category = CategoryVideos
+		category = CategoryVideo
 	default:
-		category = CategoryOthers
+		category = CategoryOther
 	}
 	return category
 }
 
 func (f *FileInfo) WithPreview(file io.ReadSeeker) (*FileInfo, error) {
-	if f.Category != CategoryImages {
+	if f.Category != CategoryImage {
 		return f, nil
 	}
 

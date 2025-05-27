@@ -20,7 +20,7 @@ func NewQueriesSanitizer(queries Queries) Queries {
 func validateCategory(category Category) (Category, error) {
 	category = Category(strings.TrimSpace(string(category)))
 	switch category {
-	case CategoryImages, CategoryDocuments, CategoryVideos, CategoryAudios, CategoryOthers:
+	case CategoryImage, CategoryText, CategoryVideo, CategoryAudio, CategoryOther:
 		return category, nil
 	default:
 		return "", apperror.ErrCommonInvalidValue

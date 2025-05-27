@@ -279,7 +279,7 @@ func TestFileInfo_WithPreview(t *testing.T) {
 		{
 			name: "generate preview for image",
 			file: FileInfo{
-				Category: CategoryImages,
+				Category: CategoryImage,
 				MimeType: "image/png",
 			},
 			reader:        bytes.NewReader(buf.Bytes()),
@@ -289,7 +289,7 @@ func TestFileInfo_WithPreview(t *testing.T) {
 		{
 			name: "skip preview for non-image",
 			file: FileInfo{
-				Category: CategoryDocuments,
+				Category: CategoryText,
 				MimeType: "text/plain",
 			},
 			reader:        bytes.NewReader([]byte("test")),
@@ -299,7 +299,7 @@ func TestFileInfo_WithPreview(t *testing.T) {
 		{
 			name: "skip preview for unsupported image format",
 			file: FileInfo{
-				Category: CategoryImages,
+				Category: CategoryImage,
 				MimeType: "image/webp",
 			},
 			reader:        bytes.NewReader(buf1.Bytes()),

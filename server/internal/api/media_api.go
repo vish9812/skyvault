@@ -83,6 +83,12 @@ func (a *MediaAPI) InitRoutes() *MediaAPI {
 // Files
 //--------------------------------
 
+// TODO: Implement UploadFolder
+func (a *MediaAPI) UploadFolder(w http.ResponseWriter, r *http.Request) {
+
+}
+
+// TODO: Handle multiple files
 func (a *MediaAPI) UploadFile(w http.ResponseWriter, r *http.Request) {
 	profileID := common.GetProfileIDFromContext(r.Context())
 
