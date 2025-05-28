@@ -88,24 +88,19 @@ export function get(url: string) {
 }
 
 export async function handleJSONResponse<T>(res: Response): Promise<T> {
-  // Simulate a slow response
-  return new Promise((resolve, reject) => {
-    setTimeout(async () => {
-      if (!res.ok) {
-        let msg = "";
-        try {
-          const data = (await res.json()) as ErrRes;
-          msg = data.code;
-        } catch (e) {
-          // If the response is not JSON, try to parse it as text
-          if (e instanceof SyntaxError) {
-            msg = await res.text();
-          }
-        }
-        reject(new Error(msg));
+  if (!res.ok) {
+    let msg = "";
+    try {
+      const data = (await res.json()) as ErrRes;
+      msg = data.code;
+    } catch (e) {
+      // If the response is not JSON, try to parse it as text
+      if (e instanceof SyntaxError) {
+        msg = await res.text();
       }
+    }
+    throw new Error(msg);
+  }
 
-      resolve(res.json() as T);
-    }, 700);
-  });
+  return res.json() as T;
 }

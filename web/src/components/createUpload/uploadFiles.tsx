@@ -3,7 +3,7 @@ import { createEffect, createSignal, For, Show } from "solid-js";
 import { Button } from "@kobalte/core/button";
 import { FileIcon } from "@sv/utils/icons";
 import { FILE_CATEGORIES, ROOT_FOLDER_ID } from "@sv/utils/consts";
-import { uploadFiles } from "@sv/apis/media";
+import { uploadFilesParallel } from "@sv/apis/media";
 import useAppCtx from "@sv/store/appCtxProvider";
 import format from "@sv/utils/format";
 
@@ -29,7 +29,9 @@ export default function UploadFiles(props: Props) {
 
   let fileInputRef: HTMLInputElement | undefined;
 
-  const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+  const MAX_FILE_SIZE = 4 * 1024 * 1024 * 1024; // 4GB
+  const MAX_FILES_COUNT = 100;
+  const MAX_TOTAL_SIZE = 10 * 1024 * 1024 * 1024; // 10GB total
   const ALLOWED_TYPES = [
     "image/*",
     "video/*",
@@ -42,6 +44,8 @@ export default function UploadFiles(props: Props) {
     "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     "application/zip",
     "application/x-zip-compressed",
+    "application/x-rar-compressed",
+    "application/x-7z-compressed",
   ];
 
   const isDisabled = () => isLoading() || selectedFiles().length === 0;
@@ -92,8 +96,30 @@ export default function UploadFiles(props: Props) {
       return file.type === type;
     });
 
-    if (!isAllowed) {
+    if (!isAllowed && file.type !== "") {
       return `File type "${file.type}" is not supported.`;
+    }
+
+    return null;
+  };
+
+  const validateFiles = (files: FileList | File[]): string | null => {
+    const fileArray = Array.from(files);
+
+    if (fileArray.length > MAX_FILES_COUNT) {
+      return `Too many files selected. Maximum is ${MAX_FILES_COUNT} files.`;
+    }
+
+    const totalSize = fileArray.reduce((sum, file) => sum + file.size, 0);
+    const currentTotalSize = selectedFiles().reduce(
+      (sum, f) => sum + f.file.size,
+      0
+    );
+
+    if (totalSize + currentTotalSize > MAX_TOTAL_SIZE) {
+      return `Total file size too large. Maximum is ${format.size(
+        MAX_TOTAL_SIZE
+      )}.`;
     }
 
     return null;
@@ -103,6 +129,13 @@ export default function UploadFiles(props: Props) {
     const fileArray = Array.from(files);
     const newFiles: FileWithId[] = [];
     const errors: string[] = [];
+
+    // Validate total files and size first
+    const totalValidationError = validateFiles(files);
+    if (totalValidationError) {
+      setError(totalValidationError);
+      return;
+    }
 
     fileArray.forEach((file) => {
       const validationError = validateFile(file);
@@ -136,7 +169,16 @@ export default function UploadFiles(props: Props) {
     }
 
     if (newFiles.length > 0) {
-      setSelectedFiles((prev) => [...prev, ...newFiles]);
+      setSelectedFiles((prev) => {
+        const combined = [...prev, ...newFiles];
+        if (combined.length > MAX_FILES_COUNT) {
+          setError(
+            `Cannot add more files. Maximum is ${MAX_FILES_COUNT} files.`
+          );
+          return prev;
+        }
+        return combined;
+      });
     }
   };
 
@@ -215,7 +257,8 @@ export default function UploadFiles(props: Props) {
       // Convert to simple File array for the API
       const fileArray = files.map((f) => f.file);
 
-      await uploadFiles(
+      // Use parallel uploads with controlled concurrency
+      await uploadFilesParallel(
         fileArray,
         appCtx.currentFolderId() || ROOT_FOLDER_ID,
         (fileIndex, progress) => {
@@ -229,7 +272,8 @@ export default function UploadFiles(props: Props) {
             }
             return updated;
           });
-        }
+        },
+        5 // Max 5 concurrent uploads
       );
 
       // Mark all as success
@@ -262,6 +306,19 @@ export default function UploadFiles(props: Props) {
     }
   };
 
+  const getTotalSize = () => {
+    return selectedFiles().reduce((sum, f) => sum + f.file.size, 0);
+  };
+
+  const getUploadStats = () => {
+    const files = selectedFiles();
+    const uploading = files.filter((f) => f.status === "uploading").length;
+    const success = files.filter((f) => f.status === "success").length;
+    const failed = files.filter((f) => f.status === "error").length;
+
+    return { uploading, success, failed, total: files.length };
+  };
+
   return (
     <Dialog
       open={props.isModalOpen}
@@ -269,11 +326,12 @@ export default function UploadFiles(props: Props) {
     >
       <Dialog.Portal>
         <Dialog.Overlay class="dialog-overlay" />
-        <Dialog.Content class="dialog-content max-w-lg">
+        <Dialog.Content class="dialog-content max-w-2xl">
           <div class="flex flex-col">
             <Dialog.Title class="dialog-title">Upload Files</Dialog.Title>
             <Dialog.Description class="dialog-description">
-              Upload your files to the current folder
+              Upload your files to the current folder. Maximum 4GB per file, 100
+              files total.
             </Dialog.Description>
 
             <Show when={error()}>
@@ -329,7 +387,8 @@ export default function UploadFiles(props: Props) {
                   to select files
                 </p>
                 <p class="text-xs text-neutral-light mt-1">
-                  Maximum file size: {format.size(MAX_FILE_SIZE)}
+                  Maximum file size: {format.size(MAX_FILE_SIZE)} • Maximum
+                  files: {MAX_FILES_COUNT}
                 </p>
               </div>
             </div>
@@ -337,14 +396,25 @@ export default function UploadFiles(props: Props) {
             {/* File list */}
             <Show when={selectedFiles().length > 0}>
               <div class="mt-4">
-                <p class="text-sm text-neutral-light mb-2">
-                  <span class="text-neutral font-medium">
-                    {selectedFiles().length}
-                  </span>{" "}
-                  file(s) selected
-                </p>
+                <div class="flex justify-between items-center mb-2">
+                  <p class="text-sm text-neutral-light">
+                    <span class="text-neutral font-medium">
+                      {selectedFiles().length}
+                    </span>{" "}
+                    file(s) selected • Total size: {format.size(getTotalSize())}
+                  </p>
 
-                <div class="max-h-[200px] md:max-h-[300px] overflow-y-auto space-y-2 mb-4">
+                  <Show when={isLoading()}>
+                    <div class="text-xs text-neutral-light">
+                      {(() => {
+                        const stats = getUploadStats();
+                        return `${stats.success}/${stats.total} completed`;
+                      })()}
+                    </div>
+                  </Show>
+                </div>
+
+                <div class="max-h-[300px] md:max-h-[400px] overflow-y-auto space-y-2 mb-4">
                   <For each={selectedFiles()}>
                     {(fileWithId) => (
                       <div class="flex items-center justify-between p-3 border border-border rounded bg-white">
@@ -352,7 +422,10 @@ export default function UploadFiles(props: Props) {
                           {/* File preview/icon */}
                           <div class="size-10 md:size-12 rounded bg-bg-muted flex items-center justify-center flex-shrink-0">
                             <Show
-                              when={fileWithId.file.type.startsWith("image/")}
+                              when={
+                                fileWithId.file.type.startsWith("image/") &&
+                                fileWithId.file.size < 10 * 1024 * 1024
+                              }
                               fallback={
                                 <FileIcon
                                   fileCategory={getFileCategory(
@@ -386,6 +459,13 @@ export default function UploadFiles(props: Props) {
                             </div>
                             <div class="text-xs text-neutral-light">
                               {format.size(fileWithId.file.size)}
+                              <Show
+                                when={fileWithId.file.size > 100 * 1024 * 1024}
+                              >
+                                <span class="ml-1 text-blue-600">
+                                  • Chunked upload
+                                </span>
+                              </Show>
                             </div>
 
                             {/* Progress bar for uploading files */}
@@ -396,12 +476,15 @@ export default function UploadFiles(props: Props) {
                                   style={{ width: `${fileWithId.progress}%` }}
                                 />
                               </div>
+                              <div class="text-xs text-neutral-light mt-1">
+                                {Math.round(fileWithId.progress)}%
+                              </div>
                             </Show>
 
                             {/* Status indicators */}
                             <Show when={fileWithId.status === "success"}>
                               <div class="text-xs text-green-600 mt-1">
-                                ✓ Uploaded
+                                ✓ Uploaded successfully
                               </div>
                             </Show>
                             <Show when={fileWithId.status === "error"}>
@@ -460,7 +543,9 @@ export default function UploadFiles(props: Props) {
                 disabled={isDisabled()}
                 onClick={handleUpload}
               >
-                {isLoading() ? "Uploading..." : "Upload Files"}
+                {isLoading()
+                  ? "Uploading..."
+                  : `Upload ${selectedFiles().length} File(s)`}
               </Button>
             </div>
           </div>

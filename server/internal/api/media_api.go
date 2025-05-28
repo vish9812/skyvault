@@ -71,6 +71,8 @@ func (a *MediaAPI) InitRoutes() *MediaAPI {
 				// Files routes that need folderID
 				r.Route("/files", func(r chi.Router) {
 					r.Post("/", a.UploadFile)
+					r.Post("/chunks", a.UploadChunk)
+					r.Post("/finalize", a.FinalizeChunkedUpload)
 				})
 			})
 		})
@@ -88,7 +90,6 @@ func (a *MediaAPI) UploadFolder(w http.ResponseWriter, r *http.Request) {
 
 }
 
-// TODO: Handle multiple files
 func (a *MediaAPI) UploadFile(w http.ResponseWriter, r *http.Request) {
 	profileID := common.GetProfileIDFromContext(r.Context())
 
@@ -134,6 +135,150 @@ func (a *MediaAPI) UploadFile(w http.ResponseWriter, r *http.Request) {
 	err = copier.Copy(&dto, &fileInfo)
 	if err != nil {
 		helper.RespondError(w, r, apperror.NewAppError(err, "mediaAPI.UploadFile:Copy"))
+		return
+	}
+
+	helper.RespondJSON(w, http.StatusCreated, &dto)
+}
+
+func (a *MediaAPI) UploadChunk(w http.ResponseWriter, r *http.Request) {
+	profileID := common.GetProfileIDFromContext(r.Context())
+
+	// Parse multipart form with smaller memory limit for chunks
+	err := r.ParseMultipartForm(10 * media.BytesPerMB) // 10MB for chunks
+	if err != nil {
+		helper.RespondError(w, r, apperror.NewAppError(err, "mediaAPI.UploadChunk:ParseMultipartForm"))
+		return
+	}
+
+	// Get chunk file
+	file, _, err := r.FormFile("chunk")
+	if err != nil {
+		helper.RespondError(w, r, apperror.NewAppError(err, "mediaAPI.UploadChunk:FormFile"))
+		return
+	}
+	defer file.Close()
+
+	// Get form parameters
+	uploadID := r.FormValue("uploadId")
+	if uploadID == "" {
+		helper.RespondError(w, r, apperror.NewAppError(apperror.ErrCommonInvalidValue, "mediaAPI.UploadChunk:MissingUploadId"))
+		return
+	}
+
+	chunkIndexStr := r.FormValue("chunkIndex")
+	chunkIndex, err := strconv.Atoi(chunkIndexStr)
+	if err != nil {
+		helper.RespondError(w, r, apperror.NewAppError(err, "mediaAPI.UploadChunk:InvalidChunkIndex"))
+		return
+	}
+
+	totalChunksStr := r.FormValue("totalChunks")
+	totalChunks, err := strconv.Atoi(totalChunksStr)
+	if err != nil {
+		helper.RespondError(w, r, apperror.NewAppError(err, "mediaAPI.UploadChunk:InvalidTotalChunks"))
+		return
+	}
+
+	fileName := r.FormValue("fileName")
+	if fileName == "" {
+		helper.RespondError(w, r, apperror.NewAppError(apperror.ErrCommonInvalidValue, "mediaAPI.UploadChunk:MissingFileName"))
+		return
+	}
+
+	var fileSize int64
+	var mimeType string
+
+	// These are only required for the first chunk
+	if chunkIndex == 0 {
+		fileSizeStr := r.FormValue("fileSize")
+		if fileSizeStr != "" {
+			fileSize, err = strconv.ParseInt(fileSizeStr, 10, 64)
+			if err != nil {
+				helper.RespondError(w, r, apperror.NewAppError(err, "mediaAPI.UploadChunk:InvalidFileSize"))
+				return
+			}
+		}
+
+		mimeType = r.FormValue("mimeType")
+		if mimeType == "" {
+			mimeType = "application/octet-stream"
+		}
+	}
+
+	cmd := &media.UploadChunkCommand{
+		OwnerID:     profileID,
+		UploadID:    uploadID,
+		ChunkIndex:  chunkIndex,
+		TotalChunks: totalChunks,
+		FileName:    fileName,
+		FileSize:    fileSize,
+		MimeType:    mimeType,
+		Reader:      file,
+	}
+
+	err = a.commands.UploadChunk(r.Context(), cmd)
+	if err != nil {
+		helper.RespondError(w, r, apperror.NewAppError(err, "mediaAPI.UploadChunk:UploadChunk").WithMetadata("upload_id", uploadID).WithMetadata("chunk_index", chunkIndex))
+		return
+	}
+
+	helper.RespondEmpty(w, http.StatusOK)
+}
+
+func (a *MediaAPI) FinalizeChunkedUpload(w http.ResponseWriter, r *http.Request) {
+	profileID := common.GetProfileIDFromContext(r.Context())
+
+	var folderID *string
+	if id := chi.URLParam(r, urlParamFolderID); validate.UUID(id) {
+		folderID = &id
+	}
+
+	var req struct {
+		UploadID string `json:"uploadId"`
+		FileName string `json:"fileName"`
+		FileSize int64  `json:"fileSize"`
+		MimeType string `json:"mimeType"`
+	}
+
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		helper.RespondError(w, r, apperror.NewAppError(err, "mediaAPI.FinalizeChunkedUpload:DecodeJSON"))
+		return
+	}
+
+	if req.UploadID == "" {
+		helper.RespondError(w, r, apperror.NewAppError(apperror.ErrCommonInvalidValue, "mediaAPI.FinalizeChunkedUpload:MissingUploadId"))
+		return
+	}
+
+	if req.FileName == "" {
+		helper.RespondError(w, r, apperror.NewAppError(apperror.ErrCommonInvalidValue, "mediaAPI.FinalizeChunkedUpload:MissingFileName"))
+		return
+	}
+
+	if req.MimeType == "" {
+		req.MimeType = "application/octet-stream"
+	}
+
+	cmd := &media.FinalizeChunkedUploadCommand{
+		OwnerID:  profileID,
+		FolderID: folderID,
+		UploadID: req.UploadID,
+		FileName: req.FileName,
+		FileSize: req.FileSize,
+		MimeType: req.MimeType,
+	}
+
+	fileInfo, err := a.commands.FinalizeChunkedUpload(r.Context(), cmd)
+	if err != nil {
+		helper.RespondError(w, r, apperror.NewAppError(err, "mediaAPI.FinalizeChunkedUpload:FinalizeChunkedUpload").WithMetadata("upload_id", req.UploadID).WithMetadata("file_name", req.FileName))
+		return
+	}
+
+	var dto dtos.GetFileInfo
+	err = copier.Copy(&dto, &fileInfo)
+	if err != nil {
+		helper.RespondError(w, r, apperror.NewAppError(err, "mediaAPI.FinalizeChunkedUpload:Copy"))
 		return
 	}
 

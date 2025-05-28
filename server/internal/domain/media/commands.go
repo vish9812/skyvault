@@ -22,6 +22,20 @@ type Commands interface {
 	// - ErrCommonInvalidValue
 	UploadFile(ctx context.Context, cmd *UploadFileCommand) (*FileInfo, error)
 
+	// UploadChunk uploads a chunk of a file for chunked uploads
+	// App Errors:
+	// - ErrCommonInvalidValue
+	UploadChunk(ctx context.Context, cmd *UploadChunkCommand) error
+
+	// FinalizeChunkedUpload combines all chunks into the final file
+	// App Errors:
+	// - ErrCommonNoData
+	// - ErrCommonNoAccess
+	// - ErrCommonDuplicateData
+	// - ErrMediaFileSizeLimitExceeded
+	// - ErrCommonInvalidValue
+	FinalizeChunkedUpload(ctx context.Context, cmd *FinalizeChunkedUploadCommand) (*FileInfo, error)
+
 	// App Errors:
 	// - ErrCommonInvalidValue
 	// - ErrCommonNoData
@@ -92,6 +106,26 @@ type UploadFileCommand struct {
 	Size     int64
 	MimeType string
 	File     io.ReadSeeker
+}
+
+type UploadChunkCommand struct {
+	OwnerID     string
+	UploadID    string
+	ChunkIndex  int
+	TotalChunks int
+	FileName    string
+	FileSize    int64
+	MimeType    string
+	Reader      io.Reader
+}
+
+type FinalizeChunkedUploadCommand struct {
+	OwnerID  string
+	FolderID *string
+	UploadID string
+	FileName string
+	FileSize int64
+	MimeType string
 }
 
 type TrashFilesCommand struct {

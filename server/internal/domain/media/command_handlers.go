@@ -76,6 +76,89 @@ func (h *CommandHandlers) UploadFile(ctx context.Context, cmd *UploadFileCommand
 	return info, nil
 }
 
+func (h *CommandHandlers) UploadChunk(ctx context.Context, cmd *UploadChunkCommand) error {
+	// Validate chunk parameters
+	if cmd.ChunkIndex < 0 || cmd.ChunkIndex >= cmd.TotalChunks {
+		return apperror.NewAppError(apperror.ErrCommonInvalidValue, "media.CommandHandlers.UploadChunk:InvalidChunkIndex").WithMetadata("chunk_index", cmd.ChunkIndex).WithMetadata("total_chunks", cmd.TotalChunks)
+	}
+
+	if cmd.TotalChunks <= 0 {
+		return apperror.NewAppError(apperror.ErrCommonInvalidValue, "media.CommandHandlers.UploadChunk:InvalidTotalChunks").WithMetadata("total_chunks", cmd.TotalChunks)
+	}
+
+	// Validate file size against limits
+	fileConfig := FileConfig{
+		MaxSizeMB: h.app.Config.Media.MaxSizeMB,
+	}
+
+	if cmd.FileSize > (fileConfig.MaxSizeMB * BytesPerMB) {
+		return apperror.NewAppError(apperror.ErrMediaFileSizeLimitExceeded, "media.CommandHandlers.UploadChunk:FileSizeExceeded").WithMetadata("max_size_mb", fileConfig.MaxSizeMB).WithMetadata("file_size", cmd.FileSize)
+	}
+
+	// Save the chunk
+	err := h.storage.SaveChunk(ctx, cmd.Reader, cmd.UploadID, cmd.ChunkIndex, cmd.OwnerID)
+	if err != nil {
+		return apperror.NewAppError(err, "media.CommandHandlers.UploadChunk:SaveChunk").WithMetadata("upload_id", cmd.UploadID).WithMetadata("chunk_index", cmd.ChunkIndex)
+	}
+
+	return nil
+}
+
+func (h *CommandHandlers) FinalizeChunkedUpload(ctx context.Context, cmd *FinalizeChunkedUploadCommand) (*FileInfo, error) {
+	var parentFolderInfo *FolderInfo
+	if cmd.FolderID != nil {
+		var err error
+		parentFolderInfo, err = h.repository.GetFolderInfo(ctx, cmd.OwnerID, *cmd.FolderID)
+		if err != nil {
+			return nil, apperror.NewAppError(err, "media.CommandHandlers.FinalizeChunkedUpload:GetFolderInfo")
+		}
+	}
+
+	fileConfig := FileConfig{
+		MaxSizeMB: h.app.Config.Media.MaxSizeMB,
+	}
+
+	info, err := NewFileInfo(fileConfig, cmd.OwnerID, parentFolderInfo, cmd.FileName, cmd.FileSize, cmd.MimeType)
+	if err != nil {
+		return nil, apperror.NewAppError(err, "media.CommandHandlers.FinalizeChunkedUpload:NewFileInfo")
+	}
+
+	// Start transaction
+	tx, err := h.repository.BeginTx(ctx)
+	if err != nil {
+		return nil, apperror.NewAppError(err, "media.CommandHandlers.FinalizeChunkedUpload:BeginTx")
+	}
+	defer tx.Rollback()
+
+	// Finalize the chunked upload by combining chunks
+	err = h.storage.FinalizeChunkedUpload(ctx, cmd.UploadID, info.ID, cmd.OwnerID)
+	if err != nil {
+		return nil, apperror.NewAppError(err, "media.CommandHandlers.FinalizeChunkedUpload:FinalizeChunkedUpload").WithMetadata("upload_id", cmd.UploadID).WithMetadata("file_id", info.ID)
+	}
+
+	// Clean up chunks after successful finalization
+	defer func() {
+		if cleanupErr := h.storage.CleanupChunks(ctx, cmd.UploadID, cmd.OwnerID); cleanupErr != nil {
+			// Log cleanup error but don't fail the upload
+			h.app.Logger.Warn().Err(cleanupErr).Str("upload_id", cmd.UploadID).Msg("Failed to cleanup chunks after successful upload")
+		}
+	}()
+
+	// Skip preview generation for chunked uploads (will be done asynchronously)
+	repoTx := h.repository.WithTx(ctx, tx)
+	info, err = repoTx.CreateFileInfo(ctx, info)
+	if err != nil {
+		return nil, apperror.NewAppError(err, "media.CommandHandlers.FinalizeChunkedUpload:CreateFileInfo")
+	}
+
+	err = tx.Commit()
+	if err != nil {
+		return nil, apperror.NewAppError(err, "media.CommandHandlers.FinalizeChunkedUpload:Commit")
+	}
+
+	return info, nil
+}
+
 func (h *CommandHandlers) RenameFile(ctx context.Context, cmd *RenameFileCommand) error {
 	info, err := h.repository.GetFileInfo(ctx, cmd.FileID)
 	if err != nil {
