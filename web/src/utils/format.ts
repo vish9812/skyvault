@@ -33,10 +33,10 @@ function initials(name: string) {
   return `${firstChar}${lastChar}`.toUpperCase();
 }
 
-const format = {
+const Format = {
   initials,
   size,
   date,
-};
+} as const;
 
-export default format;
+export default Format;

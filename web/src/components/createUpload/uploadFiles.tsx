@@ -1,102 +1,114 @@
-import { Dialog } from "@kobalte/core/dialog";
-import { createEffect, createSignal, For, Show } from "solid-js";
 import { Button } from "@kobalte/core/button";
-import { FileIcon } from "@sv/utils/icons";
-import { FILE_CATEGORIES, ROOT_FOLDER_ID } from "@sv/utils/consts";
-import { uploadFilesParallel } from "@sv/apis/media";
+import { Dialog } from "@kobalte/core/dialog";
+import { uploadFiles } from "@sv/apis/media";
+import { UploadFileInfo } from "@sv/apis/media/models";
+import { FileIcon } from "@sv/components/icons";
 import useAppCtx from "@sv/store/appCtxProvider";
-import format from "@sv/utils/format";
+import FileUtils from "@sv/utils/fileUtils";
+import Format from "@sv/utils/format";
+import Random from "@sv/utils/random";
+import Validate, { VALIDATIONS } from "@sv/utils/validate";
+import { createEffect, createSignal, For, Show } from "solid-js";
+import { createStore, produce } from "solid-js/store";
+
+// TODO: Get these from the backend
+const maxFileSize = 500 * 1024 * 1024; // 500MB
+const maxFilesCount = 100;
+const maxTotalSize = maxFileSize * maxFilesCount;
+const allowedTypes = [
+  "image/*",
+  "video/*",
+  "audio/*",
+  "text/*",
+  "application/pdf",
+  "application/msword",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  "application/vnd.ms-excel",
+  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  "application/zip",
+  "application/x-zip-compressed",
+  "application/x-rar-compressed",
+  "application/x-7z-compressed",
+];
+// disallowed types has higher priority than allowed types
+const disallowedTypes = ["application/pdf"];
 
 interface Props {
   isModalOpen: boolean;
   closeModal: () => void;
 }
 
-interface FileWithId {
-  id: string;
-  file: File;
-  progress: number;
-  status: "pending" | "uploading" | "success" | "error";
-  error?: string;
-}
+type UploadFileInfoMap = Record<string, UploadFileInfo>;
 
 export default function UploadFiles(props: Props) {
+  let fileInputRef: HTMLInputElement | undefined;
+
   const appCtx = useAppCtx();
-  const [selectedFiles, setSelectedFiles] = createSignal<FileWithId[]>([]);
+
+  const [selectedFiles, setSelectedFiles] = createStore<UploadFileInfoMap>({});
   const [isLoading, setIsLoading] = createSignal(false);
   const [error, setError] = createSignal("");
   const [isDragOver, setIsDragOver] = createSignal(false);
 
-  let fileInputRef: HTMLInputElement | undefined;
+  const isDisabled = () =>
+    isLoading() ||
+    Object.keys(selectedFiles).length === 0 ||
+    Object.keys(selectedFiles).length > maxFilesCount;
 
-  const MAX_FILE_SIZE = 4 * 1024 * 1024 * 1024; // 4GB
-  const MAX_FILES_COUNT = 100;
-  const MAX_TOTAL_SIZE = 10 * 1024 * 1024 * 1024; // 10GB total
-  const ALLOWED_TYPES = [
-    "image/*",
-    "video/*",
-    "audio/*",
-    "text/*",
-    "application/pdf",
-    "application/msword",
-    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-    "application/vnd.ms-excel",
-    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-    "application/zip",
-    "application/x-zip-compressed",
-    "application/x-rar-compressed",
-    "application/x-7z-compressed",
-  ];
+  const selectedFilesSize = () => {
+    return Object.values(selectedFiles).reduce(
+      (sum, f) => sum + f.file.size,
+      0
+    );
+  };
 
-  const isDisabled = () => isLoading() || selectedFiles().length === 0;
-
-  // Reset files when modal closes
+  // Reset state when the modal is closed
   createEffect(() => {
     if (!props.isModalOpen) {
-      setSelectedFiles([]);
-      setError("");
+      setSelectedFiles({});
       setIsLoading(false);
+      setError("");
       setIsDragOver(false);
-      if (fileInputRef) {
-        fileInputRef.value = "";
-      }
+      fileInputRef = undefined;
     }
   });
 
-  const generateFileId = () => Math.random().toString(36).substr(2, 9);
-
-  const getFileCategory = (mimeType: string): FILE_CATEGORIES => {
-    const type = mimeType.split("/")[0];
-    switch (type) {
-      case "image":
-        return FILE_CATEGORIES.IMAGE;
-      case "video":
-        return FILE_CATEGORIES.VIDEO;
-      case "audio":
-        return FILE_CATEGORIES.AUDIO;
-      case "text":
-        return FILE_CATEGORIES.TEXT;
-      default:
-        return FILE_CATEGORIES.OTHER;
-    }
-  };
-
   const validateFile = (file: File): string | null => {
-    if (file.size > MAX_FILE_SIZE) {
-      return `File "${file.name}" is too large. Maximum size is ${format.size(
-        MAX_FILE_SIZE
+    if (!Validate.name(file.name)) {
+      return `File name "${file.name}" is invalid. Max length is ${VALIDATIONS.MAX_LENGTH}.`;
+    }
+
+    if (file.size > maxFileSize) {
+      return `File "${file.name}" is too large. Max size is ${Format.size(
+        maxFileSize
       )}.`;
     }
 
     // Check if file type is allowed
-    const isAllowed = ALLOWED_TYPES.some((type) => {
-      if (type.endsWith("/*")) {
-        return file.type.startsWith(type.slice(0, -1));
-      }
-      return file.type === type;
-    });
+    let isAllowed = false;
+    if (allowedTypes.length === 0) {
+      isAllowed = true;
+    }
 
-    if (!isAllowed && file.type !== "") {
+    if (!isAllowed) {
+      isAllowed = allowedTypes.some((type) => {
+        if (type.endsWith("/*")) {
+          return file.type.startsWith(type.slice(0, -1));
+        }
+        return file.type === type;
+      });
+    }
+
+    if (isAllowed) {
+      isAllowed = !disallowedTypes.some((type) => {
+        if (type.endsWith("/*")) {
+          return file.type.startsWith(type.slice(0, -1));
+        }
+        return file.type === type;
+      });
+    }
+
+    if (!isAllowed) {
       return `File type "${file.type}" is not supported.`;
     }
 
@@ -104,22 +116,37 @@ export default function UploadFiles(props: Props) {
   };
 
   const validateFiles = (files: FileList | File[]): string | null => {
-    const fileArray = Array.from(files);
+    const newFiles = Array.from(files);
 
-    if (fileArray.length > MAX_FILES_COUNT) {
-      return `Too many files selected. Maximum is ${MAX_FILES_COUNT} files.`;
+    // Check length
+    const existingFiles = Object.values(selectedFiles);
+    if (newFiles.length + existingFiles.length > maxFilesCount) {
+      return `Too many files selected. Max is ${maxFilesCount} files.`;
     }
 
-    const totalSize = fileArray.reduce((sum, file) => sum + file.size, 0);
-    const currentTotalSize = selectedFiles().reduce(
-      (sum, f) => sum + f.file.size,
-      0
-    );
+    // Process existing files
+    const existingFileNames = new Set<string>();
+    let totalSize = 0;
+    for (const file of existingFiles) {
+      existingFileNames.add(file.file.name);
+      totalSize += file.file.size;
+    }
 
-    if (totalSize + currentTotalSize > MAX_TOTAL_SIZE) {
-      return `Total file size too large. Maximum is ${format.size(
-        MAX_TOTAL_SIZE
-      )}.`;
+    const newFileNames = new Set<string>();
+    for (const file of newFiles) {
+      // Check for duplicates
+      if (existingFileNames.has(file.name) || newFileNames.has(file.name)) {
+        return `Duplicate file "${file.name}" in the same folder is not allowed.`;
+      }
+      newFileNames.add(file.name);
+      totalSize += file.size;
+
+      // Check total size
+      if (totalSize > maxTotalSize) {
+        return `Total size of all files is too large. Max is ${Format.size(
+          maxTotalSize
+        )}.`;
+      }
     }
 
     return null;
@@ -127,59 +154,39 @@ export default function UploadFiles(props: Props) {
 
   const processFiles = (files: FileList | File[]) => {
     const fileArray = Array.from(files);
-    const newFiles: FileWithId[] = [];
-    const errors: string[] = [];
+    const newFiles: UploadFileInfoMap = {};
+    const errs: string[] = [];
 
-    // Validate total files and size first
     const totalValidationError = validateFiles(files);
     if (totalValidationError) {
       setError(totalValidationError);
       return;
     }
 
-    fileArray.forEach((file) => {
+    for (const file of fileArray) {
       const validationError = validateFile(file);
       if (validationError) {
-        errors.push(validationError);
-        return;
+        errs.push(validationError);
+        continue;
       }
 
-      // Check for duplicates
-      const isDuplicate = selectedFiles().some(
-        (existing) =>
-          existing.file.name === file.name &&
-          existing.file.size === file.size &&
-          existing.file.lastModified === file.lastModified
-      );
-
-      if (!isDuplicate) {
-        newFiles.push({
-          id: generateFileId(),
-          file,
-          progress: 0,
-          status: "pending",
-        });
-      }
-    });
-
-    if (errors.length > 0) {
-      setError(errors.join(" "));
-    } else {
-      setError("");
+      const id = Random.id();
+      newFiles[id] = {
+        id,
+        file,
+        progress: 0,
+        status: "pending",
+      };
     }
 
-    if (newFiles.length > 0) {
-      setSelectedFiles((prev) => {
-        const combined = [...prev, ...newFiles];
-        if (combined.length > MAX_FILES_COUNT) {
-          setError(
-            `Cannot add more files. Maximum is ${MAX_FILES_COUNT} files.`
-          );
-          return prev;
-        }
-        return combined;
-      });
+    if (errs.length > 0) {
+      // Show numbered errors
+      setError(errs.map((err, i) => `${i + 1}. ${err}`).join("\n"));
+      return;
     }
+
+    setError("");
+    setSelectedFiles(newFiles);
   };
 
   const handleFileInputChange = (event: Event) => {
@@ -213,7 +220,7 @@ export default function UploadFiles(props: Props) {
   };
 
   const removeFile = (fileId: string) => {
-    setSelectedFiles((prev) => prev.filter((f) => f.id !== fileId));
+    setSelectedFiles({ [fileId]: undefined });
     setError("");
   };
 
@@ -221,24 +228,8 @@ export default function UploadFiles(props: Props) {
     fileInputRef?.click();
   };
 
-  const createImagePreview = (file: File): Promise<string> => {
-    return new Promise((resolve, reject) => {
-      if (!file.type.startsWith("image/")) {
-        reject(new Error("Not an image file"));
-        return;
-      }
-
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        resolve(e.target?.result as string);
-      };
-      reader.onerror = reject;
-      reader.readAsDataURL(file);
-    });
-  };
-
   const handleUpload = async () => {
-    const files = selectedFiles();
+    const files = Object.values(selectedFiles);
 
     if (files.length === 0) {
       setError("Please select at least one file");
@@ -248,70 +239,64 @@ export default function UploadFiles(props: Props) {
     setIsLoading(true);
     setError("");
 
-    try {
-      // Mark all files as uploading
-      setSelectedFiles((prev) =>
-        prev.map((item) => ({ ...item, status: "uploading" as const }))
-      );
+    let errMsg = "";
 
-      // Convert to simple File array for the API
-      const fileArray = files.map((f) => f.file);
-
-      // Use parallel uploads with controlled concurrency
-      await uploadFilesParallel(
-        fileArray,
-        appCtx.currentFolderId() || ROOT_FOLDER_ID,
-        (fileIndex, progress) => {
-          setSelectedFiles((prev) => {
-            const updated = [...prev];
-            if (updated[fileIndex]) {
-              updated[fileIndex] = {
-                ...updated[fileIndex],
-                progress,
-              };
+    const uploadedFiles = uploadFiles(
+      files,
+      appCtx.currentFolderId(),
+      (id, progress) => {
+        setSelectedFiles(
+          produce((fileMap) => {
+            let status: UploadFileInfo["status"] = "pending";
+            if (progress === 100) {
+              status = "success";
+            } else if (progress > 0) {
+              status = "uploading";
             }
-            return updated;
-          });
-        },
-        5 // Max 5 concurrent uploads
-      );
 
-      // Mark all as success
-      setSelectedFiles((prev) =>
-        prev.map((item) => ({
-          ...item,
-          status: "success" as const,
-          progress: 100,
-        }))
-      );
+            fileMap[id].progress = progress;
+            fileMap[id].status = status;
+          })
+        );
+      }
+    );
 
-      // Close modal after brief delay to show success
+    uploadedFiles.forEach(async (fileResult) => {
+      try {
+        const file = await fileResult.file;
+        setSelectedFiles(
+          produce((fileMap) => {
+            fileMap[fileResult.clientId].status = "success";
+          })
+        );
+      } catch (err) {
+        if (!errMsg) {
+          errMsg =
+            files.length > 1 ? "Failed to upload some files" : "Upload failed";
+        }
+
+        setSelectedFiles(
+          produce((fileMap) => {
+            fileMap[fileResult.clientId].status = "error";
+            fileMap[fileResult.clientId].error =
+              err instanceof Error ? err.message : "Upload failed";
+          })
+        );
+      }
+    });
+
+    setIsLoading(false);
+
+    // If no errors, close modal after brief delay to show success
+    if (!errMsg) {
       setTimeout(() => {
         props.closeModal();
       }, 1500);
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : "Upload failed";
-      setError(errorMessage);
-
-      // Mark files as failed
-      setSelectedFiles((prev) =>
-        prev.map((item) =>
-          item.status === "uploading"
-            ? { ...item, status: "error" as const, error: errorMessage }
-            : item
-        )
-      );
-    } finally {
-      setIsLoading(false);
     }
   };
 
-  const getTotalSize = () => {
-    return selectedFiles().reduce((sum, f) => sum + f.file.size, 0);
-  };
-
   const getUploadStats = () => {
-    const files = selectedFiles();
+    const files = Object.values(selectedFiles);
     const uploading = files.filter((f) => f.status === "uploading").length;
     const success = files.filter((f) => f.status === "success").length;
     const failed = files.filter((f) => f.status === "error").length;
@@ -343,7 +328,7 @@ export default function UploadFiles(props: Props) {
               ref={fileInputRef}
               type="file"
               multiple
-              accept={ALLOWED_TYPES.join(",")}
+              accept={allowedTypes.join(",")}
               onChange={handleFileInputChange}
               style={{ display: "none" }}
               disabled={isLoading()}
@@ -387,21 +372,22 @@ export default function UploadFiles(props: Props) {
                   to select files
                 </p>
                 <p class="text-xs text-neutral-light mt-1">
-                  Maximum file size: {format.size(MAX_FILE_SIZE)} • Maximum
-                  files: {MAX_FILES_COUNT}
+                  Maximum file size: {Format.size(maxFileSize)} • Maximum files:{" "}
+                  {maxFilesCount}
                 </p>
               </div>
             </div>
 
             {/* File list */}
-            <Show when={selectedFiles().length > 0}>
+            <Show when={Object.keys(selectedFiles).length > 0}>
               <div class="mt-4">
                 <div class="flex justify-between items-center mb-2">
                   <p class="text-sm text-neutral-light">
                     <span class="text-neutral font-medium">
-                      {selectedFiles().length}
+                      {Object.keys(selectedFiles).length}
                     </span>{" "}
-                    file(s) selected • Total size: {format.size(getTotalSize())}
+                    file(s) selected • Total size:{" "}
+                    {Format.size(selectedFilesSize())}
                   </p>
 
                   <Show when={isLoading()}>
@@ -415,7 +401,7 @@ export default function UploadFiles(props: Props) {
                 </div>
 
                 <div class="max-h-[300px] md:max-h-[400px] overflow-y-auto space-y-2 mb-4">
-                  <For each={selectedFiles()}>
+                  <For each={Object.values(selectedFiles)}>
                     {(fileWithId) => (
                       <div class="flex items-center justify-between p-3 border border-border rounded bg-white">
                         <div class="flex items-center gap-3 flex-1 min-w-0">
@@ -428,7 +414,7 @@ export default function UploadFiles(props: Props) {
                               }
                               fallback={
                                 <FileIcon
-                                  fileCategory={getFileCategory(
+                                  fileCategory={FileUtils.mimeToCategory(
                                     fileWithId.file.type
                                   )}
                                   isFolder={false}
@@ -458,7 +444,7 @@ export default function UploadFiles(props: Props) {
                               {fileWithId.file.name}
                             </div>
                             <div class="text-xs text-neutral-light">
-                              {format.size(fileWithId.file.size)}
+                              {Format.size(fileWithId.file.size)}
                               <Show
                                 when={fileWithId.file.size > 100 * 1024 * 1024}
                               >
@@ -545,7 +531,7 @@ export default function UploadFiles(props: Props) {
               >
                 {isLoading()
                   ? "Uploading..."
-                  : `Upload ${selectedFiles().length} File(s)`}
+                  : `Upload ${Object.keys(selectedFiles).length} File(s)`}
               </Button>
             </div>
           </div>

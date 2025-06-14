@@ -15,6 +15,12 @@ const (
 	BytesPerGB = 1 << 30
 )
 
+// Extra 1MB for metadata/safety
+const (
+	MaxChunkSizeMB        = 6 * BytesPerMB
+	MaxDirectUploadSizeMB = 51 * BytesPerMB
+)
+
 const (
 	CategoryImage = "image"
 	CategoryText  = "text"

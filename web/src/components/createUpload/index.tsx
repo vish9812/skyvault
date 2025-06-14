@@ -10,36 +10,8 @@ function CreateUpload() {
   const [isUploadFilesModalOpen, setIsUploadFilesModalOpen] =
     createSignal(false);
 
-  // const handleUploadFilesClick = () => {
-  //   ctx.setIsFileUploadModalOpen(true);
-  // };
-
-  // const handleUploadFolderClick = () => {
-  //   folderInputRef()?.click();
-  // };
-
-  // Setup folder input to accept directory
-  // const setupFolderInput = (el: HTMLInputElement) => {
-  //   el.setAttribute("webkitdirectory", "");
-  //   el.setAttribute("directory", "");
-  //   setFolderInputRef(el);
-  // };
-
-  // Cleanup function to reset file inputs on component unmount
-  // onCleanup(() => {
-  //   if (folderInputRef()) folderInputRef()!.value = "";
-  // });
-
   return (
     <>
-      {/* Hidden file input for folder upload */}
-      {/* <input
-        type="file"
-        ref={setupFolderInput}
-        onChange={(e) => ctx.handleFileSelect(e.target.files)}
-        style={{ display: "none" }}
-      /> */}
-
       <DropdownMenu>
         <DropdownMenu.Trigger class="p-2 btn btn-gradient btn-gradient-d-expanded max-md:rounded-full md:w-full md:mb-4 md:mt-2">
           {/* Desktop trigger */}
@@ -167,13 +139,5 @@ function CreateUpload() {
     </>
   );
 }
-
-// function CreateUpload() {
-//   return (
-//     <CtxProvider>
-//       <CreateUploadWithCtx />
-//     </CtxProvider>
-//   );
-// }
 
 export default CreateUpload;

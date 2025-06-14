@@ -59,6 +59,17 @@ type AuthConfig struct {
 
 type MediaConfig struct {
 	MaxSizeMB int64
+
+	// Dynamic concurrency settings
+	MemoryBasedLimits        bool    // Enable memory-based dynamic limits
+	ServerMemoryGB           float64 // Server memory in GB (auto-detect if 0)
+	MemoryReservationPercent float64 // Percentage of memory to reserve for other operations
+
+	// Fallback static limits (used if dynamic calculation fails or is disabled)
+	FallbackGlobalUploads  int64 // Fallback global upload limit
+	FallbackGlobalChunks   int64 // Fallback global chunk limit
+	FallbackPerUserUploads int64 // Fallback per-user upload limit
+	FallbackPerUserChunks  int64 // Fallback per-user chunk limit
 }
 
 type LogConfig struct {
@@ -102,6 +113,13 @@ func LoadConfig(path string, isDev bool) *Config {
 
 	// Media config
 	config.Media.MaxSizeMB = getInt64OrZero(envMap["MEDIA__MAX_SIZE_MB"])
+	config.Media.MemoryBasedLimits = getBoolOrFalse(envMap["MEDIA__MEMORY_BASED_LIMITS"])
+	config.Media.ServerMemoryGB = getFloat64OrZero(envMap["MEDIA__SERVER_MEMORY_GB"])
+	config.Media.MemoryReservationPercent = getFloat64OrZero(envMap["MEDIA__MEMORY_RESERVATION_PERCENT"])
+	config.Media.FallbackGlobalUploads = getInt64OrZero(envMap["MEDIA__FALLBACK_GLOBAL_UPLOADS"])
+	config.Media.FallbackGlobalChunks = getInt64OrZero(envMap["MEDIA__FALLBACK_GLOBAL_CHUNKS"])
+	config.Media.FallbackPerUserUploads = getInt64OrZero(envMap["MEDIA__FALLBACK_PER_USER_UPLOADS"])
+	config.Media.FallbackPerUserChunks = getInt64OrZero(envMap["MEDIA__FALLBACK_PER_USER_CHUNKS"])
 
 	// Log config
 	config.Log.Level = envMap["LOG__LEVEL"]
@@ -130,6 +148,28 @@ func getInt64OrZero(s string) int64 {
 	v, err := strconv.ParseInt(s, 10, 64)
 	if err != nil {
 		return 0
+	}
+	return v
+}
+
+func getFloat64OrZero(s string) float64 {
+	if s == "" {
+		return 0
+	}
+	v, err := strconv.ParseFloat(s, 64)
+	if err != nil {
+		return 0
+	}
+	return v
+}
+
+func getBoolOrFalse(s string) bool {
+	if s == "" {
+		return false
+	}
+	v, err := strconv.ParseBool(s)
+	if err != nil {
+		return false
 	}
 	return v
 }
@@ -248,6 +288,33 @@ func (c *Config) validate(logger zerolog.Logger, isDev bool) {
 			c.Media.MaxSizeMB = 1024 // 1GB
 		}
 		logger.Warn().Msgf("media max size not set, using default size %dMB", c.Media.MaxSizeMB)
+	}
+
+	// Set defaults for dynamic concurrency settings
+	if c.Media.MemoryReservationPercent <= 0 || c.Media.MemoryReservationPercent >= 100 {
+		c.Media.MemoryReservationPercent = 40
+	}
+
+	if c.Media.FallbackGlobalUploads <= 0 {
+		c.Media.FallbackGlobalUploads = 10
+	}
+
+	if c.Media.FallbackGlobalChunks <= 0 {
+		c.Media.FallbackGlobalChunks = 20
+	}
+
+	if c.Media.FallbackPerUserUploads <= 0 {
+		c.Media.FallbackPerUserUploads = 3
+	}
+
+	if c.Media.FallbackPerUserChunks <= 0 {
+		c.Media.FallbackPerUserChunks = 5
+	}
+
+	// Enable memory-based limits by default in production, allow override in dev
+	if !isDev && !c.Media.MemoryBasedLimits {
+		c.Media.MemoryBasedLimits = true
+		logger.Info().Msg("memory-based concurrency limits enabled by default in production")
 	}
 
 	// Logging

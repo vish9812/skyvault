@@ -27,39 +27,29 @@ func (s *CommandsSanitizer) UploadFile(ctx context.Context, cmd *UploadFileComma
 		return nil, apperror.NewAppError(apperror.ErrCommonInvalidValue, "media.CommandsSanitizer.UploadFile:File")
 	}
 
+	if cmd.Size <= 0 {
+		return nil, apperror.NewAppError(apperror.ErrCommonInvalidValue, "media.CommandsSanitizer.UploadFile:Size")
+	}
+
 	return s.Commands.UploadFile(ctx, cmd)
 }
 
-func (s *CommandsSanitizer) UploadChunk(ctx context.Context, cmd *UploadChunkCommand) error {
+func (s *CommandsSanitizer) UploadChunk(ctx context.Context, cmd *UploadChunkCommand) (*FileInfo, error) {
 	if n, err := validate.FileName(cmd.FileName); err != nil {
-		return apperror.NewAppError(err, "media.CommandsSanitizer.UploadChunk:FileName")
+		return nil, apperror.NewAppError(err, "media.CommandsSanitizer.UploadChunk:FileName")
 	} else {
 		cmd.FileName = n
 	}
 
 	if cmd.Reader == nil {
-		return apperror.NewAppError(apperror.ErrCommonInvalidValue, "media.CommandsSanitizer.UploadChunk:Reader")
+		return nil, apperror.NewAppError(apperror.ErrCommonInvalidValue, "media.CommandsSanitizer.UploadChunk:Reader")
 	}
 
 	if cmd.UploadID == "" {
-		return apperror.NewAppError(apperror.ErrCommonInvalidValue, "media.CommandsSanitizer.UploadChunk:UploadID")
+		return nil, apperror.NewAppError(apperror.ErrCommonInvalidValue, "media.CommandsSanitizer.UploadChunk:UploadID")
 	}
 
 	return s.Commands.UploadChunk(ctx, cmd)
-}
-
-func (s *CommandsSanitizer) FinalizeChunkedUpload(ctx context.Context, cmd *FinalizeChunkedUploadCommand) (*FileInfo, error) {
-	if n, err := validate.FileName(cmd.FileName); err != nil {
-		return nil, apperror.NewAppError(err, "media.CommandsSanitizer.FinalizeChunkedUpload:FileName")
-	} else {
-		cmd.FileName = n
-	}
-
-	if cmd.UploadID == "" {
-		return nil, apperror.NewAppError(apperror.ErrCommonInvalidValue, "media.CommandsSanitizer.FinalizeChunkedUpload:UploadID")
-	}
-
-	return s.Commands.FinalizeChunkedUpload(ctx, cmd)
 }
 
 func (s *CommandsSanitizer) RenameFile(ctx context.Context, cmd *RenameFileCommand) error {

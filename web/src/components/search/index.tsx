@@ -49,8 +49,6 @@ function Search() {
 
   // Filter and group items based on the search query
   const searchItems = (searchQuery: string) => {
-    console.log("searchQuery", searchQuery);
-
     // Simulate network delay
     setTimeout(() => {
       if (!searchQuery.trim()) {
@@ -117,13 +115,13 @@ function Search() {
   // const handleSelectItem = (item) => {
   //   if (item && item.isSeeMore) {
   //     // Handle "See more" click (placeholder for now)
-  //     console.log("See more clicked:", item.value);
+  //
   //     return;
   //   }
 
   //   setSelectedItem(item);
   //   // Here you would typically do something with the selected item
-  //   console.log("Selected item:", item);
+  //
   // };
 
   return (

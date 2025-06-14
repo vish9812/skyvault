@@ -14,7 +14,7 @@ type Storage interface {
 	// SaveChunk saves a chunk of a file for chunked uploads
 	// App Errors:
 	// - apperror.ErrDuplicateData
-	SaveChunk(ctx context.Context, reader io.Reader, uploadID string, chunkIndex int, ownerID string) error
+	SaveChunk(ctx context.Context, reader io.Reader, uploadID string, chunkIndex int64, ownerID string) error
 
 	// FinalizeChunkedUpload combines all chunks into the final file
 	// App Errors:

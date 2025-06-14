@@ -4,15 +4,15 @@ import { A, useNavigate } from "@solidjs/router";
 import { signIn, signUp } from "@sv/apis/auth";
 import { CLIENT_URLS } from "@sv/utils/consts";
 import { getAuthErrorMessage } from "@sv/utils/errors";
-import Validators from "@sv/utils/validate";
+import Validate from "@sv/utils/validate";
 import { createSignal, Show } from "solid-js";
 import { createStore, unwrap } from "solid-js/store";
 import { z } from "zod";
 
 const schema = z.object({
-  fullName: Validators.z.name,
-  email: Validators.z.email,
-  password: Validators.z.password,
+  fullName: Validate.z.name,
+  email: Validate.z.email,
+  password: Validate.z.password,
 });
 
 type FieldsType = z.infer<typeof schema>;
@@ -53,7 +53,6 @@ function AuthForm(props: AuthFormProps) {
   };
 
   const handleSubmit = async () => {
-    console.log("handleSubmit");
     setLoading(true);
     setApiError("");
     setFormErrors(emptyFields());
@@ -64,7 +63,7 @@ function AuthForm(props: AuthFormProps) {
       : schema.omit({ fullName: true });
 
     const result = formSchema.safeParse(unwrap(formValues));
-    console.log("result", result);
+
     if (!result.success) {
       for (const err of result.error.errors) {
         if (err.path[0]) {
@@ -77,9 +76,8 @@ function AuthForm(props: AuthFormProps) {
 
     // Submit form
     try {
-      console.log("formValues", formValues);
       const reqData = unwrap(formValues);
-      console.log("reqData", reqData);
+
       await (props.isSignUp ? signUp(reqData) : signIn(reqData));
       navigate(CLIENT_URLS.DRIVE, { replace: true });
     } catch (err) {

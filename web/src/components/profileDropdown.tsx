@@ -1,8 +1,8 @@
 import { DropdownMenu } from "@kobalte/core/dropdown-menu";
-import { getProfile, signOut } from "@sv/apis/auth";
 import { useNavigate } from "@solidjs/router";
+import { getProfile, signOut } from "@sv/apis/auth";
 import { CLIENT_URLS } from "@sv/utils/consts";
-import format from "@sv/utils/format";
+import Format from "@sv/utils/format";
 
 function ProfileDropdown() {
   const navigate = useNavigate();
@@ -28,7 +28,7 @@ function ProfileDropdown() {
           />
         ) : (
           <span class="font-bold text-lg">
-            {format.initials(profile.fullName)}
+            {Format.initials(profile.fullName)}
           </span>
         )}
       </DropdownMenu.Trigger>

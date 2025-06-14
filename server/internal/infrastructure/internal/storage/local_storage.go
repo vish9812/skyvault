@@ -71,14 +71,13 @@ func (s *LocalStorage) SaveFile(ctx context.Context, file io.ReadSeeker, name, o
 	defer f.Close()
 
 	// Write the file
-	maxSize := s.app.Config.Media.MaxSizeMB * media.BytesPerMB
 	_, err = file.Seek(0, io.SeekStart)
 	if err != nil {
 		return apperror.NewAppError(err, "LocalStorage.SaveFile:Seek").WithMetadata("save_path", savePath)
 	}
 
 	// Copy the file with an extra MB to check if file is greater than max size.
-	written, err := io.CopyN(f, file, maxSize+media.BytesPerMB)
+	written, err := io.CopyN(f, file, media.MaxDirectUploadSizeMB)
 	if err != nil && !errors.Is(err, io.EOF) {
 		// Clean up the partially written file if copying fails
 		if delErr := s.DeleteFile(ctx, name, ownerID); delErr != nil {
@@ -89,19 +88,19 @@ func (s *LocalStorage) SaveFile(ctx context.Context, file io.ReadSeeker, name, o
 		return apperror.NewAppError(err, "LocalStorage.SaveFile:CopyN").WithMetadata("save_path", savePath)
 	}
 
-	if written > maxSize {
+	if written > media.MaxDirectUploadSizeMB {
 		var sizeErr error = apperror.ErrMediaFileSizeLimitExceeded
 		// Clean up the written file if it is greater than max size
 		if delErr := s.DeleteFile(ctx, name, ownerID); delErr != nil {
 			sizeErr = apperror.NewAppError(fmt.Errorf("%w: %w", delErr, sizeErr), "LocalStorage.SaveFile:MaxSizeExceeded:DeleteFile")
 		}
-		return apperror.NewAppError(sizeErr, "LocalStorage.SaveFile:MaxSizeExceeded").WithMetadata("save_path", savePath).WithMetadata("written_mb", written/media.BytesPerMB).WithMetadata("max_size_mb", maxSize/media.BytesPerMB)
+		return apperror.NewAppError(sizeErr, "LocalStorage.SaveFile:MaxSizeExceeded").WithMetadata("save_path", savePath).WithMetadata("written_mb", written/media.BytesPerMB).WithMetadata("max_direct_upload_size_mb", media.MaxDirectUploadSizeMB/media.BytesPerMB)
 	}
 
 	return nil
 }
 
-func (s *LocalStorage) SaveChunk(ctx context.Context, reader io.Reader, uploadID string, chunkIndex int, ownerID string) error {
+func (s *LocalStorage) SaveChunk(ctx context.Context, reader io.Reader, uploadID string, chunkIndex int64, ownerID string) error {
 	// Create chunks directory for this upload
 	chunksPath := getChunksDir(s.baseDir, ownerID, uploadID)
 	err := os.MkdirAll(chunksPath, 0750)
@@ -118,9 +117,8 @@ func (s *LocalStorage) SaveChunk(ctx context.Context, reader io.Reader, uploadID
 	}
 	defer f.Close()
 
-	// Copy chunk data (limit to 10MB per chunk for safety)
-	maxChunkSize := int64(10 * media.BytesPerMB)
-	_, err = io.CopyN(f, reader, maxChunkSize)
+	// Copy chunk data with max chunk size limit for safety
+	_, err = io.CopyN(f, reader, media.MaxChunkSizeMB)
 	if err != nil && !errors.Is(err, io.EOF) {
 		// Clean up the chunk file if copying fails
 		os.Remove(chunkPath)
@@ -285,18 +283,18 @@ func getChunksDir(baseDir string, ownerID string, uploadID string) string {
 	return filepath.Join(baseDir, chunksDir, ownerID, uploadID)
 }
 
-func getChunkPath(chunksDir string, chunkIndex int) string {
+func getChunkPath(chunksDir string, chunkIndex int64) string {
 	return filepath.Join(chunksDir, fmt.Sprintf("chunk_%d", chunkIndex))
 }
 
-func extractChunkIndex(chunkPath string) int {
+func extractChunkIndex(chunkPath string) int64 {
 	fileName := filepath.Base(chunkPath)
 	parts := strings.Split(fileName, "_")
 	if len(parts) != 2 {
 		return 0
 	}
 
-	index, err := strconv.Atoi(parts[1])
+	index, err := strconv.ParseInt(parts[1], 10, 64)
 	if err != nil {
 		return 0
 	}

@@ -4,6 +4,7 @@ import { TextField } from "@kobalte/core/text-field";
 import { createFolder } from "@sv/apis/media";
 import useAppCtx from "@sv/store/appCtxProvider";
 import { COMMON_ERR_KEYS } from "@sv/utils/errors";
+import Validate, { VALIDATIONS } from "@sv/utils/validate";
 import { createEffect, createSignal } from "solid-js";
 
 interface Props {
@@ -18,7 +19,7 @@ function CreateFolder(props: Props) {
   const [isLoading, setIsLoading] = createSignal(false);
   const [error, setError] = createSignal("");
 
-  const isInvalidName = () => name().trim() === "";
+  const isInvalidName = () => !Validate.name(name());
   const isDisabled = () => isInvalidName() || isLoading();
 
   // Reset state when the modal is closed
@@ -32,7 +33,14 @@ function CreateFolder(props: Props) {
 
   const handleNameChange = (name: string) => {
     setName(name);
-    setError(isInvalidName() ? "Folder name is required" : "");
+    let msg = "";
+    if (isInvalidName()) {
+      msg =
+        !name || name.trim().length === 0
+          ? "Folder name is required"
+          : `Folder name must be less than ${VALIDATIONS.MAX_LENGTH} characters`;
+    }
+    setError(msg);
   };
 
   const handleCreateFolder = async () => {

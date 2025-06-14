@@ -1,4 +1,17 @@
-import { FILE_CATEGORIES } from "@sv/utils/consts";
+import { CATEGORY } from "@sv/utils/fileUtils";
+
+export interface UploadFileInfo {
+  id: string;
+  file: File;
+  progress: number;
+  status: "pending" | "uploading" | "success" | "error";
+  error?: string;
+}
+
+export interface UploadFileResult {
+  clientId: string;
+  file: Promise<FileInfo>;
+}
 
 export interface FileInfo {
   id: string;
@@ -8,7 +21,7 @@ export interface FileInfo {
   size: number;
   extension?: string;
   mimeType: string;
-  category: FILE_CATEGORIES;
+  category: CATEGORY;
   preview?: string;
   createdAt: string;
   updatedAt: string;

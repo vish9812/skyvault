@@ -3,14 +3,12 @@ import { getProfile } from "@sv/apis/auth";
 import { fetchFolderContent, fetchFolderInfo } from "@sv/apis/media";
 import Breadcrumbs from "@sv/components/breadcrumbs";
 import FolderContent from "@sv/components/folderContent";
+import Icon from "@sv/components/icons";
 import useAppCtx from "@sv/store/appCtxProvider";
-import Icon from "@sv/utils/icons";
 import { Show, createResource, createSignal } from "solid-js";
 
 function Drive() {
-  console.log("Drive 1");
   const appCtx = useAppCtx();
-  console.log("appCtx", appCtx.currentFolderId());
 
   // TODO: Replace with tanstack query
   const [folderContent] = createResource(

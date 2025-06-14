@@ -11,6 +11,7 @@ import (
 	"skyvault/pkg/apperror"
 	"skyvault/pkg/applog"
 	"skyvault/pkg/common"
+	"skyvault/pkg/concurrency"
 	"skyvault/pkg/paging"
 	"skyvault/pkg/validate"
 	"strconv"
@@ -26,14 +27,45 @@ const (
 )
 
 type MediaAPI struct {
-	api      *API
-	app      *appconfig.App
-	commands media.Commands
-	queries  media.Queries
+	api                *API
+	app                *appconfig.App
+	commands           media.Commands
+	queries            media.Queries
+	concurrencyManager *concurrency.DynamicConcurrencyManager
 }
 
 func NewMediaAPI(a *API, app *appconfig.App, commands media.Commands, queries media.Queries) *MediaAPI {
-	return &MediaAPI{api: a, app: app, commands: commands, queries: queries}
+	// Create dynamic concurrency configuration
+	concurrencyConfig := concurrency.NewDynamicConcurrencyConfig(
+		media.MaxChunkSizeMB/media.BytesPerMB,
+		media.MaxDirectUploadSizeMB/media.BytesPerMB,
+		app.Config.Media.MemoryBasedLimits,
+		app.Config.Media.ServerMemoryGB,
+		app.Config.Media.MemoryReservationPercent,
+		app.Config.Media.FallbackGlobalUploads,
+		app.Config.Media.FallbackGlobalChunks,
+		app.Config.Media.FallbackPerUserUploads,
+		app.Config.Media.FallbackPerUserChunks,
+	)
+
+	// Log the calculated concurrency limits
+	app.Logger.Info().
+		Float64("available_memory_gb", concurrencyConfig.AvailableMemoryGB).
+		Float64("usable_memory_gb", concurrencyConfig.UsableMemoryGB).
+		Int64("global_upload_limit", concurrencyConfig.GlobalUploadLimit).
+		Int64("global_chunk_limit", concurrencyConfig.GlobalChunkLimit).
+		Int64("per_user_upload_limit", concurrencyConfig.PerUserUploadLimit).
+		Int64("per_user_chunk_limit", concurrencyConfig.PerUserChunkLimit).
+		Bool("memory_based_limits", app.Config.Media.MemoryBasedLimits).
+		Msg("dynamic concurrency limits calculated")
+
+	return &MediaAPI{
+		api:                a,
+		app:                app,
+		commands:           commands,
+		queries:            queries,
+		concurrencyManager: concurrency.NewDynamicConcurrencyManager(concurrencyConfig),
+	}
 }
 
 func (a *MediaAPI) InitRoutes() *MediaAPI {
@@ -72,7 +104,6 @@ func (a *MediaAPI) InitRoutes() *MediaAPI {
 				r.Route("/files", func(r chi.Router) {
 					r.Post("/", a.UploadFile)
 					r.Post("/chunks", a.UploadChunk)
-					r.Post("/finalize", a.FinalizeChunkedUpload)
 				})
 			})
 		})
@@ -92,6 +123,13 @@ func (a *MediaAPI) UploadFolder(w http.ResponseWriter, r *http.Request) {
 
 func (a *MediaAPI) UploadFile(w http.ResponseWriter, r *http.Request) {
 	profileID := common.GetProfileIDFromContext(r.Context())
+
+	// Acquire semaphores for upload
+	if err := a.concurrencyManager.AcquireUpload(r.Context(), profileID); err != nil {
+		helper.RespondError(w, r, apperror.NewAppError(err, "mediaAPI.UploadFile:AcquireUpload"))
+		return
+	}
+	defer a.concurrencyManager.ReleaseUpload(profileID)
 
 	// Allocate max. 15MB for in-memory parsing.
 	err := r.ParseMultipartForm(15 * media.BytesPerMB)
@@ -144,8 +182,15 @@ func (a *MediaAPI) UploadFile(w http.ResponseWriter, r *http.Request) {
 func (a *MediaAPI) UploadChunk(w http.ResponseWriter, r *http.Request) {
 	profileID := common.GetProfileIDFromContext(r.Context())
 
-	// Parse multipart form with smaller memory limit for chunks
-	err := r.ParseMultipartForm(10 * media.BytesPerMB) // 10MB for chunks
+	// Acquire semaphores for chunk upload
+	if err := a.concurrencyManager.AcquireChunk(r.Context(), profileID); err != nil {
+		helper.RespondError(w, r, apperror.NewAppError(err, "mediaAPI.UploadChunk:AcquireChunk"))
+		return
+	}
+	defer a.concurrencyManager.ReleaseChunk(profileID)
+
+	// Parse multipart form with configurable memory limit for chunks
+	err := r.ParseMultipartForm(media.MaxChunkSizeMB)
 	if err != nil {
 		helper.RespondError(w, r, apperror.NewAppError(err, "mediaAPI.UploadChunk:ParseMultipartForm"))
 		return
@@ -166,17 +211,43 @@ func (a *MediaAPI) UploadChunk(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Validate upload ID format to prevent directory traversal attacks
+	// Upload ID should only contain alphanumeric characters, underscores, and hyphens
+	if !validate.UploadID(uploadID) {
+		helper.RespondError(w, r, apperror.NewAppError(apperror.ErrCommonInvalidValue, "mediaAPI.UploadChunk:InvalidUploadIdFormat").WithMetadata("upload_id", uploadID))
+		return
+	}
+
 	chunkIndexStr := r.FormValue("chunkIndex")
-	chunkIndex, err := strconv.Atoi(chunkIndexStr)
+	chunkIndex, err := strconv.ParseInt(chunkIndexStr, 10, 64)
 	if err != nil {
 		helper.RespondError(w, r, apperror.NewAppError(err, "mediaAPI.UploadChunk:InvalidChunkIndex"))
 		return
 	}
 
+	// Validate chunk index is not negative
+	if chunkIndex < 0 {
+		helper.RespondError(w, r, apperror.NewAppError(apperror.ErrCommonInvalidValue, "mediaAPI.UploadChunk:NegativeChunkIndex").WithMetadata("chunk_index", chunkIndex))
+		return
+	}
+
 	totalChunksStr := r.FormValue("totalChunks")
-	totalChunks, err := strconv.Atoi(totalChunksStr)
+	totalChunks, err := strconv.ParseInt(totalChunksStr, 10, 64)
 	if err != nil {
 		helper.RespondError(w, r, apperror.NewAppError(err, "mediaAPI.UploadChunk:InvalidTotalChunks"))
+		return
+	}
+
+	// Validate total chunks is positive and within configured limits
+	maxTotalChunks := a.app.Config.Media.MaxSizeMB / media.MaxChunkSizeMB
+	if totalChunks <= 0 || totalChunks > maxTotalChunks {
+		helper.RespondError(w, r, apperror.NewAppError(apperror.ErrCommonInvalidValue, "mediaAPI.UploadChunk:InvalidTotalChunksRange").WithMetadata("total_chunks", totalChunks).WithMetadata("max_total_chunks", maxTotalChunks))
+		return
+	}
+
+	// Validate chunk index is within valid range
+	if chunkIndex >= totalChunks {
+		helper.RespondError(w, r, apperror.NewAppError(apperror.ErrCommonInvalidValue, "mediaAPI.UploadChunk:ChunkIndexOutOfRange").WithMetadata("chunk_index", chunkIndex).WithMetadata("total_chunks", totalChunks))
 		return
 	}
 
@@ -184,6 +255,14 @@ func (a *MediaAPI) UploadChunk(w http.ResponseWriter, r *http.Request) {
 	if fileName == "" {
 		helper.RespondError(w, r, apperror.NewAppError(apperror.ErrCommonInvalidValue, "mediaAPI.UploadChunk:MissingFileName"))
 		return
+	}
+
+	// Get folderID from URL parameter or form data
+	var folderID *string
+	if id := chi.URLParam(r, urlParamFolderID); validate.UUID(id) {
+		folderID = &id
+	} else if formFolderID := r.FormValue("folderId"); validate.UUID(formFolderID) {
+		folderID = &formFolderID
 	}
 
 	var fileSize int64
@@ -198,6 +277,19 @@ func (a *MediaAPI) UploadChunk(w http.ResponseWriter, r *http.Request) {
 				helper.RespondError(w, r, apperror.NewAppError(err, "mediaAPI.UploadChunk:InvalidFileSize"))
 				return
 			}
+
+			// Validate total file size against server limits
+			maxSizeBytes := a.app.Config.Media.MaxSizeMB * media.BytesPerMB
+			if fileSize > maxSizeBytes {
+				helper.RespondError(w, r, apperror.NewAppError(apperror.ErrMediaFileSizeLimitExceeded, "mediaAPI.UploadChunk:FileSizeExceeded").WithMetadata("max_size_mb", a.app.Config.Media.MaxSizeMB).WithMetadata("file_size_mb", fileSize/media.BytesPerMB))
+				return
+			}
+
+			// Validate file size is not zero or negative
+			if fileSize <= 0 {
+				helper.RespondError(w, r, apperror.NewAppError(apperror.ErrCommonInvalidValue, "mediaAPI.UploadChunk:InvalidTotalFileSize").WithMetadata("file_size", fileSize))
+				return
+			}
 		}
 
 		mimeType = r.FormValue("mimeType")
@@ -206,83 +298,42 @@ func (a *MediaAPI) UploadChunk(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	// Determine if this is the final chunk
+	isFinalChunk := chunkIndex == (totalChunks - 1)
+
 	cmd := &media.UploadChunkCommand{
-		OwnerID:     profileID,
-		UploadID:    uploadID,
-		ChunkIndex:  chunkIndex,
-		TotalChunks: totalChunks,
-		FileName:    fileName,
-		FileSize:    fileSize,
-		MimeType:    mimeType,
-		Reader:      file,
+		OwnerID:      profileID,
+		FolderID:     folderID,
+		UploadID:     uploadID,
+		ChunkIndex:   chunkIndex,
+		TotalChunks:  totalChunks,
+		FileName:     fileName,
+		FileSize:     fileSize,
+		MimeType:     mimeType,
+		Reader:       file,
+		IsFinalChunk: isFinalChunk,
 	}
 
-	err = a.commands.UploadChunk(r.Context(), cmd)
+	fileInfo, err := a.commands.UploadChunk(r.Context(), cmd)
 	if err != nil {
 		helper.RespondError(w, r, apperror.NewAppError(err, "mediaAPI.UploadChunk:UploadChunk").WithMetadata("upload_id", uploadID).WithMetadata("chunk_index", chunkIndex))
 		return
 	}
 
-	helper.RespondEmpty(w, http.StatusOK)
-}
+	if isFinalChunk && fileInfo != nil {
+		// Final chunk - return the created file info
+		var dto dtos.GetFileInfo
+		err = copier.Copy(&dto, fileInfo)
+		if err != nil {
+			helper.RespondError(w, r, apperror.NewAppError(err, "mediaAPI.UploadChunk:Copy"))
+			return
+		}
 
-func (a *MediaAPI) FinalizeChunkedUpload(w http.ResponseWriter, r *http.Request) {
-	profileID := common.GetProfileIDFromContext(r.Context())
-
-	var folderID *string
-	if id := chi.URLParam(r, urlParamFolderID); validate.UUID(id) {
-		folderID = &id
+		helper.RespondJSON(w, http.StatusCreated, &dto)
+	} else {
+		// Regular chunk - return empty response
+		helper.RespondEmpty(w, http.StatusOK)
 	}
-
-	var req struct {
-		UploadID string `json:"uploadId"`
-		FileName string `json:"fileName"`
-		FileSize int64  `json:"fileSize"`
-		MimeType string `json:"mimeType"`
-	}
-
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		helper.RespondError(w, r, apperror.NewAppError(err, "mediaAPI.FinalizeChunkedUpload:DecodeJSON"))
-		return
-	}
-
-	if req.UploadID == "" {
-		helper.RespondError(w, r, apperror.NewAppError(apperror.ErrCommonInvalidValue, "mediaAPI.FinalizeChunkedUpload:MissingUploadId"))
-		return
-	}
-
-	if req.FileName == "" {
-		helper.RespondError(w, r, apperror.NewAppError(apperror.ErrCommonInvalidValue, "mediaAPI.FinalizeChunkedUpload:MissingFileName"))
-		return
-	}
-
-	if req.MimeType == "" {
-		req.MimeType = "application/octet-stream"
-	}
-
-	cmd := &media.FinalizeChunkedUploadCommand{
-		OwnerID:  profileID,
-		FolderID: folderID,
-		UploadID: req.UploadID,
-		FileName: req.FileName,
-		FileSize: req.FileSize,
-		MimeType: req.MimeType,
-	}
-
-	fileInfo, err := a.commands.FinalizeChunkedUpload(r.Context(), cmd)
-	if err != nil {
-		helper.RespondError(w, r, apperror.NewAppError(err, "mediaAPI.FinalizeChunkedUpload:FinalizeChunkedUpload").WithMetadata("upload_id", req.UploadID).WithMetadata("file_name", req.FileName))
-		return
-	}
-
-	var dto dtos.GetFileInfo
-	err = copier.Copy(&dto, &fileInfo)
-	if err != nil {
-		helper.RespondError(w, r, apperror.NewAppError(err, "mediaAPI.FinalizeChunkedUpload:Copy"))
-		return
-	}
-
-	helper.RespondJSON(w, http.StatusCreated, &dto)
 }
 
 func pagingOptionsFromQuery(r *http.Request, prefix string) (*paging.Options, error) {
@@ -734,4 +785,15 @@ func (a *MediaAPI) GetFolderContent(w http.ResponseWriter, r *http.Request) {
 	}
 
 	helper.RespondJSON(w, http.StatusOK, &dto)
+}
+
+// CleanupUserSemaphores removes semaphores for users with no active uploads
+// This can be called periodically to prevent memory leaks from inactive users
+func (a *MediaAPI) CleanupUserSemaphores() {
+	a.concurrencyManager.CleanupUserSemaphores()
+}
+
+// GetConcurrencyConfig returns the current concurrency configuration for monitoring
+func (a *MediaAPI) GetConcurrencyConfig() *concurrency.ConcurrencyConfig {
+	return a.concurrencyManager.GetConfig()
 }

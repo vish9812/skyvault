@@ -1,6 +1,5 @@
-import { Match, mergeProps, Show, Switch } from "solid-js";
-import { FILE_CATEGORIES } from "./consts";
-import { Dynamic } from "solid-js/web";
+import { FILE_CATEGORIES } from "@sv/utils/consts";
+import { mergeProps, Show } from "solid-js";
 
 interface IconSvgProps {
   size?: number;
@@ -270,20 +269,12 @@ export function FileIcon(props: FileIconProps) {
       when={!props.isFolder}
       fallback={<Icon {...svgProps} name="folder" />}
     >
-      <Switch fallback={<Icon {...svgProps} name={FILE_CATEGORIES.OTHER} />}>
-        <Match when={props.fileCategory === FILE_CATEGORIES.IMAGE}>
-          <Icon {...svgProps} name={FILE_CATEGORIES.IMAGE} />
-        </Match>
-        <Match when={props.fileCategory === FILE_CATEGORIES.VIDEO}>
-          <Icon {...svgProps} name={FILE_CATEGORIES.VIDEO} />
-        </Match>
-        <Match when={props.fileCategory === FILE_CATEGORIES.AUDIO}>
-          <Icon {...svgProps} name={FILE_CATEGORIES.AUDIO} />
-        </Match>
-        <Match when={props.fileCategory === FILE_CATEGORIES.TEXT}>
-          <Icon {...svgProps} name={FILE_CATEGORIES.TEXT} />
-        </Match>
-      </Switch>
+      <Show
+        when={props.fileCategory !== FILE_CATEGORIES.OTHER}
+        fallback={<Icon {...svgProps} name={FILE_CATEGORIES.OTHER} />}
+      >
+        <Icon {...svgProps} name={props.fileCategory} />
+      </Show>
     </Show>
   );
 }

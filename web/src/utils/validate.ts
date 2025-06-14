@@ -5,6 +5,11 @@ export const VALIDATIONS = {
   PASSWORD_MIN_LENGTH: 4,
 } as const;
 
+/**
+ * Validate any generic name in the app
+ * @param name - Name to validate
+ * @returns True if name is valid, false otherwise
+ */
 function name(name: string): boolean {
   return !!(
     name &&
@@ -31,9 +36,9 @@ const zSchemas = {
     .max(VALIDATIONS.MAX_LENGTH, "Password is too long"),
 } as const;
 
-const Validators = {
+const Validate = {
   name,
   z: zSchemas,
 } as const;
 
-export default Validators;
+export default Validate;

@@ -1,9 +1,9 @@
+import type { FileInfo, FolderInfo } from "@sv/apis/media/models";
+import { FileIcon } from "@sv/components/icons";
 import { FOLDER_CONTENT_TYPES } from "@sv/utils/consts";
+import Format from "@sv/utils/format";
 import { Show } from "solid-js";
 import useCtx from "./ctxProvider";
-import type { FileInfo, FolderInfo } from "@sv/apis/media/models";
-import format from "@sv/utils/format";
-import { FileIcon } from "@sv/utils/icons";
 
 interface GridItemProps {
   type: typeof FOLDER_CONTENT_TYPES.FILE | typeof FOLDER_CONTENT_TYPES.FOLDER;
@@ -45,7 +45,7 @@ function GridItem(props: GridItemProps) {
       <div class="p-2 flex flex-col">
         <div class="font-medium text-neutral truncate">{props.item.name}</div>
         <Show when={props.type === FOLDER_CONTENT_TYPES.FILE}>
-          <div class="text-xs">{format.size(props.item.size)}</div>
+          <div class="text-xs">{Format.size(props.item.size)}</div>
         </Show>
       </div>
     </div>

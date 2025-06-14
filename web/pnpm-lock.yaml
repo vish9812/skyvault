@@ -32,6 +32,9 @@ importers:
       tailwindcss:
         specifier: ^4.1.5
         version: 4.1.5
+      uuid:
+        specifier: ^11.1.0
+        version: 11.1.0
       zod:
         specifier: ^3.24.3
         version: 3.24.3
@@ -956,6 +959,10 @@ packages:
     peerDependencies:
       browserslist: '>= 4.21.0'
 
+  uuid@11.1.0:
+    resolution: {integrity: sha512-0/A9rDy9P7cJ+8w1c9WD9V//9Wj15Ce2MPz8Ri6032usz+NfePxx5AcN3bN+r6ZL6jEo066/yNYB3tn4pQEx+A==}
+    hasBin: true
+
   validate-html-nesting@1.2.2:
     resolution: {integrity: sha512-hGdgQozCsQJMyfK5urgFcWEqsSSrK63Awe0t/IMR0bZ0QMtnuaiHzThW81guu3qx9abLi99NEuiaN6P9gVYsNg==}
 
@@ -1852,6 +1859,8 @@ snapshots:
       browserslist: 4.24.5
       escalade: 3.2.0
       picocolors: 1.1.1
+
+  uuid@11.1.0: {}
 
   validate-html-nesting@1.2.2: {}
 

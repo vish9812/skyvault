@@ -1,6 +1,12 @@
 export const ROOT_FOLDER_ID = "-1";
 export const ROOT_FOLDER_NAME = "Root";
 
+export const BYTES_PER = {
+  KB: 1 << 10,
+  MB: 1 << 20,
+  GB: 1 << 30,
+} as const;
+
 export const CLIENT_URLS = {
   SIGN_UP: "/auth/sign-up",
   SIGN_IN: "/auth/sign-in",
@@ -9,14 +15,6 @@ export const CLIENT_URLS = {
   FAVORITES: "/favorites",
   TRASH: "/trash",
 } as const;
-
-export enum FILE_CATEGORIES {
-  IMAGE = "image",
-  VIDEO = "video",
-  AUDIO = "audio",
-  TEXT = "text",
-  OTHER = "other",
-}
 
 export const FOLDER_CONTENT_TYPES = {
   FOLDER: "folder",
