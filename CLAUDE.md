@@ -85,6 +85,10 @@ Each domain follows CQRS pattern with:
 - Use strongly-typed constants (see `@sv/utils/consts`)
 - Follow SolidJS patterns for reactivity
 - Component props use interfaces
+- **Styling**: Prefer existing CSS classes from `@sv/index.css` over direct Tailwind classes
+  - Use semantic classes like `text-primary`, `border-border`, `bg-bg-muted`
+  - Avoid hardcoded colors like `text-blue-500`, `border-gray-300`
+  - Create new semantic classes in `index.css` for common patterns
 
 ## Database
 
