@@ -1,4 +1,4 @@
-import { FILE_CATEGORIES } from "@sv/utils/consts";
+import { CATEGORY } from "@sv/utils/fileUtils";
 import { mergeProps, Show } from "solid-js";
 
 interface IconSvgProps {
@@ -55,7 +55,7 @@ const icons = {
     );
   },
 
-  [FILE_CATEGORIES.IMAGE]: (props?: IconSvgProps) => {
+  [CATEGORY.IMAGE]: (props?: IconSvgProps) => {
     const size = props?.size ?? defaultProps.size;
     const color = props?.color ?? defaultProps.color;
 
@@ -77,7 +77,7 @@ const icons = {
     );
   },
 
-  [FILE_CATEGORIES.VIDEO]: (props?: IconSvgProps) => {
+  [CATEGORY.VIDEO]: (props?: IconSvgProps) => {
     const size = props?.size ?? defaultProps.size;
     const color = props?.color ?? defaultProps.color;
 
@@ -99,7 +99,7 @@ const icons = {
     );
   },
 
-  [FILE_CATEGORIES.AUDIO]: (props?: IconSvgProps) => {
+  [CATEGORY.AUDIO]: (props?: IconSvgProps) => {
     const size = props?.size ?? defaultProps.size;
     const color = props?.color ?? defaultProps.color;
 
@@ -121,7 +121,7 @@ const icons = {
     );
   },
 
-  [FILE_CATEGORIES.TEXT]: (props?: IconSvgProps) => {
+  [CATEGORY.TEXT]: (props?: IconSvgProps) => {
     const size = props?.size ?? defaultProps.size;
     const color = props?.color ?? defaultProps.color;
 
@@ -143,7 +143,7 @@ const icons = {
     );
   },
 
-  [FILE_CATEGORIES.OTHER]: (props?: IconSvgProps) => {
+  [CATEGORY.OTHER]: (props?: IconSvgProps) => {
     const size = props?.size ?? defaultProps.size;
     const color = props?.color ?? defaultProps.color;
 
@@ -257,7 +257,7 @@ const icons = {
 
 interface FileIconProps {
   isFolder: boolean;
-  fileCategory: FILE_CATEGORIES;
+  fileCategory: CATEGORY;
   size?: number;
 }
 
@@ -270,8 +270,8 @@ export function FileIcon(props: FileIconProps) {
       fallback={<Icon {...svgProps} name="folder" />}
     >
       <Show
-        when={props.fileCategory !== FILE_CATEGORIES.OTHER}
-        fallback={<Icon {...svgProps} name={FILE_CATEGORIES.OTHER} />}
+        when={props.fileCategory !== CATEGORY.OTHER}
+        fallback={<Icon {...svgProps} name={CATEGORY.OTHER} />}
       >
         <Icon {...svgProps} name={props.fileCategory} />
       </Show>

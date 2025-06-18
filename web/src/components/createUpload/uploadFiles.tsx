@@ -1,9 +1,10 @@
 import { Button } from "@kobalte/core/button";
 import { Dialog } from "@kobalte/core/dialog";
 import { uploadFiles } from "@sv/apis/media";
-import { UploadFileInfo } from "@sv/apis/media/models";
+import { FileInfo, UploadFileInfo } from "@sv/apis/media/models";
 import { FileIcon } from "@sv/components/icons";
 import useAppCtx from "@sv/store/appCtxProvider";
+import { BYTES_PER } from "@sv/utils/consts";
 import FileUtils from "@sv/utils/fileUtils";
 import Format from "@sv/utils/format";
 import Random from "@sv/utils/random";
@@ -12,8 +13,8 @@ import { createEffect, createSignal, For, Show } from "solid-js";
 import { createStore, produce } from "solid-js/store";
 
 // TODO: Get these from the backend
-const maxFileSize = 500 * 1024 * 1024; // 500MB
-const maxFilesCount = 100;
+const maxFileSize = 5 * BYTES_PER.MB;
+const maxFilesCount = 4;
 const maxTotalSize = maxFileSize * maxFilesCount;
 const allowedTypes = [
   "image/*",
@@ -46,14 +47,15 @@ export default function UploadFiles(props: Props) {
   const appCtx = useAppCtx();
 
   const [selectedFiles, setSelectedFiles] = createStore<UploadFileInfoMap>({});
+  const [selectedFilesCount, setSelectedFilesCount] = createSignal(0);
   const [isLoading, setIsLoading] = createSignal(false);
   const [error, setError] = createSignal("");
   const [isDragOver, setIsDragOver] = createSignal(false);
 
   const isDisabled = () =>
     isLoading() ||
-    Object.keys(selectedFiles).length === 0 ||
-    Object.keys(selectedFiles).length > maxFilesCount;
+    selectedFilesCount() === 0 ||
+    selectedFilesCount() > maxFilesCount;
 
   const selectedFilesSize = () => {
     return Object.values(selectedFiles).reduce(
@@ -66,6 +68,7 @@ export default function UploadFiles(props: Props) {
   createEffect(() => {
     if (!props.isModalOpen) {
       setSelectedFiles({});
+      setSelectedFilesCount(0);
       setIsLoading(false);
       setError("");
       setIsDragOver(false);
@@ -155,6 +158,7 @@ export default function UploadFiles(props: Props) {
   const processFiles = (files: FileList | File[]) => {
     const fileArray = Array.from(files);
     const newFiles: UploadFileInfoMap = {};
+    let newFilesCount = 0;
     const errs: string[] = [];
 
     const totalValidationError = validateFiles(files);
@@ -177,6 +181,7 @@ export default function UploadFiles(props: Props) {
         progress: 0,
         status: "pending",
       };
+      newFilesCount++;
     }
 
     if (errs.length > 0) {
@@ -187,6 +192,7 @@ export default function UploadFiles(props: Props) {
 
     setError("");
     setSelectedFiles(newFiles);
+    setSelectedFilesCount((c) => c + newFilesCount);
   };
 
   const handleFileInputChange = (event: Event) => {
@@ -222,6 +228,7 @@ export default function UploadFiles(props: Props) {
   const removeFile = (fileId: string) => {
     setSelectedFiles({ [fileId]: undefined });
     setError("");
+    setSelectedFilesCount((c) => c - 1);
   };
 
   const openFileDialog = () => {
@@ -253,7 +260,6 @@ export default function UploadFiles(props: Props) {
             } else if (progress > 0) {
               status = "uploading";
             }
-
             fileMap[id].progress = progress;
             fileMap[id].status = status;
           })
@@ -261,29 +267,37 @@ export default function UploadFiles(props: Props) {
       }
     );
 
-    uploadedFiles.forEach(async (fileResult) => {
-      try {
-        const file = await fileResult.file;
-        setSelectedFiles(
-          produce((fileMap) => {
-            fileMap[fileResult.clientId].status = "success";
-          })
-        );
-      } catch (err) {
-        if (!errMsg) {
-          errMsg =
-            files.length > 1 ? "Failed to upload some files" : "Upload failed";
-        }
+    const promises: Promise<FileInfo | null>[] = uploadedFiles.map(
+      async (fileResult) => {
+        try {
+          const file = await fileResult.file;
+          setSelectedFiles(
+            produce((fileMap) => {
+              fileMap[fileResult.clientId].status = "success";
+            })
+          );
+          return file;
+        } catch (err) {
+          if (!errMsg) {
+            errMsg =
+              files.length > 1
+                ? "Failed to upload some files"
+                : "Upload failed";
+          }
 
-        setSelectedFiles(
-          produce((fileMap) => {
-            fileMap[fileResult.clientId].status = "error";
-            fileMap[fileResult.clientId].error =
-              err instanceof Error ? err.message : "Upload failed";
-          })
-        );
+          setSelectedFiles(
+            produce((fileMap) => {
+              fileMap[fileResult.clientId].status = "error";
+              fileMap[fileResult.clientId].error =
+                err instanceof Error ? err.message : "Upload failed";
+            })
+          );
+          return null;
+        }
       }
-    });
+    );
+
+    await Promise.all(promises);
 
     setIsLoading(false);
 
@@ -297,11 +311,15 @@ export default function UploadFiles(props: Props) {
 
   const getUploadStats = () => {
     const files = Object.values(selectedFiles);
-    const uploading = files.filter((f) => f.status === "uploading").length;
-    const success = files.filter((f) => f.status === "success").length;
-    const failed = files.filter((f) => f.status === "error").length;
+    const stats = { uploading: 0, success: 0, failed: 0, total: files.length };
 
-    return { uploading, success, failed, total: files.length };
+    for (const file of files) {
+      if (file.status === "uploading") stats.uploading++;
+      else if (file.status === "success") stats.success++;
+      else if (file.status === "error") stats.failed++;
+    }
+
+    return stats;
   };
 
   return (
@@ -315,8 +333,8 @@ export default function UploadFiles(props: Props) {
           <div class="flex flex-col">
             <Dialog.Title class="dialog-title">Upload Files</Dialog.Title>
             <Dialog.Description class="dialog-description">
-              Upload your files to the current folder. Maximum 4GB per file, 100
-              files total.
+              Upload your files to the current folder. Maximum{" "}
+              {Format.size(maxFileSize)} per file, {maxFilesCount} files total.
             </Dialog.Description>
 
             <Show when={error()}>
@@ -379,12 +397,12 @@ export default function UploadFiles(props: Props) {
             </div>
 
             {/* File list */}
-            <Show when={Object.keys(selectedFiles).length > 0}>
+            <Show when={selectedFilesCount() > 0}>
               <div class="mt-4">
                 <div class="flex justify-between items-center mb-2">
                   <p class="text-sm text-neutral-light">
                     <span class="text-neutral font-medium">
-                      {Object.keys(selectedFiles).length}
+                      {selectedFilesCount()}
                     </span>{" "}
                     file(s) selected • Total size:{" "}
                     {Format.size(selectedFilesSize())}
@@ -394,7 +412,7 @@ export default function UploadFiles(props: Props) {
                     <div class="text-xs text-neutral-light">
                       {(() => {
                         const stats = getUploadStats();
-                        return `${stats.success}/${stats.total} completed`;
+                        return `${stats.success}/${stats.total} completed • ${stats.failed} failed`;
                       })()}
                     </div>
                   </Show>
@@ -402,20 +420,20 @@ export default function UploadFiles(props: Props) {
 
                 <div class="max-h-[300px] md:max-h-[400px] overflow-y-auto space-y-2 mb-4">
                   <For each={Object.values(selectedFiles)}>
-                    {(fileWithId) => (
+                    {(file) => (
                       <div class="flex items-center justify-between p-3 border border-border rounded bg-white">
                         <div class="flex items-center gap-3 flex-1 min-w-0">
                           {/* File preview/icon */}
                           <div class="size-10 md:size-12 rounded bg-bg-muted flex items-center justify-center flex-shrink-0">
                             <Show
                               when={
-                                fileWithId.file.type.startsWith("image/") &&
-                                fileWithId.file.size < 10 * 1024 * 1024
+                                file.file.type.startsWith("image/") &&
+                                file.file.size < 10 * BYTES_PER.MB
                               }
                               fallback={
                                 <FileIcon
                                   fileCategory={FileUtils.mimeToCategory(
-                                    fileWithId.file.type
+                                    file.file.type
                                   )}
                                   isFolder={false}
                                   size={6}
@@ -423,8 +441,8 @@ export default function UploadFiles(props: Props) {
                               }
                             >
                               <img
-                                src={URL.createObjectURL(fileWithId.file)}
-                                alt={fileWithId.file.name}
+                                src={URL.createObjectURL(file.file)}
+                                alt={file.file.name}
                                 class="w-full h-full object-cover rounded"
                                 onLoad={(e) => {
                                   // Clean up object URL after image loads
@@ -441,51 +459,44 @@ export default function UploadFiles(props: Props) {
                           {/* File info */}
                           <div class="flex flex-col min-w-0 flex-1">
                             <div class="font-medium text-sm truncate">
-                              {fileWithId.file.name}
+                              {file.file.name}
                             </div>
                             <div class="text-xs text-neutral-light">
-                              {Format.size(fileWithId.file.size)}
-                              <Show
-                                when={fileWithId.file.size > 100 * 1024 * 1024}
-                              >
-                                <span class="ml-1 text-blue-600">
-                                  • Chunked upload
-                                </span>
-                              </Show>
+                              {Format.size(file.file.size)}
                             </div>
 
                             {/* Progress bar for uploading files */}
-                            <Show when={fileWithId.status === "uploading"}>
+                            <Show when={file.status === "uploading"}>
                               <div class="w-full bg-bg-muted rounded-full h-1.5 mt-1">
                                 <div
                                   class="bg-primary h-1.5 rounded-full transition-all duration-300"
-                                  style={{ width: `${fileWithId.progress}%` }}
+                                  style={{ width: `${file.progress}%` }}
                                 />
                               </div>
                               <div class="text-xs text-neutral-light mt-1">
-                                {Math.round(fileWithId.progress)}%
+                                {Math.round(file.progress)}%
                               </div>
                             </Show>
 
                             {/* Status indicators */}
-                            <Show when={fileWithId.status === "success"}>
-                              <div class="text-xs text-green-600 mt-1">
+                            <Show when={file.status === "success"}>
+                              <div class="text-xs text-success mt-1">
                                 ✓ Uploaded successfully
                               </div>
                             </Show>
-                            <Show when={fileWithId.status === "error"}>
-                              <div class="text-xs text-red-600 mt-1">
-                                ✗ {fileWithId.error || "Upload failed"}
+                            <Show when={file.status === "error"}>
+                              <div class="text-xs text-error mt-1">
+                                ✗ {file.error || "Upload failed"}
                               </div>
                             </Show>
                           </div>
                         </div>
 
                         {/* Remove button */}
-                        <Show when={fileWithId.status !== "uploading"}>
+                        <Show when={file.status !== "uploading"}>
                           <button
                             class="text-neutral-light hover:text-error p-1 rounded ml-2 flex-shrink-0"
-                            onClick={() => removeFile(fileWithId.id)}
+                            onClick={() => removeFile(file.id)}
                             disabled={isLoading()}
                           >
                             <svg
@@ -531,7 +542,7 @@ export default function UploadFiles(props: Props) {
               >
                 {isLoading()
                   ? "Uploading..."
-                  : `Upload ${Object.keys(selectedFiles).length} File(s)`}
+                  : `Upload ${selectedFilesCount()} File(s)`}
               </Button>
             </div>
           </div>
