@@ -1,8 +1,8 @@
 import { Button } from "@kobalte/core/button";
-import { Dialog } from "@kobalte/core/dialog";
 import { uploadFiles } from "@sv/apis/media";
 import { FileInfo, UploadFileInfo } from "@sv/apis/media/models";
 import { FileIcon } from "@sv/components/icons";
+import Dialog, { DialogActions } from "@sv/components/ui/Dialog";
 import useAppCtx from "@sv/store/appCtxProvider";
 import { BYTES_PER } from "@sv/utils/consts";
 import FileUtils from "@sv/utils/fileUtils";
@@ -325,229 +325,221 @@ export default function UploadFiles(props: Props) {
   return (
     <Dialog
       open={props.isModalOpen}
-      onOpenChange={(isOpen) => !isOpen && props.closeModal()}
+      onClose={props.closeModal}
+      title="Upload Files"
+      description={`Upload your files to the current folder. Maximum ${Format.size(
+        maxFileSize
+      )} per file, ${maxFilesCount} files total.`}
+      size="xl"
     >
-      <Dialog.Portal>
-        <Dialog.Overlay class="dialog-overlay" />
-        <Dialog.Content class="dialog-content max-w-2xl">
-          <div class="flex flex-col">
-            <Dialog.Title class="dialog-title">Upload Files</Dialog.Title>
-            <Dialog.Description class="dialog-description">
-              Upload your files to the current folder. Maximum{" "}
-              {Format.size(maxFileSize)} per file, {maxFilesCount} files total.
-            </Dialog.Description>
+      <div>
+        <Show when={error()}>
+          <div class="input-t-error mb-4">{error()}</div>
+        </Show>
 
-            <Show when={error()}>
-              <div class="input-t-error mb-4">{error()}</div>
-            </Show>
+        {/* Hidden file input */}
+        <input
+          ref={fileInputRef}
+          type="file"
+          multiple
+          accept={allowedTypes.join(",")}
+          onChange={handleFileInputChange}
+          style={{ display: "none" }}
+          disabled={isLoading()}
+        />
 
-            {/* Hidden file input */}
-            <input
-              ref={fileInputRef}
-              type="file"
-              multiple
-              accept={allowedTypes.join(",")}
-              onChange={handleFileInputChange}
-              style={{ display: "none" }}
-              disabled={isLoading()}
-            />
-
-            {/* Drag and drop zone */}
-            <div
-              class={`border-2 border-dashed rounded-lg p-6 my-4 text-center transition-all cursor-pointer ${
-                isDragOver()
-                  ? "border-primary bg-primary-lighter"
-                  : "border-border hover:border-primary hover:bg-primary-lighter"
-              } ${isLoading() ? "opacity-50 cursor-not-allowed" : ""}`}
-              onDragOver={handleDragOver}
-              onDragLeave={handleDragLeave}
-              onDrop={handleDrop}
-              onClick={!isLoading() ? openFileDialog : undefined}
+        {/* Drag and drop zone */}
+        <div
+          class={`border-2 border-dashed rounded-lg p-6 my-4 text-center transition-all cursor-pointer ${
+            isDragOver()
+              ? "border-primary bg-primary-lighter"
+              : "border-border hover:border-primary hover:bg-primary-lighter"
+          } ${isLoading() ? "opacity-50 cursor-not-allowed" : ""}`}
+          onDragOver={handleDragOver}
+          onDragLeave={handleDragLeave}
+          onDrop={handleDrop}
+          onClick={!isLoading() ? openFileDialog : undefined}
+        >
+          <div class="flex-center flex-col gap-2">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke-width="1.5"
+              stroke="currentColor"
+              class="size-10 text-neutral-light"
             >
-              <div class="flex-center flex-col gap-2">
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke-width="1.5"
-                  stroke="currentColor"
-                  class="size-10 text-neutral-light"
-                >
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5m-13.5-9L12 3m0 0 4.5 4.5M12 3v13.5"
-                  />
-                </svg>
-                <p class="font-medium">
-                  {isDragOver()
-                    ? "Drop files here"
-                    : "Drag and drop files here"}
-                </p>
-                <p class="text-sm text-neutral-light">
-                  Or{" "}
-                  <span class="text-neutral font-medium">click anywhere</span>{" "}
-                  to select files
-                </p>
-                <p class="text-xs text-neutral-light mt-1">
-                  Maximum file size: {Format.size(maxFileSize)} • Maximum files:{" "}
-                  {maxFilesCount}
-                </p>
-              </div>
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5m-13.5-9L12 3m0 0 4.5 4.5M12 3v13.5"
+              />
+            </svg>
+            <p class="font-medium">
+              {isDragOver() ? "Drop files here" : "Drag and drop files here"}
+            </p>
+            <p class="text-sm text-neutral-light">
+              Or <span class="text-neutral font-medium">click anywhere</span> to
+              select files
+            </p>
+            <p class="text-xs text-neutral-light mt-1">
+              Maximum file size: {Format.size(maxFileSize)} • Maximum files:{" "}
+              {maxFilesCount}
+            </p>
+          </div>
+        </div>
+
+        {/* File list */}
+        <Show when={selectedFilesCount() > 0}>
+          <div class="mt-4">
+            <div class="flex justify-between items-center mb-2">
+              <p class="text-sm text-neutral-light">
+                <span class="text-neutral font-medium">
+                  {selectedFilesCount()}
+                </span>{" "}
+                file(s) selected • Total size:{" "}
+                {Format.size(selectedFilesSize())}
+              </p>
+
+              <Show when={isLoading()}>
+                <div class="text-xs text-neutral-light">
+                  {(() => {
+                    const stats = getUploadStats();
+                    return `${stats.success}/${stats.total} completed • ${stats.failed} failed`;
+                  })()}
+                </div>
+              </Show>
             </div>
 
-            {/* File list */}
-            <Show when={selectedFilesCount() > 0}>
-              <div class="mt-4">
-                <div class="flex justify-between items-center mb-2">
-                  <p class="text-sm text-neutral-light">
-                    <span class="text-neutral font-medium">
-                      {selectedFilesCount()}
-                    </span>{" "}
-                    file(s) selected • Total size:{" "}
-                    {Format.size(selectedFilesSize())}
-                  </p>
-
-                  <Show when={isLoading()}>
-                    <div class="text-xs text-neutral-light">
-                      {(() => {
-                        const stats = getUploadStats();
-                        return `${stats.success}/${stats.total} completed • ${stats.failed} failed`;
-                      })()}
-                    </div>
-                  </Show>
-                </div>
-
-                <div class="max-h-[300px] md:max-h-[400px] overflow-y-auto space-y-2 mb-4">
-                  <For each={Object.values(selectedFiles)}>
-                    {(file) => (
-                      <div class="flex items-center justify-between p-3 border border-border rounded bg-white">
-                        <div class="flex items-center gap-3 flex-1 min-w-0">
-                          {/* File preview/icon */}
-                          <div class="size-10 md:size-12 rounded bg-bg-muted flex items-center justify-center flex-shrink-0">
-                            <Show
-                              when={
-                                file.file.type.startsWith("image/") &&
-                                file.file.size < 10 * BYTES_PER.MB
-                              }
-                              fallback={
-                                <FileIcon
-                                  fileCategory={FileUtils.mimeToCategory(
-                                    file.file.type
-                                  )}
-                                  isFolder={false}
-                                  size={6}
-                                />
-                              }
-                            >
-                              <img
-                                src={URL.createObjectURL(file.file)}
-                                alt={file.file.name}
-                                class="w-full h-full object-cover rounded"
-                                onLoad={(e) => {
-                                  // Clean up object URL after image loads
-                                  setTimeout(() => {
-                                    URL.revokeObjectURL(
-                                      (e.target as HTMLImageElement).src
-                                    );
-                                  }, 1000);
-                                }}
-                              />
-                            </Show>
-                          </div>
-
-                          {/* File info */}
-                          <div class="flex flex-col min-w-0 flex-1">
-                            <div class="font-medium text-sm truncate">
-                              {file.file.name}
-                            </div>
-                            <div class="text-xs text-neutral-light">
-                              {Format.size(file.file.size)}
-                            </div>
-
-                            {/* Progress bar for uploading files */}
-                            <Show when={file.status === "uploading"}>
-                              <div class="w-full bg-bg-muted rounded-full h-1.5 mt-1">
-                                <div
-                                  class="bg-primary h-1.5 rounded-full transition-all duration-300"
-                                  style={{ width: `${file.progress}%` }}
-                                />
-                              </div>
-                              <div class="text-xs text-neutral-light mt-1">
-                                {Math.round(file.progress)}%
-                              </div>
-                            </Show>
-
-                            {/* Status indicators */}
-                            <Show when={file.status === "success"}>
-                              <div class="text-xs text-success mt-1">
-                                ✓ Uploaded successfully
-                              </div>
-                            </Show>
-                            <Show when={file.status === "error"}>
-                              <div class="text-xs text-error mt-1">
-                                ✗ {file.error || "Upload failed"}
-                              </div>
-                            </Show>
-                          </div>
-                        </div>
-
-                        {/* Remove button */}
-                        <Show when={file.status !== "uploading"}>
-                          <button
-                            class="text-neutral-light hover:text-error p-1 rounded ml-2 flex-shrink-0"
-                            onClick={() => removeFile(file.id)}
-                            disabled={isLoading()}
-                          >
-                            <svg
-                              xmlns="http://www.w3.org/2000/svg"
-                              fill="none"
-                              viewBox="0 0 24 24"
-                              stroke-width="1.5"
-                              stroke="currentColor"
-                              class="size-5"
-                            >
-                              <path
-                                stroke-linecap="round"
-                                stroke-linejoin="round"
-                                d="M6 18 18 6M6 6l12 12"
-                              />
-                            </svg>
-                          </button>
+            <div class="max-h-[300px] md:max-h-[400px] overflow-y-auto space-y-2 mb-4">
+              <For each={Object.values(selectedFiles)}>
+                {(file) => (
+                  <div class="flex items-center justify-between p-3 border border-border rounded bg-white">
+                    <div class="flex items-center gap-3 flex-1 min-w-0">
+                      {/* File preview/icon */}
+                      <div class="size-10 md:size-12 rounded bg-bg-muted flex items-center justify-center flex-shrink-0">
+                        <Show
+                          when={
+                            file.file.type.startsWith("image/") &&
+                            file.file.size < 10 * BYTES_PER.MB
+                          }
+                          fallback={
+                            <FileIcon
+                              fileCategory={FileUtils.mimeToCategory(
+                                file.file.type
+                              )}
+                              isFolder={false}
+                              size={6}
+                            />
+                          }
+                        >
+                          <img
+                            src={URL.createObjectURL(file.file)}
+                            alt={file.file.name}
+                            class="w-full h-full object-cover rounded"
+                            onLoad={(e) => {
+                              // Clean up object URL after image loads
+                              setTimeout(() => {
+                                URL.revokeObjectURL(
+                                  (e.target as HTMLImageElement).src
+                                );
+                              }, 1000);
+                            }}
+                          />
                         </Show>
                       </div>
-                    )}
-                  </For>
-                </div>
-              </div>
-            </Show>
 
-            {/* Action buttons */}
-            <div class="flex justify-end gap-2 mt-4">
-              <Button
-                class="btn btn-outline"
-                onClick={props.closeModal}
-                disabled={isLoading()}
-              >
-                Cancel
-              </Button>
-              <Button
-                classList={{
-                  btn: true,
-                  "btn-disabled": isDisabled(),
-                  "btn-primary": !isDisabled(),
-                }}
-                disabled={isDisabled()}
-                onClick={handleUpload}
-              >
-                {isLoading()
-                  ? "Uploading..."
-                  : `Upload ${selectedFilesCount()} File(s)`}
-              </Button>
+                      {/* File info */}
+                      <div class="flex flex-col min-w-0 flex-1">
+                        <div class="font-medium text-sm truncate">
+                          {file.file.name}
+                        </div>
+                        <div class="text-xs text-neutral-light">
+                          {Format.size(file.file.size)}
+                        </div>
+
+                        {/* Progress bar for uploading files */}
+                        <Show when={file.status === "uploading"}>
+                          <div class="w-full bg-bg-muted rounded-full h-1.5 mt-1">
+                            <div
+                              class="bg-primary h-1.5 rounded-full transition-all duration-300"
+                              style={{ width: `${file.progress}%` }}
+                            />
+                          </div>
+                          <div class="text-xs text-neutral-light mt-1">
+                            {Math.round(file.progress)}%
+                          </div>
+                        </Show>
+
+                        {/* Status indicators */}
+                        <Show when={file.status === "success"}>
+                          <div class="text-xs text-success mt-1">
+                            ✓ Uploaded successfully
+                          </div>
+                        </Show>
+                        <Show when={file.status === "error"}>
+                          <div class="text-xs text-error mt-1">
+                            ✗ {file.error || "Upload failed"}
+                          </div>
+                        </Show>
+                      </div>
+                    </div>
+
+                    {/* Remove button */}
+                    <Show when={file.status !== "uploading"}>
+                      <button
+                        class="text-neutral-light hover:text-error p-1 rounded ml-2 flex-shrink-0"
+                        onClick={() => removeFile(file.id)}
+                        disabled={isLoading()}
+                      >
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                          stroke-width="1.5"
+                          stroke="currentColor"
+                          class="size-5"
+                        >
+                          <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            d="M6 18 18 6M6 6l12 12"
+                          />
+                        </svg>
+                      </button>
+                    </Show>
+                  </div>
+                )}
+              </For>
             </div>
           </div>
-        </Dialog.Content>
-      </Dialog.Portal>
+        </Show>
+      </div>
+
+      <DialogActions>
+        <>
+          <Button
+            class="px-4 py-2 text-neutral-light bg-white border border-border rounded-md hover:bg-bg-muted"
+            onClick={props.closeModal}
+            disabled={isLoading()}
+          >
+            Cancel
+          </Button>
+          <Button
+            classList={{
+              btn: true,
+              "btn-disabled": isDisabled(),
+              "btn-primary": !isDisabled(),
+            }}
+            disabled={isDisabled()}
+            onClick={handleUpload}
+          >
+            {isLoading()
+              ? "Uploading..."
+              : `Upload ${selectedFilesCount()} File(s)`}
+          </Button>
+        </>
+      </DialogActions>
     </Dialog>
   );
 }

@@ -1,7 +1,7 @@
 import { Button } from "@kobalte/core/button";
-import { Dialog } from "@kobalte/core/dialog";
 import { TextField } from "@kobalte/core/text-field";
 import { createFolder } from "@sv/apis/media";
+import Dialog, { DialogActions } from "@sv/components/ui/Dialog";
 import useAppCtx from "@sv/store/appCtxProvider";
 import { COMMON_ERR_KEYS } from "@sv/utils/errors";
 import Validate, { VALIDATIONS } from "@sv/utils/validate";
@@ -67,64 +67,57 @@ function CreateFolder(props: Props) {
   return (
     <Dialog
       open={props.isModalOpen}
-      onOpenChange={(isOpen) => !isOpen && props.closeModal()}
+      onClose={props.closeModal}
+      title="Create New Folder"
+      description="Enter a name for your new folder"
+      size="md"
     >
-      <Dialog.Portal>
-        <Dialog.Overlay class="dialog-overlay" />
-        <Dialog.Content class="dialog-content">
-          <div class="flex flex-col">
-            <Dialog.Title class="dialog-title">Create New Folder</Dialog.Title>
-            <Dialog.Description class="dialog-description">
-              Enter a name for your new folder
-            </Dialog.Description>
+      <div class="mt-4">
+        <TextField
+          value={name()}
+          onChange={handleNameChange}
+          validationState={error() ? "invalid" : "valid"}
+        >
+          <TextField.Label class="label">Folder Name</TextField.Label>
+          <TextField.Input
+            classList={{
+              input: true,
+              "input-b-std": !error(),
+              "input-b-error": !!error(),
+            }}
+            type="text"
+            placeholder="Enter folder name"
+            autocomplete="off"
+            autofocus
+          />
+          <TextField.ErrorMessage class="input-t-error">
+            {error()}
+          </TextField.ErrorMessage>
+        </TextField>
+      </div>
 
-            <div class="mt-4">
-              <TextField
-                value={name()}
-                onChange={handleNameChange}
-                validationState={error() ? "invalid" : "valid"}
-              >
-                <TextField.Label class="label">Folder Name</TextField.Label>
-                <TextField.Input
-                  classList={{
-                    input: true,
-                    "input-b-std": !error(),
-                    "input-b-error": !!error(),
-                  }}
-                  type="text"
-                  placeholder="Enter folder name"
-                  autocomplete="off"
-                  autofocus
-                />
-                <TextField.ErrorMessage class="input-t-error">
-                  {error()}
-                </TextField.ErrorMessage>
-              </TextField>
-            </div>
-
-            <div class="flex justify-end gap-2 mt-4">
-              <Button
-                class="btn btn-outline"
-                onClick={props.closeModal}
-                disabled={isLoading()}
-              >
-                Cancel
-              </Button>
-              <Button
-                classList={{
-                  btn: true,
-                  "btn-disabled": isDisabled(),
-                  "btn-primary": !isDisabled(),
-                }}
-                onClick={handleCreateFolder}
-                disabled={isDisabled()}
-              >
-                {isLoading() ? "Creating..." : "Create Folder"}
-              </Button>
-            </div>
-          </div>
-        </Dialog.Content>
-      </Dialog.Portal>
+      <DialogActions>
+        <>
+          <Button
+            class="btn btn-outline"
+            onClick={props.closeModal}
+            disabled={isLoading()}
+          >
+            Cancel
+          </Button>
+          <Button
+            classList={{
+              btn: true,
+              "btn-disabled": isDisabled(),
+              "btn-primary": !isDisabled(),
+            }}
+            onClick={handleCreateFolder}
+            disabled={isDisabled()}
+          >
+            {isLoading() ? "Creating..." : "Create Folder"}
+          </Button>
+        </>
+      </DialogActions>
     </Dialog>
   );
 }
