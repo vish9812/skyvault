@@ -1,6 +1,6 @@
 import { Button } from "@kobalte/core/button";
 import { Search as KSearch } from "@kobalte/core/search";
-import { createSignal, createEffect, Show, For } from "solid-js";
+import { createSignal, Show } from "solid-js";
 
 // Mock data for demonstration
 const MOCK_FILES = [
@@ -236,7 +236,7 @@ function Search() {
     >
       <KSearch.Control
         aria-label="Search"
-        class="flex-center w-[200px] md:w-[350px] mx-4 bg-white input-b-std border rounded-md focus:outline-none"
+        class="flex-center w-[200px] md:w-[350px] mx-4 bg-white input-b-std border rounded-md focus:outline-hidden"
       >
         <KSearch.Indicator
           loadingComponent={
@@ -275,7 +275,7 @@ function Search() {
             </svg>
           </KSearch.Icon>
         </KSearch.Indicator>
-        <KSearch.Input ref={inputRef} class="w-full outline-none py-2" />
+        <KSearch.Input ref={inputRef} class="w-full outline-hidden py-2" />
         {/* Close button */}
         <Button
           class="p-1"

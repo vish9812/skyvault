@@ -2,9 +2,10 @@ import { Button } from "@kobalte/core/button";
 import { uploadFiles } from "@sv/apis/media";
 import { FileInfo, UploadFileInfo } from "@sv/apis/media/models";
 import { FileIcon } from "@sv/components/icons";
-import Dialog, { DialogActions } from "@sv/components/ui/Dialog";
+import Dialog from "@sv/components/ui/Dialog";
 import useAppCtx from "@sv/store/appCtxProvider";
 import { BYTES_PER } from "@sv/utils/consts";
+import { getFileUploadErrorMessage } from "@sv/utils/errors";
 import FileUtils from "@sv/utils/fileUtils";
 import Format from "@sv/utils/format";
 import Random from "@sv/utils/random";
@@ -14,7 +15,7 @@ import { createStore, produce } from "solid-js/store";
 
 // TODO: Get these from the backend
 const maxFileSize = 5 * BYTES_PER.MB;
-const maxFilesCount = 4;
+const maxFilesCount = 10;
 const maxTotalSize = maxFileSize * maxFilesCount;
 const allowedTypes = [
   "image/*",
@@ -52,7 +53,7 @@ export default function UploadFiles(props: Props) {
   const [error, setError] = createSignal("");
   const [isDragOver, setIsDragOver] = createSignal(false);
 
-  const isDisabled = () =>
+  const isUploadDisabled = () =>
     isLoading() ||
     selectedFilesCount() === 0 ||
     selectedFilesCount() > maxFilesCount;
@@ -255,9 +256,7 @@ export default function UploadFiles(props: Props) {
         setSelectedFiles(
           produce((fileMap) => {
             let status: UploadFileInfo["status"] = "pending";
-            if (progress === 100) {
-              status = "success";
-            } else if (progress > 0) {
+            if (progress > 0 && progress < 100) {
               status = "uploading";
             }
             fileMap[id].progress = progress;
@@ -300,6 +299,7 @@ export default function UploadFiles(props: Props) {
     await Promise.all(promises);
 
     setIsLoading(false);
+    setError(errMsg);
 
     // If no errors, close modal after brief delay to show success
     if (!errMsg) {
@@ -327,14 +327,32 @@ export default function UploadFiles(props: Props) {
       open={props.isModalOpen}
       onClose={props.closeModal}
       title="Upload Files"
-      description={`Upload your files to the current folder. Maximum ${Format.size(
-        maxFileSize
-      )} per file, ${maxFilesCount} files total.`}
+      description="Upload your files to the current folder."
       size="xl"
+      actions={
+        <>
+          <Button class="btn btn-outline" onClick={props.closeModal}>
+            Close
+          </Button>
+          <Button
+            classList={{
+              btn: true,
+              "btn-disabled": isUploadDisabled(),
+              "btn-primary": !isUploadDisabled(),
+            }}
+            disabled={isUploadDisabled()}
+            onClick={handleUpload}
+          >
+            {isLoading()
+              ? "Uploading..."
+              : `Upload ${selectedFilesCount()} File(s)`}
+          </Button>
+        </>
+      }
     >
-      <div>
+      <div class="flex flex-col gap-4">
         <Show when={error()}>
-          <div class="input-t-error mb-4">{error()}</div>
+          <p class="input-t-error text-center">{error()}</p>
         </Show>
 
         {/* Hidden file input */}
@@ -345,16 +363,19 @@ export default function UploadFiles(props: Props) {
           accept={allowedTypes.join(",")}
           onChange={handleFileInputChange}
           style={{ display: "none" }}
-          disabled={isLoading()}
         />
 
         {/* Drag and drop zone */}
         <div
-          class={`border-2 border-dashed rounded-lg p-6 my-4 text-center transition-all cursor-pointer ${
-            isDragOver()
-              ? "border-primary bg-primary-lighter"
-              : "border-border hover:border-primary hover:bg-primary-lighter"
-          } ${isLoading() ? "opacity-50 cursor-not-allowed" : ""}`}
+          classList={{
+            "border-2 border-dashed rounded-lg p-6 text-center transition-all":
+              true,
+            "border-primary bg-primary-lighter": isDragOver() && !isLoading(),
+            "border-border hover:border-primary hover:bg-primary-lighter":
+              !isDragOver() && !isLoading(),
+            "opacity-50 cursor-not-allowed": isLoading(),
+            "cursor-pointer": !isLoading(),
+          }}
           onDragOver={handleDragOver}
           onDragLeave={handleDragLeave}
           onDrop={handleDrop}
@@ -391,155 +412,125 @@ export default function UploadFiles(props: Props) {
 
         {/* File list */}
         <Show when={selectedFilesCount() > 0}>
-          <div class="mt-4">
-            <div class="flex justify-between items-center mb-2">
-              <p class="text-sm text-neutral-light">
-                <span class="text-neutral font-medium">
-                  {selectedFilesCount()}
-                </span>{" "}
-                file(s) selected • Total size:{" "}
-                {Format.size(selectedFilesSize())}
-              </p>
+          <div class="flex justify-between items-center">
+            <p class="text-sm text-neutral-light">
+              <span class="text-neutral font-medium">
+                {selectedFilesCount()}
+              </span>{" "}
+              file(s) selected • Total size: {Format.size(selectedFilesSize())}
+            </p>
 
-              <Show when={isLoading()}>
-                <div class="text-xs text-neutral-light">
-                  {(() => {
-                    const stats = getUploadStats();
-                    return `${stats.success}/${stats.total} completed • ${stats.failed} failed`;
-                  })()}
-                </div>
-              </Show>
+            <div class="text-xs text-neutral-light">
+              {(() => {
+                const stats = getUploadStats();
+                return `success: ${stats.success} • failed: ${stats.failed}`;
+              })()}
             </div>
+          </div>
 
-            <div class="max-h-[300px] md:max-h-[400px] overflow-y-auto space-y-2 mb-4">
-              <For each={Object.values(selectedFiles)}>
-                {(file) => (
-                  <div class="flex items-center justify-between p-3 border border-border rounded bg-white">
-                    <div class="flex items-center gap-3 flex-1 min-w-0">
-                      {/* File preview/icon */}
-                      <div class="size-10 md:size-12 rounded bg-bg-muted flex items-center justify-center flex-shrink-0">
-                        <Show
-                          when={
-                            file.file.type.startsWith("image/") &&
-                            file.file.size < 10 * BYTES_PER.MB
-                          }
-                          fallback={
-                            <FileIcon
-                              fileCategory={FileUtils.mimeToCategory(
-                                file.file.type
-                              )}
-                              isFolder={false}
-                              size={6}
-                            />
-                          }
-                        >
-                          <img
-                            src={URL.createObjectURL(file.file)}
-                            alt={file.file.name}
-                            class="w-full h-full object-cover rounded"
-                            onLoad={(e) => {
-                              // Clean up object URL after image loads
-                              setTimeout(() => {
-                                URL.revokeObjectURL(
-                                  (e.target as HTMLImageElement).src
-                                );
-                              }, 1000);
-                            }}
+          <div class="max-h-[300px] md:max-h-[400px] overflow-y-auto space-y-2">
+            <For each={Object.values(selectedFiles)}>
+              {(file) => (
+                <div class="flex items-center justify-between p-3 border border-border rounded-sm bg-white">
+                  <div class="flex items-center gap-3 flex-1 min-w-0">
+                    {/* File preview/icon */}
+                    <div class="size-10 md:size-12 rounded-sm bg-bg-muted flex items-center justify-center shrink-0">
+                      <Show
+                        when={
+                          file.file.type.startsWith("image/") &&
+                          file.file.size < 10 * BYTES_PER.MB
+                        }
+                        fallback={
+                          <FileIcon
+                            fileCategory={FileUtils.mimeToCategory(
+                              file.file.type
+                            )}
+                            isFolder={false}
+                            size={6}
                           />
-                        </Show>
-                      </div>
-
-                      {/* File info */}
-                      <div class="flex flex-col min-w-0 flex-1">
-                        <div class="font-medium text-sm truncate">
-                          {file.file.name}
-                        </div>
-                        <div class="text-xs text-neutral-light">
-                          {Format.size(file.file.size)}
-                        </div>
-
-                        {/* Progress bar for uploading files */}
-                        <Show when={file.status === "uploading"}>
-                          <div class="w-full bg-bg-muted rounded-full h-1.5 mt-1">
-                            <div
-                              class="bg-primary h-1.5 rounded-full transition-all duration-300"
-                              style={{ width: `${file.progress}%` }}
-                            />
-                          </div>
-                          <div class="text-xs text-neutral-light mt-1">
-                            {Math.round(file.progress)}%
-                          </div>
-                        </Show>
-
-                        {/* Status indicators */}
-                        <Show when={file.status === "success"}>
-                          <div class="text-xs text-success mt-1">
-                            ✓ Uploaded successfully
-                          </div>
-                        </Show>
-                        <Show when={file.status === "error"}>
-                          <div class="text-xs text-error mt-1">
-                            ✗ {file.error || "Upload failed"}
-                          </div>
-                        </Show>
-                      </div>
+                        }
+                      >
+                        <img
+                          src={URL.createObjectURL(file.file)}
+                          alt={file.file.name}
+                          class="w-full h-full object-cover rounded"
+                          onLoad={(e) => {
+                            // Clean up object URL after image loads
+                            setTimeout(() => {
+                              URL.revokeObjectURL(
+                                (e.target as HTMLImageElement).src
+                              );
+                            }, 1000);
+                          }}
+                        />
+                      </Show>
                     </div>
 
-                    {/* Remove button */}
-                    <Show when={file.status !== "uploading"}>
-                      <button
-                        class="text-neutral-light hover:text-error p-1 rounded ml-2 flex-shrink-0"
-                        onClick={() => removeFile(file.id)}
-                        disabled={isLoading()}
-                      >
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          fill="none"
-                          viewBox="0 0 24 24"
-                          stroke-width="1.5"
-                          stroke="currentColor"
-                          class="size-5"
-                        >
-                          <path
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                            d="M6 18 18 6M6 6l12 12"
+                    {/* File info */}
+                    <div class="flex flex-col min-w-0 flex-1">
+                      <div class="font-medium text-sm truncate">
+                        {file.file.name}
+                      </div>
+                      <div class="text-xs text-neutral-light">
+                        {Format.size(file.file.size)}
+                      </div>
+
+                      {/* Progress bar for uploading files */}
+                      <Show when={file.status === "uploading"}>
+                        <div class="w-full bg-bg-muted rounded-full h-1.5 mt-1">
+                          <div
+                            class="bg-primary h-1.5 rounded-full transition-all duration-300"
+                            style={{ width: `${file.progress}%` }}
                           />
-                        </svg>
-                      </button>
-                    </Show>
+                        </div>
+                        <div class="text-xs text-neutral-light mt-1">
+                          {Math.round(file.progress)}%
+                        </div>
+                      </Show>
+
+                      {/* Status indicators */}
+                      <Show when={file.status === "success"}>
+                        <div class="text-xs text-success mt-1">
+                          ✓ Uploaded successfully
+                        </div>
+                      </Show>
+                      <Show when={file.status === "error"}>
+                        <div class="text-xs text-error mt-1">
+                          ✗ {getFileUploadErrorMessage(file.error || "")}
+                        </div>
+                      </Show>
+                    </div>
                   </div>
-                )}
-              </For>
-            </div>
+
+                  {/* Remove button */}
+                  <Show when={file.status !== "uploading"}>
+                    <button
+                      class="text-neutral-light hover:text-error p-1 rounded-sm ml-2 shrink-0"
+                      onClick={() => removeFile(file.id)}
+                      disabled={isLoading()}
+                    >
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke-width="1.5"
+                        stroke="currentColor"
+                        class="size-5"
+                      >
+                        <path
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          d="M6 18 18 6M6 6l12 12"
+                        />
+                      </svg>
+                    </button>
+                  </Show>
+                </div>
+              )}
+            </For>
           </div>
         </Show>
       </div>
-
-      <DialogActions>
-        <>
-          <Button
-            class="px-4 py-2 text-neutral-light bg-white border border-border rounded-md hover:bg-bg-muted"
-            onClick={props.closeModal}
-            disabled={isLoading()}
-          >
-            Cancel
-          </Button>
-          <Button
-            classList={{
-              btn: true,
-              "btn-disabled": isDisabled(),
-              "btn-primary": !isDisabled(),
-            }}
-            disabled={isDisabled()}
-            onClick={handleUpload}
-          >
-            {isLoading()
-              ? "Uploading..."
-              : `Upload ${selectedFilesCount()} File(s)`}
-          </Button>
-        </>
-      </DialogActions>
     </Dialog>
   );
 }

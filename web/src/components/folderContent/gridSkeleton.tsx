@@ -7,8 +7,8 @@ function GridSkeleton() {
             <div class="w-14 h-14 bg-gray-200 rounded-full animate-pulse"></div>
           </div>
           <div class="p-2 flex flex-col">
-            <div class="h-4 bg-gray-200 rounded w-3/4 animate-pulse"></div>
-            <div class="h-3 bg-gray-200 rounded w-1/3 mt-2 animate-pulse"></div>
+            <div class="h-4 bg-gray-200 rounded-sm w-3/4 animate-pulse"></div>
+            <div class="h-3 bg-gray-200 rounded-sm w-1/3 mt-2 animate-pulse"></div>
           </div>
         </div>
       ))}

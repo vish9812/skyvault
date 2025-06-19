@@ -64,9 +64,10 @@ export async function uploadFile(
 export async function uploadFileChunked(
   file: File,
   folderId: string,
-  onProgress?: (progress: number) => void,
-  chunkSize: number = 5 * 1024 * 1024 // 5MB chunks
+  onProgress?: (progress: number) => void
 ): Promise<FileInfo> {
+  // TODO: Get the chunk size from the backend
+  const chunkSize = 5 * BYTES_PER.MB; // 5MB chunks
   const totalChunks = Math.ceil(file.size / chunkSize);
   const uploadId = generateUploadId();
   let finalFileInfo: FileInfo | null = null;
@@ -117,6 +118,7 @@ export function uploadFiles(
   onFileProgress?: (id: string, progress: number) => void
 ): UploadFileResult[] {
   const files = uFiles.map((uFile) => {
+    // TODO: Get the limits from the backend
     // Use chunked upload for files larger than 50MB
     const useChunkedUpload = uFile.file.size > 50 * BYTES_PER.MB;
 

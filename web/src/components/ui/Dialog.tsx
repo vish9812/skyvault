@@ -7,6 +7,7 @@ interface DialogProps {
   description?: string;
   children: JSX.Element;
   size?: "sm" | "md" | "lg" | "xl";
+  actions?: JSX.Element;
 }
 
 export default function Dialog(props: DialogProps) {
@@ -47,7 +48,7 @@ export default function Dialog(props: DialogProps) {
 
   return (
     <Show when={props.open}>
-      <div class="fixed inset-0 z-50 flex items-center justify-center">
+      <div class="fixed inset-0 z-50 flex-center">
         {/* Overlay */}
         <div
           class="fixed inset-0 bg-black/50 transition-opacity"
@@ -55,26 +56,27 @@ export default function Dialog(props: DialogProps) {
         />
 
         {/* Modal Content */}
+        {/* TODO: Tailwindcss v4 is missing the animate-in, fade-in-0, and zoom-in-95 classes */}
         <div
           class={`relative z-10 w-full ${maxWidthClass()} mx-4 bg-white rounded-lg shadow-xl max-h-[90vh] overflow-hidden animate-in fade-in-0 zoom-in-95 duration-200`}
         >
           <div class="flex flex-col">
             {/* Header */}
-            <div class="px-6 py-4 border-b border-gray-200">
+            <div class="px-6 py-4 border-b border-border-strong">
               <div class="flex items-center justify-between">
                 <div>
-                  <h2 class="text-xl font-semibold text-gray-900">
+                  <h2 class="text-xl font-semibold text-neutral">
                     {props.title}
                   </h2>
                   <Show when={props.description}>
-                    <p class="mt-1 text-sm text-gray-600">
+                    <p class="mt-1 text-sm text-neutral-lighter">
                       {props.description}
                     </p>
                   </Show>
                 </div>
                 <button
                   onClick={props.onClose}
-                  class="text-gray-400 hover:text-gray-600 transition-colors"
+                  class="text-neutral-light hover:text-neutral transition-colors"
                 >
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
@@ -96,18 +98,16 @@ export default function Dialog(props: DialogProps) {
 
             {/* Content */}
             <div class="px-6 py-4 overflow-y-auto">{props.children}</div>
+
+            {/* Actions */}
+            {props.actions && (
+              <div class="px-6 py-4 border-t border-border-strong flex justify-end gap-2">
+                {props.actions}
+              </div>
+            )}
           </div>
         </div>
       </div>
     </Show>
-  );
-}
-
-// Convenience component for dialog actions/buttons
-export function DialogActions(props: { children: JSX.Element }) {
-  return (
-    <div class="px-6 py-4 border-t border-gray-200 flex justify-end gap-2">
-      {props.children}
-    </div>
   );
 }

@@ -29,3 +29,13 @@ export function defaultErrorMessage(code: string): string {
 export function getAuthErrorMessage(code: string): string {
   return authErrorMessages[code] || defaultErrorMessage(code);
 }
+
+const fileUploadErrorMessages: Record<string, string> = {
+  [COMMON_ERR_KEYS.DUPLICATE]: "This file already exists.",
+  MEDIA_FILE_SIZE_LIMIT_EXCEEDED:
+    "File size exceeds the maximum allowed size. Please try again with a smaller file.",
+};
+
+export function getFileUploadErrorMessage(code: string): string {
+  return fileUploadErrorMessages[code] || defaultErrorMessage(code);
+}

@@ -53,23 +53,26 @@ export function postFormData(
     };
 
     xhr.onload = () => {
-      if (xhr.status >= 200 && xhr.status < 300) {
-        const response = new Response(xhr.response, {
-          status: xhr.status,
-          statusText: xhr.statusText,
-          headers: new Headers({
-            "Content-Type":
-              xhr.getResponseHeader("Content-Type") || "application/json",
-          }),
-        });
-        resolve(response);
-      } else {
-        reject(new Error(`HTTP Error: ${xhr.status}`));
-      }
+      const response = new Response(xhr.response, {
+        status: xhr.status,
+        statusText: xhr.statusText,
+        headers: new Headers({
+          "Content-Type": "application/json",
+        }),
+      });
+      resolve(response);
     };
 
-    xhr.onerror = () => reject(new Error("Network Error"));
-    xhr.ontimeout = () => reject(new Error("Request Timeout"));
+    xhr.onerror = () => {
+      const msg = xhr.statusText || "SkyVault: Network Error";
+      console.log(msg);
+      reject(new Error(msg));
+    };
+    xhr.ontimeout = () => {
+      const msg = xhr.statusText || "SkyVault: Request Timeout";
+      console.log(msg);
+      reject(new Error(msg));
+    };
 
     xhr.send(formData);
   });

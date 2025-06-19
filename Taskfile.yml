@@ -127,7 +127,7 @@ tasks:
       - rm -rf node_modules
       - rm -rf dist
 
-  # Combined tasks
+  # Full Application tasks
   build:
     desc: Build both server and web applications
     deps:
@@ -141,6 +141,10 @@ tasks:
       - rm -rf {{.SERVER_STATIC_DIR}}
       - ln -s web/dist {{.SERVER_STATIC_DIR}}
       - task: server:run
+
+  dev:
+    desc: Run the server and web development server
+    deps: [web:dev, server:run]
 
   test:
     desc: Run the tests

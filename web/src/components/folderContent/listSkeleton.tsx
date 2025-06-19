@@ -15,13 +15,13 @@ function ListSkeleton() {
         <div class="grid grid-cols-[2rem_1fr_6rem] md:grid-cols-[2rem_1fr_6rem_9rem] items-center py-3 px-4 border-t border-border first:border-t-0">
           <div class="h-6 w-6 bg-gray-200 rounded-full animate-pulse"></div>
           <div class="min-w-0">
-            <div class="h-5 bg-gray-200 rounded w-1/3 animate-pulse"></div>
+            <div class="h-5 bg-gray-200 rounded-sm w-1/3 animate-pulse"></div>
           </div>
           <div class="text-right">
-            <div class="h-4 bg-gray-200 rounded w-12 ml-auto animate-pulse"></div>
+            <div class="h-4 bg-gray-200 rounded-sm w-12 ml-auto animate-pulse"></div>
           </div>
           <div class="text-right">
-            <div class="h-4 bg-gray-200 rounded w-24 ml-auto animate-pulse"></div>
+            <div class="h-4 bg-gray-200 rounded-sm w-24 ml-auto animate-pulse"></div>
           </div>
           <div></div>
         </div>

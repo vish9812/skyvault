@@ -1,7 +1,7 @@
 import { Button } from "@kobalte/core/button";
 import { TextField } from "@kobalte/core/text-field";
 import { createFolder } from "@sv/apis/media";
-import Dialog, { DialogActions } from "@sv/components/ui/Dialog";
+import Dialog from "@sv/components/ui/Dialog";
 import useAppCtx from "@sv/store/appCtxProvider";
 import { COMMON_ERR_KEYS } from "@sv/utils/errors";
 import Validate, { VALIDATIONS } from "@sv/utils/validate";
@@ -71,39 +71,14 @@ function CreateFolder(props: Props) {
       title="Create New Folder"
       description="Enter a name for your new folder"
       size="md"
-    >
-      <div class="mt-4">
-        <TextField
-          value={name()}
-          onChange={handleNameChange}
-          validationState={error() ? "invalid" : "valid"}
-        >
-          <TextField.Label class="label">Folder Name</TextField.Label>
-          <TextField.Input
-            classList={{
-              input: true,
-              "input-b-std": !error(),
-              "input-b-error": !!error(),
-            }}
-            type="text"
-            placeholder="Enter folder name"
-            autocomplete="off"
-            autofocus
-          />
-          <TextField.ErrorMessage class="input-t-error">
-            {error()}
-          </TextField.ErrorMessage>
-        </TextField>
-      </div>
-
-      <DialogActions>
+      actions={
         <>
           <Button
             class="btn btn-outline"
             onClick={props.closeModal}
             disabled={isLoading()}
           >
-            Cancel
+            Close
           </Button>
           <Button
             classList={{
@@ -117,7 +92,29 @@ function CreateFolder(props: Props) {
             {isLoading() ? "Creating..." : "Create Folder"}
           </Button>
         </>
-      </DialogActions>
+      }
+    >
+      <TextField
+        value={name()}
+        onChange={handleNameChange}
+        validationState={error() ? "invalid" : "valid"}
+      >
+        <TextField.Label class="label">Folder Name</TextField.Label>
+        <TextField.Input
+          classList={{
+            input: true,
+            "input-b-std": !error(),
+            "input-b-error": !!error(),
+          }}
+          type="text"
+          placeholder="Enter folder name"
+          autocomplete="off"
+          autofocus
+        />
+        <TextField.ErrorMessage class="input-t-error">
+          {error()}
+        </TextField.ErrorMessage>
+      </TextField>
     </Dialog>
   );
 }

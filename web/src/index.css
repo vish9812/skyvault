@@ -135,7 +135,7 @@ input[type="password"]::-ms-clear {
 
 /* Input Styles */
 @utility input {
-  @apply w-full px-3 py-2 border rounded focus:outline-none;
+  @apply w-full px-3 py-2 border rounded-sm  focus:outline-hidden;
 }
 
 /* b refers to border */
@@ -177,20 +177,4 @@ input[type="password"]::-ms-clear {
 
 @utility dropdown-item {
   @apply px-4 py-2  cursor-pointer hover:bg-bg-muted transition-colors;
-}
-
-@utility dialog-overlay {
-  @apply fixed inset-0 bg-black/20 z-50;
-}
-
-@utility dialog-content {
-  @apply fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 bg-white rounded-lg p-6 shadow-xl z-50 w-full max-w-md;
-}
-
-@utility dialog-title {
-  @apply text-lg font-bold;
-}
-
-@utility dialog-description {
-  @apply text-sm text-neutral-light;
 }

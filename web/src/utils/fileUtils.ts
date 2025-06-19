@@ -34,30 +34,8 @@ function mimeToCategory(mimeType: string): CATEGORY {
   }
 }
 
-/**
- * Create image preview from file
- * @param file - File to create preview from
- * @returns Promise that resolves to the preview image. Rejects if file is not an image.
- */
-function createImagePreview(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    if (!file.type.startsWith(MIME_BASE.IMAGE + "/")) {
-      reject(new Error("Not an image file"));
-      return;
-    }
-
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      resolve(e.target?.result as string);
-    };
-    reader.onerror = reject;
-    reader.readAsDataURL(file);
-  });
-}
-
 const FileUtils = {
   mimeToCategory,
-  createImagePreview,
 } as const;
 
 export default FileUtils;
