@@ -3,6 +3,7 @@ package media
 import (
 	"bytes"
 	"io"
+	"skyvault/pkg/common"
 	"skyvault/pkg/utils"
 	"testing"
 	"time"
@@ -52,7 +53,7 @@ func TestNewFileInfo(t *testing.T) {
 			ownerID:      "100",
 			parentFolder: nil,
 			fileName:     "test.txt",
-			size:         2 * BytesPerMB,
+			size:         2 * common.BytesPerMB,
 			mimeType:     "text/plain",
 			expectError:  true,
 		},

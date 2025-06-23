@@ -22,7 +22,7 @@ export interface FileInfo {
   extension?: string;
   mimeType: string;
   category: CATEGORY;
-  preview?: string;
+  previewBase64?: string;
   createdAt: string;
   updatedAt: string;
 }

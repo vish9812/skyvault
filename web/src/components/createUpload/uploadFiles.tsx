@@ -14,26 +14,9 @@ import { createEffect, createSignal, For, Show } from "solid-js";
 import { createStore, produce } from "solid-js/store";
 
 // TODO: Get these from the backend
-const maxFileSize = 5 * BYTES_PER.MB;
+const maxFileSize = 50 * BYTES_PER.MB;
 const maxFilesCount = 10;
 const maxTotalSize = maxFileSize * maxFilesCount;
-const allowedTypes = [
-  "image/*",
-  "video/*",
-  "audio/*",
-  "text/*",
-  "application/pdf",
-  "application/msword",
-  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-  "application/vnd.ms-excel",
-  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-  "application/zip",
-  "application/x-zip-compressed",
-  "application/x-rar-compressed",
-  "application/x-7z-compressed",
-];
-// disallowed types has higher priority than allowed types
-const disallowedTypes = ["application/pdf"];
 
 interface Props {
   isModalOpen: boolean;
@@ -86,34 +69,6 @@ export default function UploadFiles(props: Props) {
       return `File "${file.name}" is too large. Max size is ${Format.size(
         maxFileSize
       )}.`;
-    }
-
-    // Check if file type is allowed
-    let isAllowed = false;
-    if (allowedTypes.length === 0) {
-      isAllowed = true;
-    }
-
-    if (!isAllowed) {
-      isAllowed = allowedTypes.some((type) => {
-        if (type.endsWith("/*")) {
-          return file.type.startsWith(type.slice(0, -1));
-        }
-        return file.type === type;
-      });
-    }
-
-    if (isAllowed) {
-      isAllowed = !disallowedTypes.some((type) => {
-        if (type.endsWith("/*")) {
-          return file.type.startsWith(type.slice(0, -1));
-        }
-        return file.type === type;
-      });
-    }
-
-    if (!isAllowed) {
-      return `File type "${file.type}" is not supported.`;
     }
 
     return null;
@@ -360,7 +315,6 @@ export default function UploadFiles(props: Props) {
           ref={fileInputRef}
           type="file"
           multiple
-          accept={allowedTypes.join(",")}
           onChange={handleFileInputChange}
           style={{ display: "none" }}
         />
@@ -454,14 +408,15 @@ export default function UploadFiles(props: Props) {
                           src={URL.createObjectURL(file.file)}
                           alt={file.file.name}
                           class="w-full h-full object-cover rounded"
-                          onLoad={(e) => {
-                            // Clean up object URL after image loads
-                            setTimeout(() => {
-                              URL.revokeObjectURL(
-                                (e.target as HTMLImageElement).src
-                              );
-                            }, 1000);
-                          }}
+                          // TODO: Buggy, need to fix. e.target is showing as null.
+                          // onLoad={(e) => {
+                          //   // Clean up object URL after image loads
+                          //   setTimeout(() => {
+                          //     URL.revokeObjectURL(
+                          //       (e.target as HTMLImageElement).src
+                          //     );
+                          //   }, 1000);
+                          // }}
                         />
                       </Show>
                     </div>

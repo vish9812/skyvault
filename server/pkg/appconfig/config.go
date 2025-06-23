@@ -20,10 +20,11 @@ type Config struct {
 }
 
 type ServerConfig struct {
-	Path    string
-	DataDir string
-	Port    int
-	Addr    string
+	Path                string
+	DataDir             string
+	Port                int
+	Addr                string
+	ExpectedActiveUsers int64
 }
 
 type DBContainerConfig struct {
@@ -58,7 +59,9 @@ type AuthConfig struct {
 }
 
 type MediaConfig struct {
-	MaxSizeMB int64
+	MaxUploadSizeMB       int64 // Max upload size even when including chunking strategy.
+	MaxDirectUploadSizeMB int64 // Max size allowed for an upload, before chunking strategy is applied. This value must be less than MaxUploadSizeMB.
+	MaxChunkSizeMB        int64 // Max size of a chunk. This value must be less than MaxDirectUploadSizeMB.
 
 	// Dynamic concurrency settings
 	MemoryBasedLimits        bool    // Enable memory-based dynamic limits
@@ -93,6 +96,7 @@ func LoadConfig(path string, isDev bool) *Config {
 	config.Server.DataDir = envMap["SERVER__DATA_DIR"]
 	config.Server.Port = getIntOrZero(envMap["SERVER__PORT"])
 	config.Server.Addr = envMap["SERVER__ADDR"]
+	config.Server.ExpectedActiveUsers = getInt64OrZero(envMap["SERVER__EXPECTED_ACTIVE_USERS"])
 
 	// DB config
 	config.DB.Container.Image = envMap["DB__CONTAINER__IMAGE"]
@@ -112,7 +116,9 @@ func LoadConfig(path string, isDev bool) *Config {
 	config.Auth.JWT.TokenTimeoutMin = getIntOrZero(envMap["AUTH__JWT__TOKEN_TIMEOUT_MIN"])
 
 	// Media config
-	config.Media.MaxSizeMB = getInt64OrZero(envMap["MEDIA__MAX_SIZE_MB"])
+	config.Media.MaxUploadSizeMB = getInt64OrZero(envMap["MEDIA__MAX_UPLOAD_SIZE_MB"])
+	config.Media.MaxDirectUploadSizeMB = getInt64OrZero(envMap["MEDIA__MAX_DIRECT_UPLOAD_SIZE_MB"])
+	config.Media.MaxChunkSizeMB = getInt64OrZero(envMap["MEDIA__MAX_CHUNK_SIZE_MB"])
 	config.Media.MemoryBasedLimits = getBoolOrFalse(envMap["MEDIA__MEMORY_BASED_LIMITS"])
 	config.Media.ServerMemoryGB = getFloat64OrZero(envMap["MEDIA__SERVER_MEMORY_GB"])
 	config.Media.MemoryReservationPercent = getFloat64OrZero(envMap["MEDIA__MEMORY_RESERVATION_PERCENT"])
@@ -200,6 +206,11 @@ func (c *Config) validate(logger zerolog.Logger, isDev bool) {
 		logger.Warn().Msg("server addr not set, using default addr localhost:8090")
 	}
 
+	if c.Server.ExpectedActiveUsers <= 0 {
+		c.Server.ExpectedActiveUsers = 10
+		logger.Warn().Msg("server expected active users not set, using default users 10")
+	}
+
 	// Database
 	if c.DB.ConnTimeoutSec <= 0 {
 		c.DB.ConnTimeoutSec = 30
@@ -282,33 +293,58 @@ func (c *Config) validate(logger zerolog.Logger, isDev bool) {
 	}
 
 	// Media
-	if c.Media.MaxSizeMB <= 0 {
-		c.Media.MaxSizeMB = 100
+	if c.Media.MaxUploadSizeMB <= 0 {
+		c.Media.MaxUploadSizeMB = 100
 		if isDev {
-			c.Media.MaxSizeMB = 1024 // 1GB
+			c.Media.MaxUploadSizeMB = 1024 // 1GB
 		}
-		logger.Warn().Msgf("media max size not set, using default size %dMB", c.Media.MaxSizeMB)
+		logger.Warn().Msgf("media max size not set, using default size %dMB", c.Media.MaxUploadSizeMB)
 	}
+
+	if c.Media.MaxDirectUploadSizeMB > c.Media.MaxUploadSizeMB {
+		c.Media.MaxDirectUploadSizeMB = 50
+		logger.Warn().Msgf("media max direct upload size is greater than max upload size, using default size %dMB", c.Media.MaxDirectUploadSizeMB)
+	}
+
+	if c.Media.MaxDirectUploadSizeMB <= 0 {
+		c.Media.MaxDirectUploadSizeMB = 50
+		logger.Warn().Msgf("media max single upload size not set, using default size %dMB", c.Media.MaxDirectUploadSizeMB)
+	}
+
+	if c.Media.MaxChunkSizeMB <= 0 {
+		c.Media.MaxChunkSizeMB = 10
+		logger.Warn().Msgf("media max chunk size not set, using default size %dMB", c.Media.MaxChunkSizeMB)
+	}
+
+	if c.Media.MaxChunkSizeMB > c.Media.MaxDirectUploadSizeMB {
+		c.Media.MaxChunkSizeMB = 10
+		logger.Warn().Msgf("media max chunk size is greater than max direct upload size, using default size %dMB", c.Media.MaxChunkSizeMB)
+	}
+
+	// Add 1MB extra buffer to the upload size to account for overhead
+	c.Media.MaxUploadSizeMB += 1
+	c.Media.MaxDirectUploadSizeMB += 1
+	c.Media.MaxChunkSizeMB += 1
 
 	// Set defaults for dynamic concurrency settings
 	if c.Media.MemoryReservationPercent <= 0 || c.Media.MemoryReservationPercent >= 100 {
-		c.Media.MemoryReservationPercent = 40
+		c.Media.MemoryReservationPercent = 20
 	}
 
 	if c.Media.FallbackGlobalUploads <= 0 {
-		c.Media.FallbackGlobalUploads = 10
+		c.Media.FallbackGlobalUploads = 100
 	}
 
 	if c.Media.FallbackGlobalChunks <= 0 {
-		c.Media.FallbackGlobalChunks = 20
+		c.Media.FallbackGlobalChunks = 400
 	}
 
 	if c.Media.FallbackPerUserUploads <= 0 {
-		c.Media.FallbackPerUserUploads = 3
+		c.Media.FallbackPerUserUploads = 10
 	}
 
 	if c.Media.FallbackPerUserChunks <= 0 {
-		c.Media.FallbackPerUserChunks = 5
+		c.Media.FallbackPerUserChunks = 40
 	}
 
 	// Enable memory-based limits by default in production, allow override in dev

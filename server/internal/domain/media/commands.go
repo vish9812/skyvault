@@ -22,15 +22,20 @@ type Commands interface {
 	// - ErrCommonInvalidValue
 	UploadFile(ctx context.Context, cmd *UploadFileCommand) (*FileInfo, error)
 
-	// UploadChunk uploads a chunk of a file for chunked uploads
-	// If IsFinalChunk is true, it will also finalize the upload and return FileInfo
+	// UploadChunk uploads a single chunk of a file for chunked uploads
+	// Does not finalize the upload - use FinalizeChunkedUpload for that
 	// App Errors:
 	// - ErrCommonInvalidValue
-	// - ErrCommonNoData (for finalization)
-	// - ErrCommonNoAccess (for finalization)
-	// - ErrCommonDuplicateData (for finalization)
-	// - ErrMediaFileSizeLimitExceeded (for finalization)
-	UploadChunk(ctx context.Context, cmd *UploadChunkCommand) (*FileInfo, error)
+	UploadChunk(ctx context.Context, cmd *UploadChunkCommand) error
+
+	// FinalizeChunkedUpload combines all chunks into final file after all chunks are uploaded
+	// App Errors:
+	// - ErrCommonInvalidValue
+	// - ErrCommonNoData
+	// - ErrCommonNoAccess
+	// - ErrCommonDuplicateData
+	// - ErrMediaFileSizeLimitExceeded
+	FinalizeChunkedUpload(ctx context.Context, cmd *FinalizeChunkedUploadCommand) (*FileInfo, error)
 
 	// App Errors:
 	// - ErrCommonInvalidValue
@@ -105,16 +110,21 @@ type UploadFileCommand struct {
 }
 
 type UploadChunkCommand struct {
-	OwnerID      string
-	FolderID     *string
-	UploadID     string
-	ChunkIndex   int64
-	TotalChunks  int64
-	FileName     string
-	FileSize     int64
-	MimeType     string
-	Reader       io.Reader
-	IsFinalChunk bool
+	OwnerID     string
+	UploadID    string
+	ChunkIndex  int64
+	TotalChunks int64
+	Chunk       io.Reader
+}
+
+type FinalizeChunkedUploadCommand struct {
+	OwnerID     string
+	FolderID    *string
+	UploadID    string
+	FileName    string
+	FileSize    int64
+	MimeType    string
+	TotalChunks int64
 }
 
 type TrashFilesCommand struct {

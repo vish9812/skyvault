@@ -1,5 +1,6 @@
 import { get, handleJSONResponse, post, postFormData } from "@sv/apis/common";
 import { BYTES_PER, ROOT_FOLDER_ID, ROOT_FOLDER_NAME } from "@sv/utils/consts";
+import Random from "@sv/utils/random";
 import type {
   FileInfo,
   FolderContent,
@@ -10,11 +11,6 @@ import type {
 
 const urlMedia = "media";
 const urlFolders = `${urlMedia}/folders`;
-
-// Utility functions
-function generateUploadId(): string {
-  return `upload_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-}
 
 export async function fetchFolderInfo(id: string): Promise<FolderInfo> {
   if (id === ROOT_FOLDER_ID) {
@@ -67,49 +63,74 @@ export async function uploadFileChunked(
   onProgress?: (progress: number) => void
 ): Promise<FileInfo> {
   // TODO: Get the chunk size from the backend
-  const chunkSize = 5 * BYTES_PER.MB; // 5MB chunks
+  const chunkSize = 2 * BYTES_PER.MB;
   const totalChunks = Math.ceil(file.size / chunkSize);
-  const uploadId = generateUploadId();
-  let finalFileInfo: FileInfo | null = null;
+  const uploadId = Random.id();
+
+  // Create all chunk upload promises in parallel
+  const chunkPromises: Promise<Response>[] = [];
+  let completedChunks = 0;
 
   for (let chunkIndex = 0; chunkIndex < totalChunks; chunkIndex++) {
     const start = chunkIndex * chunkSize;
     const end = Math.min(start + chunkSize, file.size);
-    const chunk = file.slice(start, end);
-    const isLastChunk = chunkIndex === totalChunks - 1;
+    const chunk = file.slice(start, end, file.type);
 
     const formData = new FormData();
     formData.append("chunk", chunk);
     formData.append("uploadId", uploadId);
     formData.append("chunkIndex", chunkIndex.toString());
     formData.append("totalChunks", totalChunks.toString());
-    formData.append("fileName", file.name);
-    formData.append("folderId", folderId);
 
-    if (chunkIndex === 0) {
-      formData.append("fileSize", file.size.toString());
-      formData.append("mimeType", file.type || "application/octet-stream");
-    }
+    const chunkPromise = new Promise<Response>(async (resolve, reject) => {
+      try {
+        const res = await postFormData(
+          `${urlFolders}/${folderId}/files/chunks`,
+          formData
+        );
 
-    const res = await postFormData(
-      `${urlFolders}/${folderId}/files/chunks`,
-      formData
-    );
+        // Check for successful chunk upload
+        if (!res.ok) {
+          throw new Error(`Failed to upload chunk ${chunkIndex}`);
+        }
 
-    if (isLastChunk) {
-      // Final chunk returns the FileInfo
-      finalFileInfo = await handleJSONResponse<FileInfo>(res);
-    }
+        // Update progress for completed chunks
+        completedChunks++;
+        if (onProgress) {
+          // Progress during chunk uploads (90% of total progress)
+          const chunkProgress = (completedChunks / totalChunks) * 90;
+          onProgress(chunkProgress);
+        }
 
-    const progress = ((chunkIndex + 1) / totalChunks) * 100;
-    onProgress?.(progress);
+        resolve(res);
+      } catch (err) {
+        reject(err);
+      }
+    });
+
+    chunkPromises.push(chunkPromise);
   }
 
-  if (!finalFileInfo) {
-    throw new Error("Failed to get file info from final chunk");
+  // Wait for all chunks to complete
+  await Promise.all(chunkPromises);
+
+  // All chunks uploaded successfully, now finalize
+  const finalizeRes = await post(
+    `${urlFolders}/${folderId}/files/chunks/${uploadId}/finalize`,
+    {
+      fileName: file.name,
+      fileSize: file.size,
+      mimeType: file.type || "application/octet-stream",
+      totalChunks,
+    }
+  );
+
+  if (onProgress) {
+    // Final 10% for finalization
+    onProgress(100);
   }
 
-  return finalFileInfo;
+  return handleJSONResponse<FileInfo>(finalizeRes);
 }
 
 export function uploadFiles(
@@ -120,14 +141,22 @@ export function uploadFiles(
   const files = uFiles.map((uFile) => {
     // TODO: Get the limits from the backend
     // Use chunked upload for files larger than 50MB
-    const useChunkedUpload = uFile.file.size > 50 * BYTES_PER.MB;
+    const useChunkedUpload = uFile.file.size > 2 * BYTES_PER.MB;
 
     const file = useChunkedUpload
-      ? uploadFileChunked(uFile.file, folderId, (progress) =>
-          onFileProgress?.(uFile.id, progress)
+      ? uploadFileChunked(
+          uFile.file,
+          folderId,
+          onFileProgress
+            ? (progress) => onFileProgress(uFile.id, progress)
+            : undefined
         )
-      : uploadFile(uFile.file, folderId, (progress) =>
-          onFileProgress?.(uFile.id, progress)
+      : uploadFile(
+          uFile.file,
+          folderId,
+          onFileProgress
+            ? (progress) => onFileProgress(uFile.id, progress)
+            : undefined
         );
 
     return {

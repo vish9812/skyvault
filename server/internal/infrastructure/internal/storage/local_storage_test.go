@@ -24,14 +24,14 @@ func setupTestApp() *appconfig.App {
 				DataDir: testBasePath,
 			},
 			Media: appconfig.MediaConfig{
-				MaxSizeMB: 1,
+				MaxUploadSizeMB: 1,
 			},
 		},
 	}
 }
 
 func createTestFile(t *testing.T, baseDir string, ownerID string, fileName string, fileContent []byte) string {
-	ownerDir := getOwnerDir(baseDir, ownerID)
+	ownerDir := getOwnerDirPath(baseDir, ownerID)
 	err := os.MkdirAll(ownerDir, 0750)
 	if err != nil {
 		t.Fatalf("Failed to create test owner directory at %s: %v", ownerDir, err)
@@ -69,7 +69,7 @@ func TestSaveFile(t *testing.T) {
 	err := ls.SaveFile(ctx, fileReader, fileName, ownerID)
 	require.NoError(t, err, "SaveFile should not return an error")
 
-	savePath := getFilePath(getOwnerDir(ls.baseDir, ownerID), fileName)
+	savePath := getFilePath(getOwnerDirPath(ls.baseDir, ownerID), fileName)
 	_, err = os.Stat(savePath)
 	require.NoError(t, err, "Saved file should exist")
 

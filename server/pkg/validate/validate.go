@@ -3,7 +3,6 @@ package validate
 import (
 	"fmt"
 	"net/mail"
-	"regexp"
 	"skyvault/pkg/apperror"
 	"strings"
 
@@ -13,8 +12,6 @@ import (
 const (
 	MaxLen = 255
 )
-
-var uploadIDRegex = regexp.MustCompile(`^[a-zA-Z0-9_-]+$`)
 
 func Email(email string) (string, error) {
 	em := strings.TrimSpace(strings.ToLower(email))
@@ -73,15 +70,4 @@ func UUIDs(uuidStrs []string) ([]string, []string) {
 		}
 	}
 	return validUUIDs, invalidUUIDs
-}
-
-// UploadID validates that an upload ID contains only safe characters
-// to prevent directory traversal attacks. Upload IDs should only contain
-// alphanumeric characters, underscores, and hyphens.
-func UploadID(uploadID string) bool {
-	if uploadID == "" || len(uploadID) > MaxLen {
-		return false
-	}
-
-	return uploadIDRegex.MatchString(uploadID)
 }

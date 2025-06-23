@@ -2,6 +2,14 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Development Principles
+
+### Solution Design Guidelines
+
+- **Security & System Design First**: When providing solutions, always consider security implications, scalability, performance, and system design patterns. Think about potential vulnerabilities, data validation, error handling, and how the solution fits within the overall architecture.
+
+- **User Experience (UX) Focus**: For frontend solutions, prioritize user experience. Consider loading states, error handling, accessibility, responsive design, intuitive interactions, and clear feedback to users. Solutions should feel natural and help users accomplish their goals efficiently.
+
 ## Common Development Commands
 
 ### Backend (Go Server)

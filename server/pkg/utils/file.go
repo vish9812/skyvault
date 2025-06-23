@@ -29,10 +29,6 @@ func ScaleDownImageTo(format string, reader io.ReadSeeker, maxWidth, maxHeight i
 	var img image.Image
 	var err error
 
-	// img, _, err = image.Decode(reader)
-	// if err != nil {
-	// 	return nil, err
-	// }
 	if format == "jpeg" {
 		img, err = jpeg.Decode(reader)
 		if err != nil {

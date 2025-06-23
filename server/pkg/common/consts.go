@@ -2,6 +2,12 @@ package common
 
 import "context"
 
+const (
+	BytesPerKB = 1 << 10
+	BytesPerMB = 1 << 20
+	BytesPerGB = 1 << 30
+)
+
 type CtxKey string
 
 const (

@@ -57,7 +57,10 @@ func (a *API) InitRoutes(infra *infrastructure.Infrastructure) *API {
 
 	// API routers
 	v1Pub := chi.NewRouter()
-	v1Pvt := chi.NewRouter().With(middlewares.JWT(infra.Auth.JWT))
+	v1Pvt := chi.NewRouter().With(
+		middlewares.JWT(infra.Auth.JWT),
+		middlewares.RequestSizeLimit(a.app.Config),
+	)
 
 	// Mount routers
 	router.Mount("/api/v1/pub", v1Pub)

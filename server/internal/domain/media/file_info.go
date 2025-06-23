@@ -1,24 +1,14 @@
 package media
 
 import (
+	"fmt"
 	"io"
 	"path/filepath"
 	"skyvault/pkg/apperror"
+	"skyvault/pkg/common"
 	"skyvault/pkg/utils"
 	"strings"
 	"time"
-)
-
-const (
-	BytesPerKB = 1 << 10
-	BytesPerMB = 1 << 20
-	BytesPerGB = 1 << 30
-)
-
-// Extra 1MB for metadata/safety
-const (
-	MaxChunkSizeMB        = 6 * BytesPerMB
-	MaxDirectUploadSizeMB = 51 * BytesPerMB
 )
 
 const (
@@ -52,7 +42,6 @@ type FileInfo struct {
 // App Errors:
 // - ErrCommonNoAccess
 // - ErrCommonInvalidValue
-// - ErrMediaFileSizeLimitExceeded
 func NewFileInfo(config FileConfig, ownerID string, parentFolder *FolderInfo, name string, size int64, mimeType string) (*FileInfo, error) {
 	var folderID *string
 	if parentFolder != nil {
@@ -62,8 +51,8 @@ func NewFileInfo(config FileConfig, ownerID string, parentFolder *FolderInfo, na
 		folderID = &parentFolder.ID
 	}
 
-	if size > (config.MaxSizeMB * BytesPerMB) {
-		return nil, apperror.NewAppError(apperror.ErrMediaFileSizeLimitExceeded, "media.NewFileInfo").WithMetadata("max_size_mb", config.MaxSizeMB).WithMetadata("file_size", size)
+	if size > (config.MaxSizeMB * common.BytesPerMB) {
+		return nil, apperror.NewAppError(fmt.Errorf("%w: file size limit exceeded", apperror.ErrCommonInvalidValue), "media.NewFileInfo:FileSizeLimitExceeded").WithMetadata("max_size_mb", config.MaxSizeMB).WithMetadata("file_size_mb", size/common.BytesPerMB)
 	}
 
 	if mimeType == "" {

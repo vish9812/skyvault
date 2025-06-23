@@ -68,6 +68,7 @@ func TestNewDynamicConcurrencyConfig(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			config := NewDynamicConcurrencyConfig(
+				10, // expectedActiveUsers
 				tt.maxChunkSizeMB,
 				tt.maxDirectUploadMB,
 				tt.memoryBasedLimits,
@@ -112,6 +113,7 @@ func TestNewDynamicConcurrencyConfig(t *testing.T) {
 
 func TestDynamicConcurrencyManager(t *testing.T) {
 	config := NewDynamicConcurrencyConfig(
+		10,   // expectedActiveUsers
 		6,    // maxChunkSizeMB
 		51,   // maxDirectUploadMB
 		true, // memoryBasedLimits

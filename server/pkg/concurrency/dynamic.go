@@ -1,11 +1,13 @@
 package concurrency
 
 import (
+	"bufio"
 	"context"
-	"fmt"
 	"os"
 	"runtime"
+	"skyvault/pkg/apperror"
 	"strconv"
+	"strings"
 	"sync"
 
 	"golang.org/x/sync/semaphore"
@@ -19,9 +21,10 @@ type ConcurrencyConfig struct {
 	UsableMemoryGB    float64
 
 	// Size-based factors
-	MaxChunkSizeMB      int64
-	MaxDirectUploadMB   int64
-	AvgConcurrentSizeMB int64 // Estimated average concurrent operation size
+	MaxChunkSizeMB            int64
+	MaxDirectUploadMB         int64
+	AvgConcurrentUploadSizeMB int64 // Estimated average concurrent upload size
+	AvgConcurrentChunkSizeMB  int64 // Estimated average concurrent chunk size
 
 	// Calculated limits
 	GlobalUploadLimit  int64
@@ -32,11 +35,10 @@ type ConcurrencyConfig struct {
 
 // DynamicConcurrencyManager manages semaphores with dynamic limits
 type DynamicConcurrencyManager struct {
-	config              *ConcurrencyConfig
-	uploadSemaphore     *semaphore.Weighted
-	chunkSemaphore      *semaphore.Weighted
-	userSemaphores      sync.Map // map[string]*userSemaphores
-	expectedActiveUsers int64
+	config          *ConcurrencyConfig
+	uploadSemaphore *semaphore.Weighted
+	chunkSemaphore  *semaphore.Weighted
+	userSemaphores  sync.Map // map[string]*userSemaphores
 }
 
 type userSemaphores struct {
@@ -46,6 +48,7 @@ type userSemaphores struct {
 
 // NewDynamicConcurrencyConfig creates a new concurrency configuration based on system resources
 func NewDynamicConcurrencyConfig(
+	expectedActiveUsers int64,
 	maxChunkSizeMB int64,
 	maxDirectUploadMB int64,
 	memoryBasedLimits bool,
@@ -77,36 +80,36 @@ func NewDynamicConcurrencyConfig(
 		config.AvailableMemoryGB = getSystemMemoryGB()
 	}
 
-	// Reserve memory for other operations (default 40%)
+	// Reserve memory for other operations (default 20%)
 	if memoryReservationPercent <= 0 || memoryReservationPercent >= 100 {
-		memoryReservationPercent = 40
+		memoryReservationPercent = 20
 	}
 	config.ReservedMemoryGB = config.AvailableMemoryGB * (memoryReservationPercent / 100)
 	config.UsableMemoryGB = config.AvailableMemoryGB - config.ReservedMemoryGB
 
-	// Estimate average concurrent operation size (chunk + processing overhead)
-	// Use the larger of chunk size or a reasonable minimum
-	config.AvgConcurrentSizeMB = max(config.MaxChunkSizeMB+10, 20) // +10MB for processing overhead, min 20MB
+	// Estimate average concurrent operation size (MaxSize + processing overhead)
+	config.AvgConcurrentUploadSizeMB = max(config.MaxDirectUploadMB+10, 20) // +10MB for processing overhead, min 20MB
+	config.AvgConcurrentChunkSizeMB = max(config.MaxChunkSizeMB+10, 10)     // +10MB for processing overhead, min 10MB
 
 	// Calculate limits based on memory capacity
-	maxConcurrentOps := int64((config.UsableMemoryGB * 1024) / float64(config.AvgConcurrentSizeMB))
+	maxConcurrentUploadOps := int64((config.UsableMemoryGB * 1024) / float64(config.AvgConcurrentUploadSizeMB))
+	maxConcurrentChunkOps := int64((config.UsableMemoryGB * 1024) / float64(config.AvgConcurrentChunkSizeMB))
 
-	// Set conservative but dynamic limits with reasonable caps
-	config.GlobalUploadLimit = max(min(maxConcurrentOps, 50), 2)   // Cap at 50, min 2
-	config.GlobalChunkLimit = max(min(maxConcurrentOps*2, 100), 4) // Chunks can be more concurrent, cap at 100, min 4
+	// Calculate dynamic caps based on available memory, with reasonable minimums
+	uploadCap := max(int64(config.UsableMemoryGB*20), 50) // 20 uploads per GB, min 50
+	chunkCap := max(int64(config.UsableMemoryGB*80), 200) // 80 chunks per GB, min 200
+
+	// Set conservative but dynamic limits
+	config.GlobalUploadLimit = max(min(maxConcurrentUploadOps, uploadCap), 2)
+	config.GlobalChunkLimit = max(min(maxConcurrentChunkOps*4, chunkCap), 8)
+
+	if expectedActiveUsers < 1 {
+		expectedActiveUsers = 10
+	}
 
 	// Per-user limits based on global limits and expected user count
-	expectedActiveUsers := int64(10) // Could be made configurable
-	config.PerUserUploadLimit = max(config.GlobalUploadLimit/expectedActiveUsers, 2)
-	config.PerUserChunkLimit = max(config.GlobalChunkLimit/expectedActiveUsers, 3)
-
-	// Fallback to static limits if calculated limits seem unreasonable
-	if config.GlobalUploadLimit < fallbackGlobalUploads/2 {
-		config.GlobalUploadLimit = fallbackGlobalUploads
-		config.GlobalChunkLimit = fallbackGlobalChunks
-		config.PerUserUploadLimit = fallbackPerUserUploads
-		config.PerUserChunkLimit = fallbackPerUserChunks
-	}
+	config.PerUserUploadLimit = config.GlobalUploadLimit / expectedActiveUsers
+	config.PerUserChunkLimit = config.GlobalChunkLimit / expectedActiveUsers
 
 	return config
 }
@@ -114,11 +117,10 @@ func NewDynamicConcurrencyConfig(
 // NewDynamicConcurrencyManager creates a new dynamic concurrency manager
 func NewDynamicConcurrencyManager(config *ConcurrencyConfig) *DynamicConcurrencyManager {
 	return &DynamicConcurrencyManager{
-		config:              config,
-		uploadSemaphore:     semaphore.NewWeighted(config.GlobalUploadLimit),
-		chunkSemaphore:      semaphore.NewWeighted(config.GlobalChunkLimit),
-		userSemaphores:      sync.Map{},
-		expectedActiveUsers: 10,
+		config:          config,
+		uploadSemaphore: semaphore.NewWeighted(config.GlobalUploadLimit),
+		chunkSemaphore:  semaphore.NewWeighted(config.GlobalChunkLimit),
+		userSemaphores:  sync.Map{},
 	}
 }
 
@@ -126,14 +128,14 @@ func NewDynamicConcurrencyManager(config *ConcurrencyConfig) *DynamicConcurrency
 func (m *DynamicConcurrencyManager) AcquireUpload(ctx context.Context, userID string) error {
 	// Acquire global semaphore first to limit total system load
 	if err := m.uploadSemaphore.Acquire(ctx, 1); err != nil {
-		return fmt.Errorf("failed to acquire global upload semaphore: %w", err)
+		return apperror.NewAppError(err, "concurrency.DynamicConcurrencyManager.AcquireUpload:Acquire")
 	}
 
 	// Acquire per-user semaphore to ensure fair distribution
 	userSems := m.getUserSemaphores(userID)
 	if err := userSems.uploadSemaphore.Acquire(ctx, 1); err != nil {
 		m.uploadSemaphore.Release(1)
-		return fmt.Errorf("failed to acquire user upload semaphore: %w", err)
+		return apperror.NewAppError(err, "concurrency.DynamicConcurrencyManager.AcquireUpload:Acquire")
 	}
 
 	return nil
@@ -150,14 +152,14 @@ func (m *DynamicConcurrencyManager) ReleaseUpload(userID string) {
 func (m *DynamicConcurrencyManager) AcquireChunk(ctx context.Context, userID string) error {
 	// Acquire global semaphore first to limit total system load
 	if err := m.chunkSemaphore.Acquire(ctx, 1); err != nil {
-		return fmt.Errorf("failed to acquire global chunk semaphore: %w", err)
+		return apperror.NewAppError(err, "concurrency.DynamicConcurrencyManager.AcquireChunk:Acquire")
 	}
 
 	// Acquire per-user semaphore to ensure fair distribution
 	userSems := m.getUserSemaphores(userID)
 	if err := userSems.chunkSemaphore.Acquire(ctx, 1); err != nil {
 		m.chunkSemaphore.Release(1)
-		return fmt.Errorf("failed to acquire user chunk semaphore: %w", err)
+		return apperror.NewAppError(err, "concurrency.DynamicConcurrencyManager.AcquireChunk:Acquire")
 	}
 
 	return nil
@@ -210,57 +212,61 @@ func (m *DynamicConcurrencyManager) CleanupUserSemaphores() {
 	})
 }
 
-// GetConfig returns the current concurrency configuration
-func (m *DynamicConcurrencyManager) GetConfig() *ConcurrencyConfig {
-	return m.config
-}
-
 // getSystemMemoryGB attempts to detect system memory in GB
 func getSystemMemoryGB() float64 {
-	// Try environment variable first
-	if memStr := os.Getenv("SERVER_MEMORY_GB"); memStr != "" {
+	// Try environment variable first (consistent with other config variables)
+	if memStr := os.Getenv("SERVER__TOTAL_RAM_GB"); memStr != "" {
 		if mem, err := strconv.ParseFloat(memStr, 64); err == nil && mem > 0 {
 			return mem
 		}
 	}
 
-	// Try to get from runtime (this gives us the Go runtime's view of memory)
+	// Try platform-specific detection
+	if mem := getPlatformSpecificMemoryGB(); mem > 0 {
+		return mem
+	}
+
+	// Fallback: Try to estimate from runtime stats
+	// Note: This is not accurate for total system memory, but better than nothing
 	var m runtime.MemStats
 	runtime.ReadMemStats(&m)
 
-	// Convert bytes to GB, but this might not be the total system memory
-	// It's the memory available to the Go runtime
+	// Use Sys (total bytes of memory obtained from OS) as a rough estimate
+	// This represents the virtual address space reserved by Go runtime
 	runtimeMemoryGB := float64(m.Sys) / (1024 * 1024 * 1024)
 
-	// If we got a reasonable value, use it with some headroom
-	if runtimeMemoryGB > 0.1 {
-		// Assume the runtime has access to most of the container/system memory
-		// Add some headroom since Sys doesn't represent total available memory
-		estimatedTotalGB := runtimeMemoryGB * 1.5
+	// If we got a reasonable value (>500MB), use it as maximum bound
+	if runtimeMemoryGB >= 0.5 {
+		return runtimeMemoryGB
+	}
 
-		// Cap at reasonable values
-		if estimatedTotalGB > 64 {
-			estimatedTotalGB = 64 // Cap at 64GB
+	// Conservative fallback if all detection methods fail
+	return 1.0
+}
+
+// getPlatformSpecificMemoryGB reads system memory from /proc/meminfo on Linux
+// TODO: Implement for other platforms
+func getPlatformSpecificMemoryGB() float64 {
+	file, err := os.Open("/proc/meminfo")
+	if err != nil {
+		return 0
+	}
+	defer file.Close()
+
+	scanner := bufio.NewScanner(file)
+	for scanner.Scan() {
+		line := scanner.Text()
+		if strings.HasPrefix(line, "MemTotal:") {
+			fields := strings.Fields(line)
+			if len(fields) >= 2 {
+				if memKB, err := strconv.ParseInt(fields[1], 10, 64); err == nil {
+					// Convert from KB to GB
+					return float64(memKB) / (1024 * 1024)
+				}
+			}
+			break
 		}
-
-		return estimatedTotalGB
 	}
 
-	// Fallback to conservative estimate
-	return 2.0
-}
-
-// Helper functions
-func min(a, b int64) int64 {
-	if a < b {
-		return a
-	}
-	return b
-}
-
-func max(a, b int64) int64 {
-	if a > b {
-		return a
-	}
-	return b
+	return 0
 }

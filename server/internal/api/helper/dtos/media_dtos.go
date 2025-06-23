@@ -15,7 +15,7 @@ type GetFileInfo struct {
 	Extension     *string   `json:"extension,omitempty"`
 	MimeType      string    `json:"mimeType" copier:"must,nopanic"`
 	Category      string    `json:"category" copier:"must,nopanic"`
-	PreviewBase64 *string   `json:"preview"`
+	PreviewBase64 *string   `json:"previewBase64"`
 	CreatedAt     time.Time `json:"createdAt" copier:"must,nopanic"`
 	UpdatedAt     time.Time `json:"updatedAt" copier:"must,nopanic"`
 }

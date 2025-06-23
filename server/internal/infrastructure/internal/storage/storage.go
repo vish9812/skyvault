@@ -33,7 +33,7 @@ func (s *Storage) Health(ctx context.Context) error {
 	baseDir := filepath.Join(s.app.Config.Server.DataDir, localStorageBaseDir)
 
 	randomOwnerID := utils.RandomString(20)
-	ownerDir := getOwnerDir(baseDir, randomOwnerID)
+	ownerDir := getOwnerDirPath(baseDir, randomOwnerID)
 	err := os.MkdirAll(ownerDir, os.ModePerm)
 	if err != nil {
 		return apperror.NewAppError(err, "s.Health:MkdirAll").WithMetadata("owner_dir", ownerDir)

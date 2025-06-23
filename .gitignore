@@ -1,6 +1,7 @@
-.aider*
-.ai
-.cursor
-.env
 *.env
-skyvault
+.claude/
+.aider/
+.ai/
+.cursor/
+.task/
+skyvault/

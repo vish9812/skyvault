@@ -24,9 +24,9 @@ function GridItem(props: GridItemProps) {
     >
       {/* File/folder icon or preview */}
       <div class="flex-center h-28 md:h-34 rounded-t-lg border-b border-border bg-bg-subtle">
-        {props.item.preview ? (
+        {props.item.previewBase64 ? (
           <img
-            src={`data:image/png;base64,${props.item.preview}`}
+            src={`data:image/png;base64,${props.item.previewBase64}`}
             alt={props.item.name}
             class="object-cover h-full w-full"
           />
