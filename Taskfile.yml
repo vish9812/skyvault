@@ -65,10 +65,6 @@ tasks:
     cmds:
       - mkdir -p bin
       - go build -o {{.SERVER_BUILD_OUTPUT}} ./cmd/main.go
-    sources:
-      - ./**/*.go
-    generates:
-      - "{{.SERVER_BUILD_OUTPUT}}"
 
   server:run:
     dir: server

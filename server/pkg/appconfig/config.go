@@ -20,11 +20,13 @@ type Config struct {
 }
 
 type ServerConfig struct {
-	Path                string
-	DataDir             string
-	Port                int
-	Addr                string
-	ExpectedActiveUsers int64
+	Path                     string
+	DataDir                  string
+	Port                     int
+	Addr                     string
+	ExpectedActiveUsers      int64
+	ServerMemoryGB           float64 // Server memory in GB (auto-detect if 0)
+	MemoryReservationPercent float64 // Percentage of memory to reserve for other operations
 }
 
 type DBContainerConfig struct {
@@ -64,9 +66,7 @@ type MediaConfig struct {
 	MaxChunkSizeMB        int64 // Max size of a chunk. This value must be less than MaxDirectUploadSizeMB.
 
 	// Dynamic concurrency settings
-	MemoryBasedLimits        bool    // Enable memory-based dynamic limits
-	ServerMemoryGB           float64 // Server memory in GB (auto-detect if 0)
-	MemoryReservationPercent float64 // Percentage of memory to reserve for other operations
+	MemoryBasedLimits bool // Enable memory-based dynamic limits
 
 	// Fallback static limits (used if dynamic calculation fails or is disabled)
 	FallbackGlobalUploads  int64 // Fallback global upload limit
@@ -97,6 +97,8 @@ func LoadConfig(path string, isDev bool) *Config {
 	config.Server.Port = getIntOrZero(envMap["SERVER__PORT"])
 	config.Server.Addr = envMap["SERVER__ADDR"]
 	config.Server.ExpectedActiveUsers = getInt64OrZero(envMap["SERVER__EXPECTED_ACTIVE_USERS"])
+	config.Server.ServerMemoryGB = getFloat64OrZero(envMap["SERVER__MEMORY_GB"])
+	config.Server.MemoryReservationPercent = getFloat64OrZero(envMap["SERVER__MEMORY_RESERVATION_PERCENT"])
 
 	// DB config
 	config.DB.Container.Image = envMap["DB__CONTAINER__IMAGE"]
@@ -120,8 +122,6 @@ func LoadConfig(path string, isDev bool) *Config {
 	config.Media.MaxDirectUploadSizeMB = getInt64OrZero(envMap["MEDIA__MAX_DIRECT_UPLOAD_SIZE_MB"])
 	config.Media.MaxChunkSizeMB = getInt64OrZero(envMap["MEDIA__MAX_CHUNK_SIZE_MB"])
 	config.Media.MemoryBasedLimits = getBoolOrFalse(envMap["MEDIA__MEMORY_BASED_LIMITS"])
-	config.Media.ServerMemoryGB = getFloat64OrZero(envMap["MEDIA__SERVER_MEMORY_GB"])
-	config.Media.MemoryReservationPercent = getFloat64OrZero(envMap["MEDIA__MEMORY_RESERVATION_PERCENT"])
 	config.Media.FallbackGlobalUploads = getInt64OrZero(envMap["MEDIA__FALLBACK_GLOBAL_UPLOADS"])
 	config.Media.FallbackGlobalChunks = getInt64OrZero(envMap["MEDIA__FALLBACK_GLOBAL_CHUNKS"])
 	config.Media.FallbackPerUserUploads = getInt64OrZero(envMap["MEDIA__FALLBACK_PER_USER_UPLOADS"])
@@ -209,6 +209,11 @@ func (c *Config) validate(logger zerolog.Logger, isDev bool) {
 	if c.Server.ExpectedActiveUsers <= 0 {
 		c.Server.ExpectedActiveUsers = 10
 		logger.Warn().Msg("server expected active users not set, using default users 10")
+	}
+
+	// Set defaults for server memory settings
+	if c.Server.MemoryReservationPercent <= 0 || c.Server.MemoryReservationPercent >= 100 {
+		c.Server.MemoryReservationPercent = 20
 	}
 
 	// Database
@@ -321,15 +326,7 @@ func (c *Config) validate(logger zerolog.Logger, isDev bool) {
 		logger.Warn().Msgf("media max chunk size is greater than max direct upload size, using default size %dMB", c.Media.MaxChunkSizeMB)
 	}
 
-	// Add 1MB extra buffer to the upload size to account for overhead
-	c.Media.MaxUploadSizeMB += 1
-	c.Media.MaxDirectUploadSizeMB += 1
-	c.Media.MaxChunkSizeMB += 1
-
 	// Set defaults for dynamic concurrency settings
-	if c.Media.MemoryReservationPercent <= 0 || c.Media.MemoryReservationPercent >= 100 {
-		c.Media.MemoryReservationPercent = 20
-	}
 
 	if c.Media.FallbackGlobalUploads <= 0 {
 		c.Media.FallbackGlobalUploads = 100

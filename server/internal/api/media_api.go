@@ -38,11 +38,11 @@ func NewMediaAPI(a *API, app *appconfig.App, commands media.Commands, queries me
 	// Create dynamic concurrency configuration
 	concurrencyConfig := concurrency.NewDynamicConcurrencyConfig(
 		app.Config.Server.ExpectedActiveUsers,
-		app.Config.Media.MaxChunkSizeMB/common.BytesPerMB,
-		app.Config.Media.MaxDirectUploadSizeMB/common.BytesPerMB,
+		app.Config.Media.MaxChunkSizeMB,
+		app.Config.Media.MaxDirectUploadSizeMB,
 		app.Config.Media.MemoryBasedLimits,
-		app.Config.Media.ServerMemoryGB,
-		app.Config.Media.MemoryReservationPercent,
+		app.Config.Server.ServerMemoryGB,
+		app.Config.Server.MemoryReservationPercent,
 		app.Config.Media.FallbackGlobalUploads,
 		app.Config.Media.FallbackGlobalChunks,
 		app.Config.Media.FallbackPerUserUploads,
