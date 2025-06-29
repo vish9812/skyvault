@@ -2,7 +2,7 @@ import { Button } from "@kobalte/core/button";
 import { uploadFiles } from "@sv/apis/media";
 import { FileInfo, UploadFileInfo } from "@sv/apis/media/models";
 import { FileIcon } from "@sv/components/icons";
-import Dialog from "@sv/components/ui/Dialog";
+import Dialog from "@sv/components/ui/dialog";
 import useAppCtx from "@sv/store/appCtxProvider";
 import { BYTES_PER } from "@sv/utils/consts";
 import { getFileUploadErrorMessage } from "@sv/utils/errors";
@@ -12,11 +12,6 @@ import Random from "@sv/utils/random";
 import Validate, { VALIDATIONS } from "@sv/utils/validate";
 import { createEffect, createSignal, For, Show } from "solid-js";
 import { createStore, produce } from "solid-js/store";
-
-// TODO: Get these from the backend
-const maxFileSize = 50 * BYTES_PER.MB;
-const maxFilesCount = 10;
-const maxTotalSize = maxFileSize * maxFilesCount;
 
 interface Props {
   isModalOpen: boolean;
@@ -35,6 +30,11 @@ export default function UploadFiles(props: Props) {
   const [isLoading, setIsLoading] = createSignal(false);
   const [error, setError] = createSignal("");
   const [isDragOver, setIsDragOver] = createSignal(false);
+
+  // Get upload limits from system config
+  const maxFileSize = appCtx.systemConfig.maxDirectUploadSizeMB * BYTES_PER.MB;
+  const maxTotalSize = appCtx.systemConfig.maxUploadSizeMB * BYTES_PER.MB;
+  const maxFilesCount = Math.floor(maxTotalSize / maxFileSize);
 
   const isUploadDisabled = () =>
     isLoading() ||

@@ -1,4 +1,5 @@
 import { createEffect, JSX, Show } from "solid-js";
+import Overlay from "./overlay";
 
 interface DialogProps {
   open: boolean;
@@ -48,17 +49,13 @@ export default function Dialog(props: DialogProps) {
 
   return (
     <Show when={props.open}>
-      <div class="fixed inset-0 z-50 flex-center">
-        {/* Overlay */}
-        <div
-          class="fixed inset-0 bg-black/50 transition-opacity"
-          onClick={props.onClose}
-        />
-
+      <Overlay handleClick={undefined}>
         {/* Modal Content */}
         {/* TODO: Tailwindcss v4 is missing the animate-in, fade-in-0, and zoom-in-95 classes */}
         <div
           class={`relative z-10 w-full ${maxWidthClass()} mx-4 bg-white rounded-lg shadow-xl max-h-[90vh] overflow-hidden animate-in fade-in-0 zoom-in-95 duration-200`}
+          onClick={(e) => e.stopPropagation()}
+          onTouchStart={(e) => e.stopPropagation()}
         >
           <div class="flex flex-col">
             {/* Header */}
@@ -107,7 +104,7 @@ export default function Dialog(props: DialogProps) {
             )}
           </div>
         </div>
-      </div>
+      </Overlay>
     </Show>
   );
 }

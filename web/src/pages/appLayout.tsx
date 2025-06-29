@@ -1,19 +1,9 @@
-import { useNavigate } from "@solidjs/router";
-import { getProfile } from "@sv/apis/auth";
 import { AppCtxProvider } from "@sv/store/appCtxProvider";
-import { CLIENT_URLS } from "@sv/utils/consts";
 import { ParentProps } from "solid-js";
 import AppHeader from "./appHeader";
 import AppNavigation from "./appNavigation";
 
 function AppLayoutWithCtx(props: ParentProps) {
-  const navigate = useNavigate();
-  const profile = getProfile();
-  if (!profile) {
-    navigate(CLIENT_URLS.SIGN_IN, { replace: true });
-    return;
-  }
-
   return (
     <div class="bg-bg-subtle min-h-screen">
       <AppNavigation />

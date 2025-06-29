@@ -24,6 +24,7 @@ type API struct {
 	Auth    *AuthAPI
 	Profile *ProfileAPI
 	Media   *MediaAPI
+	System  *SystemAPI
 }
 
 func NewAPI(app *appconfig.App) *API {

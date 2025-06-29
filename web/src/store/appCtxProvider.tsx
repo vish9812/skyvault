@@ -1,14 +1,38 @@
-import { useLocation, useMatch, useParams } from "@solidjs/router";
+import { useLocation, useMatch, useNavigate, useParams } from "@solidjs/router";
+import { getProfile } from "@sv/apis/auth";
+import { getSystemConfig } from "@sv/apis/system";
+import LoadingBackdrop from "@sv/components/ui/loadingBackdrop";
 import { CLIENT_URLS, ROOT_FOLDER_ID } from "@sv/utils/consts";
 import {
   createRenderEffect,
+  createResource,
   createSignal,
   ParentProps,
-  useContext
+  Show,
+  useContext,
 } from "solid-js";
-import AppCtx, { AppCtxType } from "./appCtx";
+import AppCtx, { AppCtxType, DefaultSystemConfig } from "./appCtx";
 
 export function AppCtxProvider(props: ParentProps) {
+  const navigate = useNavigate();
+  const profile = getProfile();
+
+  if (!profile) {
+    navigate(CLIENT_URLS.SIGN_IN, { replace: true });
+    return;
+  }
+
+  // System config only loads when user is authenticated
+  const [systemConfig] = createResource(async () => {
+    try {
+      return await getSystemConfig();
+    } catch (error) {
+      console.warn("Failed to load system config, using defaults:", error);
+      return DefaultSystemConfig;
+    }
+  });
+
+  // Current folder id
   const location = useLocation();
 
   const isNavigatable = useMatch(
@@ -29,9 +53,16 @@ export function AppCtxProvider(props: ParentProps) {
 
   const val: AppCtxType = {
     currentFolderId,
+    systemConfig: systemConfig()!,
   };
 
-  return <AppCtx.Provider value={val}>{props.children}</AppCtx.Provider>;
+  return (
+    <div>
+      <Show when={!systemConfig.loading} fallback={<LoadingBackdrop />}>
+        <AppCtx.Provider value={val}>{props.children}</AppCtx.Provider>
+      </Show>
+    </div>
+  );
 }
 
 function useAppCtx() {

@@ -38,6 +38,7 @@ func InitAPI(app *appconfig.App, infra *infrastructure.Infrastructure) *api.API 
 	apiServer.Auth = api.NewAuthAPI(apiServer, signUpFlow, signInFlow).InitRoutes()
 	apiServer.Media = api.NewMediaAPI(apiServer, app, mediaCmdRoot, mediaQrsRoot).InitRoutes()
 	apiServer.Profile = api.NewProfileAPI(apiServer, proCmdRoot, proQrsRoot).InitRoutes()
+	apiServer.System = api.NewSystemAPI(apiServer).InitRoutes()
 
 	return apiServer
 }

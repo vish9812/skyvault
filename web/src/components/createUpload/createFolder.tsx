@@ -1,7 +1,7 @@
 import { Button } from "@kobalte/core/button";
 import { TextField } from "@kobalte/core/text-field";
 import { createFolder } from "@sv/apis/media";
-import Dialog from "@sv/components/ui/Dialog";
+import Dialog from "@sv/components/ui/dialog";
 import useAppCtx from "@sv/store/appCtxProvider";
 import { COMMON_ERR_KEYS } from "@sv/utils/errors";
 import Validate, { VALIDATIONS } from "@sv/utils/validate";
@@ -18,6 +18,7 @@ function CreateFolder(props: Props) {
   const [name, setName] = createSignal("");
   const [isLoading, setIsLoading] = createSignal(false);
   const [error, setError] = createSignal("");
+  let inputRef!: HTMLInputElement;
 
   const isInvalidName = () => !Validate.name(name());
   const isDisabled = () => isInvalidName() || isLoading();
@@ -28,6 +29,13 @@ function CreateFolder(props: Props) {
       setName("");
       setError("");
       setIsLoading(false);
+    }
+  });
+
+  // Auto focus when modal opens
+  createEffect(() => {
+    if (props.isModalOpen && inputRef) {
+      setTimeout(() => inputRef?.focus(), 100);
     }
   });
 
@@ -61,6 +69,13 @@ function CreateFolder(props: Props) {
       }
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleKeyDown = (e: KeyboardEvent) => {
+    if (e.key === "Enter" && !isDisabled()) {
+      e.preventDefault();
+      handleCreateFolder();
     }
   };
 
@@ -101,6 +116,7 @@ function CreateFolder(props: Props) {
       >
         <TextField.Label class="label">Folder Name</TextField.Label>
         <TextField.Input
+          ref={inputRef}
           classList={{
             input: true,
             "input-b-std": !error(),
@@ -109,7 +125,7 @@ function CreateFolder(props: Props) {
           type="text"
           placeholder="Enter folder name"
           autocomplete="off"
-          autofocus
+          onKeyDown={handleKeyDown}
         />
         <TextField.ErrorMessage class="input-t-error">
           {error()}
