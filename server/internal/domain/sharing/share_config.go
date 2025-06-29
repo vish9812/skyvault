@@ -7,11 +7,10 @@ import (
 )
 
 type ShareConfig struct {
-	ID           int64
-	CustomID     string // for url path
-	OwnerID      int64
-	FileID       *int64 // Only one of file or folder must be set
-	FolderID     *int64
+	ID           string
+	OwnerID      string
+	FileID       *string // Only one of file or folder must be set
+	FolderID     *string
 	PasswordHash *string
 	MaxDownloads *int64
 	ExpiresAt    *time.Time
@@ -21,9 +20,9 @@ type ShareConfig struct {
 }
 
 func NewShareConfig(
-	ownerID int64,
-	fileID *int64,
-	folderID *int64,
+	ownerID string,
+	fileID *string,
+	folderID *string,
 	password *string,
 	maxDownloads *int64,
 	expiresAt *time.Time,
@@ -37,9 +36,14 @@ func NewShareConfig(
 		passwordHash = &h
 	}
 
+	id, err := utils.ID()
+	if err != nil {
+		return nil, apperror.NewAppError(err, "sharing.NewShareConfig:ID")
+	}
+
 	now := time.Now().UTC()
 	return &ShareConfig{
-		CustomID:     utils.UUID(),
+		ID:           id,
 		OwnerID:      ownerID,
 		FileID:       fileID,
 		FolderID:     folderID,
@@ -54,7 +58,7 @@ func NewShareConfig(
 
 // App Errors:
 // - ErrCommonNoAccess
-func (s *ShareConfig) ValidateAccess(ownerID int64) error {
+func (s *ShareConfig) ValidateAccess(ownerID string) error {
 	if s.OwnerID != ownerID {
 		return apperror.NewAppError(apperror.ErrCommonNoAccess, "sharing.ShareConfig.ValidateAccess")
 	}

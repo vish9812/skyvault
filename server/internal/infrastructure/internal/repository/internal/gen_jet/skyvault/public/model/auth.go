@@ -8,12 +8,13 @@
 package model
 
 import (
+	"github.com/google/uuid"
 	"time"
 )
 
 type Auth struct {
-	ID             int64 `sql:"primary_key"`
-	ProfileID      int64
+	ID             uuid.UUID `sql:"primary_key"`
+	ProfileID      uuid.UUID
 	Provider       string
 	ProviderUserID string
 	PasswordHash   *string

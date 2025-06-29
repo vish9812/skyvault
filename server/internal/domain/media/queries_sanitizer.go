@@ -13,14 +13,14 @@ type QueriesSanitizer struct {
 	Queries
 }
 
-func NewQueriesSanitizer(queries Queries) *QueriesSanitizer {
+func NewQueriesSanitizer(queries Queries) Queries {
 	return &QueriesSanitizer{Queries: queries}
 }
 
 func validateCategory(category Category) (Category, error) {
 	category = Category(strings.TrimSpace(string(category)))
 	switch category {
-	case CategoryImages, CategoryDocuments, CategoryVideos, CategoryAudios, CategoryOthers:
+	case CategoryImage, CategoryText, CategoryVideo, CategoryAudio, CategoryOther:
 		return category, nil
 	default:
 		return "", apperror.ErrCommonInvalidValue

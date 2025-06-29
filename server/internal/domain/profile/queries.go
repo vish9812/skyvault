@@ -10,5 +10,5 @@ type Queries interface {
 }
 
 type GetQuery struct {
-	ID int64
+	ID string
 }

@@ -22,6 +22,21 @@ type Commands interface {
 	// - ErrCommonInvalidValue
 	UploadFile(ctx context.Context, cmd *UploadFileCommand) (*FileInfo, error)
 
+	// UploadChunk uploads a single chunk of a file for chunked uploads
+	// Does not finalize the upload - use FinalizeChunkedUpload for that
+	// App Errors:
+	// - ErrCommonInvalidValue
+	UploadChunk(ctx context.Context, cmd *UploadChunkCommand) error
+
+	// FinalizeChunkedUpload combines all chunks into final file after all chunks are uploaded
+	// App Errors:
+	// - ErrCommonInvalidValue
+	// - ErrCommonNoData
+	// - ErrCommonNoAccess
+	// - ErrCommonDuplicateData
+	// - ErrMediaFileSizeLimitExceeded
+	FinalizeChunkedUpload(ctx context.Context, cmd *FinalizeChunkedUploadCommand) (*FileInfo, error)
+
 	// App Errors:
 	// - ErrCommonInvalidValue
 	// - ErrCommonNoData
@@ -86,34 +101,52 @@ type Commands interface {
 //--------------------------------
 
 type UploadFileCommand struct {
-	OwnerID  int64
-	FolderID *int64
+	OwnerID  string
+	FolderID *string
 	Name     string
 	Size     int64
 	MimeType string
 	File     io.ReadSeeker
 }
 
+type UploadChunkCommand struct {
+	OwnerID     string
+	UploadID    string
+	ChunkIndex  int64
+	TotalChunks int64
+	Chunk       io.Reader
+}
+
+type FinalizeChunkedUploadCommand struct {
+	OwnerID     string
+	FolderID    *string
+	UploadID    string
+	FileName    string
+	FileSize    int64
+	MimeType    string
+	TotalChunks int64
+}
+
 type TrashFilesCommand struct {
-	OwnerID int64
-	FileIDs []int64
+	OwnerID string
+	FileIDs []string
 }
 
 type RenameFileCommand struct {
-	OwnerID int64
-	FileID  int64
+	OwnerID string
+	FileID  string
 	Name    string
 }
 
 type MoveFileCommand struct {
-	OwnerID  int64
-	FileID   int64
-	FolderID *int64
+	OwnerID  string
+	FileID   string
+	FolderID *string
 }
 
 type RestoreFileCommand struct {
-	OwnerID int64
-	FileID  int64
+	OwnerID string
+	FileID  string
 }
 
 //--------------------------------
@@ -121,29 +154,29 @@ type RestoreFileCommand struct {
 //--------------------------------
 
 type CreateFolderCommand struct {
-	OwnerID        int64
+	OwnerID        string
 	Name           string
-	ParentFolderID *int64
+	ParentFolderID *string
 }
 
 type TrashFoldersCommand struct {
-	OwnerID   int64
-	FolderIDs []int64
+	OwnerID   string
+	FolderIDs []string
 }
 
 type RenameFolderCommand struct {
-	OwnerID  int64
-	FolderID int64
+	OwnerID  string
+	FolderID string
 	Name     string
 }
 
 type MoveFolderCommand struct {
-	OwnerID        int64
-	FolderID       int64
-	ParentFolderID *int64
+	OwnerID        string
+	FolderID       string
+	ParentFolderID *string
 }
 
 type RestoreFolderCommand struct {
-	OwnerID  int64
-	FolderID int64
+	OwnerID  string
+	FolderID string
 }

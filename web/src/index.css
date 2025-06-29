@@ -1,0 +1,180 @@
+@import "tailwindcss";
+
+/* Hide password reveal button in Edge */
+input[type="password"]::-ms-reveal,
+input[type="password"]::-ms-clear {
+  display: none !important;
+}
+
+@theme {
+  /* Primary Colors */
+  --color-primary: #7274f3;
+  --color-primary-light: #a1a3f7;
+  --color-primary-lighter: #e8e8fd;
+  --color-primary-dark: #4346ef;
+
+  /* Secondary Colors */
+  --color-secondary: #9d72f3;
+  --color-secondary-light: #bea1f7;
+  --color-secondary-lighter: #efe8fd;
+  --color-secondary-dark: #7c43ef;
+
+  /* Success Colors */
+  --color-success: #22c55e;
+  --color-success-light: #4ade80;
+  --color-success-dark: #16a34a;
+
+  /* Error Colors */
+  --color-error: #ef4444;
+  --color-error-light: #f87171;
+  --color-error-dark: #dc2626;
+
+  /* Warning Colors */
+  --color-warning: #f59e0b;
+  --color-warning-light: #fbbf24;
+  --color-warning-dark: #d97706;
+
+  /* Info Colors */
+  --color-info: #0ea5e9;
+  --color-info-light: #38bdf8;
+  --color-info-dark: #0284c7;
+
+  /* Neutral Colors */
+  --color-neutral: #1f2937;
+  --color-neutral-light: #6b7280;
+  --color-neutral-lighter: #9ca3af;
+
+  /* Background Colors */
+  --color-bg-subtle: #f9fafb;
+  --color-bg-muted: #f3f4f6;
+
+  /* Border Colors */
+  --color-border: #e5e7eb;
+  --color-border-strong: #d1d5db;
+}
+@layer base {
+  body {
+    @apply text-neutral bg-bg-muted;
+  }
+
+  /* ===== TYPOGRAPHY */
+  h1 {
+    @apply text-neutral text-[34px] leading-[42px] font-bold;
+  }
+  h2 {
+    @apply text-neutral text-[24px] leading-[36px] font-bold;
+  }
+  h3 {
+    @apply text-neutral-light text-[20px] leading-[28px] font-semibold;
+  }
+  h4 {
+    @apply text-neutral-light text-[18px] leading-[20px] font-semibold;
+  }
+  h5 {
+    @apply text-neutral-lighter text-[16px] leading-[24px] font-medium;
+  }
+  h6 {
+    @apply text-neutral-lighter text-[14px] leading-[20px] font-medium;
+  }
+}
+
+@utility flex-center {
+  @apply flex items-center justify-center;
+}
+
+/* Button Base */
+@utility btn {
+  @apply inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium rounded-md transition-colors duration-150 cursor-pointer;
+}
+
+/* Button Variants */
+@utility btn-primary {
+  @apply bg-primary text-white hover:bg-primary-dark;
+}
+
+@utility btn-secondary {
+  @apply bg-secondary text-white hover:bg-secondary-dark;
+}
+
+@utility btn-disabled {
+  @apply bg-neutral-lighter text-neutral cursor-not-allowed;
+}
+
+@utility btn-success {
+  @apply bg-success text-white hover:bg-success-dark;
+}
+
+@utility btn-error {
+  @apply bg-error text-white hover:bg-error-dark;
+}
+
+@utility btn-outline {
+  @apply bg-transparent border border-border-strong text-gray-800 hover:bg-gray-100;
+}
+
+@utility btn-ghost {
+  @apply bg-transparent text-gray-800 hover:bg-gray-200;
+}
+
+/* Button Sizes */
+@utility btn-sm {
+  @apply px-3 py-1 text-xs;
+}
+
+@utility btn-lg {
+  @apply px-6 py-3 text-lg;
+}
+
+@utility link {
+  @apply text-primary hover:text-primary-dark hover:underline;
+}
+
+@utility link-no-underline {
+  @apply text-primary hover:text-primary-dark no-underline hover:bg-secondary-lighter;
+}
+
+/* Input Styles */
+@utility input {
+  @apply w-full px-3 py-2 border rounded-sm  focus:outline-hidden;
+}
+
+/* b refers to border */
+@utility input-b-std {
+  @apply border-border-strong focus:border-primary;
+}
+
+@utility input-b-error {
+  @apply border-error-light focus:border-error-dark;
+}
+
+/* t refers to text */
+@utility input-t-error {
+  @apply text-error text-xs mt-1;
+}
+
+/* Label Styles */
+@utility label {
+  @apply block text-neutral-light text-sm font-semibold mb-1;
+}
+
+/* Gradient utilities */
+@utility gradient {
+  @apply bg-linear-to-r from-primary to-secondary;
+}
+
+@utility gradient-text {
+  @apply bg-linear-to-r from-primary to-secondary bg-clip-text text-transparent;
+}
+
+@utility btn-gradient {
+  @apply bg-linear-to-r from-primary to-secondary text-white hover:from-primary-dark hover:to-secondary-dark;
+}
+
+/* d refers to data attribute */
+@utility btn-gradient-d-expanded {
+  @apply data-expanded:from-primary-dark data-expanded:to-secondary-dark;
+}
+
+@utility dropdown-item {
+  @apply px-4 py-2  cursor-pointer hover:bg-bg-muted transition-colors;
+}

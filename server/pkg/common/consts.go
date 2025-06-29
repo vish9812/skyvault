@@ -2,6 +2,12 @@ package common
 
 import "context"
 
+const (
+	BytesPerKB = 1 << 10
+	BytesPerMB = 1 << 20
+	BytesPerGB = 1 << 30
+)
+
 type CtxKey string
 
 const (
@@ -9,6 +15,6 @@ const (
 	CtxKeyProfileID CtxKey = "profile_id"
 )
 
-func GetProfileIDFromContext(ctx context.Context) int64 {
-	return ctx.Value(CtxKeyProfileID).(int64)
+func GetProfileIDFromContext(ctx context.Context) string {
+	return ctx.Value(CtxKeyProfileID).(string)
 }

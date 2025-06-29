@@ -40,16 +40,16 @@ func (r *ProfileRepository) Create(ctx context.Context, pro *profile.Profile) (*
 	}
 
 	stmt := Profile.INSERT(
-		Profile.MutableColumns,
+		Profile.AllColumns,
 	).MODEL(dbModel).RETURNING(Profile.AllColumns)
 
 	return runInsert[model.Profile, profile.Profile](ctx, stmt, r.repository.dbTx)
 }
 
-func (r *ProfileRepository) Get(ctx context.Context, id int64) (*profile.Profile, error) {
+func (r *ProfileRepository) Get(ctx context.Context, id string) (*profile.Profile, error) {
 	stmt := SELECT(Profile.AllColumns).
 		FROM(Profile).
-		WHERE(Profile.ID.EQ(Int64(id)))
+		WHERE(Profile.ID.EQ(UUID(UUIDStr(id))))
 
 	return runSelect[model.Profile, profile.Profile](ctx, stmt, r.repository.dbTx)
 }
@@ -71,14 +71,14 @@ func (r *ProfileRepository) Update(ctx context.Context, pro *profile.Profile) er
 
 	stmt := Profile.UPDATE(
 		Profile.MutableColumns,
-	).MODEL(dbModel).WHERE(Profile.ID.EQ(Int64(pro.ID)))
+	).MODEL(dbModel).WHERE(Profile.ID.EQ(UUID(UUIDStr(pro.ID))))
 
 	return runUpdateOrDelete(ctx, stmt, r.repository.dbTx)
 }
 
-func (r *ProfileRepository) Delete(ctx context.Context, id int64) error {
+func (r *ProfileRepository) Delete(ctx context.Context, id string) error {
 	stmt := Profile.DELETE().
-		WHERE(Profile.ID.EQ(Int64(id)))
+		WHERE(Profile.ID.EQ(UUID(UUIDStr(id))))
 
 	return runUpdateOrDelete(ctx, stmt, r.repository.dbTx)
 }

@@ -24,5 +24,5 @@ type CreateCommand struct {
 }
 
 type DeleteCommand struct {
-	ID int64
+	ID string
 }

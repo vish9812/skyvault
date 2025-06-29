@@ -20,10 +20,13 @@ type Config struct {
 }
 
 type ServerConfig struct {
-	Path    string
-	DataDir string
-	Port    int
-	Addr    string
+	Path                     string
+	DataDir                  string
+	Port                     int
+	Addr                     string
+	ExpectedActiveUsers      int64
+	ServerMemoryGB           float64 // Server memory in GB (auto-detect if 0)
+	MemoryReservationPercent float64 // Percentage of memory to reserve for other operations
 }
 
 type DBContainerConfig struct {
@@ -58,7 +61,18 @@ type AuthConfig struct {
 }
 
 type MediaConfig struct {
-	MaxSizeMB int64
+	MaxUploadSizeMB       int64 // Max upload size even when including chunking strategy.
+	MaxDirectUploadSizeMB int64 // Max size allowed for an upload, before chunking strategy is applied. This value must be less than MaxUploadSizeMB.
+	MaxChunkSizeMB        int64 // Max size of a chunk. This value must be less than MaxDirectUploadSizeMB.
+
+	// Dynamic concurrency settings
+	MemoryBasedLimits bool // Enable memory-based dynamic limits
+
+	// Fallback static limits (used if dynamic calculation fails or is disabled)
+	FallbackGlobalUploads  int64 // Fallback global upload limit
+	FallbackGlobalChunks   int64 // Fallback global chunk limit
+	FallbackPerUserUploads int64 // Fallback per-user upload limit
+	FallbackPerUserChunks  int64 // Fallback per-user chunk limit
 }
 
 type LogConfig struct {
@@ -82,6 +96,9 @@ func LoadConfig(path string, isDev bool) *Config {
 	config.Server.DataDir = envMap["SERVER__DATA_DIR"]
 	config.Server.Port = getIntOrZero(envMap["SERVER__PORT"])
 	config.Server.Addr = envMap["SERVER__ADDR"]
+	config.Server.ExpectedActiveUsers = getInt64OrZero(envMap["SERVER__EXPECTED_ACTIVE_USERS"])
+	config.Server.ServerMemoryGB = getFloat64OrZero(envMap["SERVER__MEMORY_GB"])
+	config.Server.MemoryReservationPercent = getFloat64OrZero(envMap["SERVER__MEMORY_RESERVATION_PERCENT"])
 
 	// DB config
 	config.DB.Container.Image = envMap["DB__CONTAINER__IMAGE"]
@@ -101,7 +118,14 @@ func LoadConfig(path string, isDev bool) *Config {
 	config.Auth.JWT.TokenTimeoutMin = getIntOrZero(envMap["AUTH__JWT__TOKEN_TIMEOUT_MIN"])
 
 	// Media config
-	config.Media.MaxSizeMB = getInt64OrZero(envMap["MEDIA__MAX_SIZE_MB"])
+	config.Media.MaxUploadSizeMB = getInt64OrZero(envMap["MEDIA__MAX_UPLOAD_SIZE_MB"])
+	config.Media.MaxDirectUploadSizeMB = getInt64OrZero(envMap["MEDIA__MAX_DIRECT_UPLOAD_SIZE_MB"])
+	config.Media.MaxChunkSizeMB = getInt64OrZero(envMap["MEDIA__MAX_CHUNK_SIZE_MB"])
+	config.Media.MemoryBasedLimits = getBoolOrFalse(envMap["MEDIA__MEMORY_BASED_LIMITS"])
+	config.Media.FallbackGlobalUploads = getInt64OrZero(envMap["MEDIA__FALLBACK_GLOBAL_UPLOADS"])
+	config.Media.FallbackGlobalChunks = getInt64OrZero(envMap["MEDIA__FALLBACK_GLOBAL_CHUNKS"])
+	config.Media.FallbackPerUserUploads = getInt64OrZero(envMap["MEDIA__FALLBACK_PER_USER_UPLOADS"])
+	config.Media.FallbackPerUserChunks = getInt64OrZero(envMap["MEDIA__FALLBACK_PER_USER_CHUNKS"])
 
 	// Log config
 	config.Log.Level = envMap["LOG__LEVEL"]
@@ -134,6 +158,28 @@ func getInt64OrZero(s string) int64 {
 	return v
 }
 
+func getFloat64OrZero(s string) float64 {
+	if s == "" {
+		return 0
+	}
+	v, err := strconv.ParseFloat(s, 64)
+	if err != nil {
+		return 0
+	}
+	return v
+}
+
+func getBoolOrFalse(s string) bool {
+	if s == "" {
+		return false
+	}
+	v, err := strconv.ParseBool(s)
+	if err != nil {
+		return false
+	}
+	return v
+}
+
 // validate use default values if possible, otherwise log error
 func (c *Config) validate(logger zerolog.Logger, isDev bool) {
 	var foundErr bool
@@ -158,6 +204,16 @@ func (c *Config) validate(logger zerolog.Logger, isDev bool) {
 	if c.Server.Addr == "" {
 		c.Server.Addr = fmt.Sprintf("localhost:%d", c.Server.Port)
 		logger.Warn().Msg("server addr not set, using default addr localhost:8090")
+	}
+
+	if c.Server.ExpectedActiveUsers <= 0 {
+		c.Server.ExpectedActiveUsers = 10
+		logger.Warn().Msg("server expected active users not set, using default users 10")
+	}
+
+	// Set defaults for server memory settings
+	if c.Server.MemoryReservationPercent <= 0 || c.Server.MemoryReservationPercent >= 100 {
+		c.Server.MemoryReservationPercent = 20
 	}
 
 	// Database
@@ -242,12 +298,56 @@ func (c *Config) validate(logger zerolog.Logger, isDev bool) {
 	}
 
 	// Media
-	if c.Media.MaxSizeMB <= 0 {
-		c.Media.MaxSizeMB = 100
+	if c.Media.MaxUploadSizeMB <= 0 {
+		c.Media.MaxUploadSizeMB = 100
 		if isDev {
-			c.Media.MaxSizeMB = 1024 // 1GB
+			c.Media.MaxUploadSizeMB = 1024 // 1GB
 		}
-		logger.Warn().Msgf("media max size not set, using default size %dMB", c.Media.MaxSizeMB)
+		logger.Warn().Msgf("media max size not set, using default size %dMB", c.Media.MaxUploadSizeMB)
+	}
+
+	if c.Media.MaxDirectUploadSizeMB > c.Media.MaxUploadSizeMB {
+		c.Media.MaxDirectUploadSizeMB = 50
+		logger.Warn().Msgf("media max direct upload size is greater than max upload size, using default size %dMB", c.Media.MaxDirectUploadSizeMB)
+	}
+
+	if c.Media.MaxDirectUploadSizeMB <= 0 {
+		c.Media.MaxDirectUploadSizeMB = 50
+		logger.Warn().Msgf("media max single upload size not set, using default size %dMB", c.Media.MaxDirectUploadSizeMB)
+	}
+
+	if c.Media.MaxChunkSizeMB <= 0 {
+		c.Media.MaxChunkSizeMB = 10
+		logger.Warn().Msgf("media max chunk size not set, using default size %dMB", c.Media.MaxChunkSizeMB)
+	}
+
+	if c.Media.MaxChunkSizeMB > c.Media.MaxDirectUploadSizeMB {
+		c.Media.MaxChunkSizeMB = 10
+		logger.Warn().Msgf("media max chunk size is greater than max direct upload size, using default size %dMB", c.Media.MaxChunkSizeMB)
+	}
+
+	// Set defaults for dynamic concurrency settings
+
+	if c.Media.FallbackGlobalUploads <= 0 {
+		c.Media.FallbackGlobalUploads = 100
+	}
+
+	if c.Media.FallbackGlobalChunks <= 0 {
+		c.Media.FallbackGlobalChunks = 400
+	}
+
+	if c.Media.FallbackPerUserUploads <= 0 {
+		c.Media.FallbackPerUserUploads = 10
+	}
+
+	if c.Media.FallbackPerUserChunks <= 0 {
+		c.Media.FallbackPerUserChunks = 40
+	}
+
+	// Enable memory-based limits by default in production, allow override in dev
+	if !isDev && !c.Media.MemoryBasedLimits {
+		c.Media.MemoryBasedLimits = true
+		logger.Info().Msg("memory-based concurrency limits enabled by default in production")
 	}
 
 	// Logging

@@ -2,13 +2,16 @@ package sharing
 
 import (
 	"time"
+
+	"skyvault/pkg/apperror"
+	"skyvault/pkg/utils"
 )
 
 type ShareRecipient struct {
-	ID             int64
-	ShareConfigID  int64
-	ContactID      *int64 // Only one of ContactID, ContactGroupID, or Email can be set
-	ContactGroupID *int64
+	ID             string
+	ShareConfigID  string
+	ContactID      *string // Only one of ContactID, ContactGroupID, or Email can be set
+	ContactGroupID *string
 	Email          *string // Email which we don't want to save as a contact
 	DownloadsCount int
 	CreatedAt      time.Time
@@ -16,13 +19,18 @@ type ShareRecipient struct {
 }
 
 func NewShareRecipient(
-	shareConfigID int64,
-	contactID *int64,
-	contactGroupID *int64,
+	shareConfigID string,
+	contactID *string,
+	contactGroupID *string,
 	nonContactEmail *string,
-) *ShareRecipient {
+) (*ShareRecipient, error) {
+	id, err := utils.ID()
+	if err != nil {
+		return nil, apperror.NewAppError(err, "sharing.NewShareRecipient:ID")
+	}
 	now := time.Now().UTC()
 	return &ShareRecipient{
+		ID:             id,
 		ShareConfigID:  shareConfigID,
 		ContactID:      contactID,
 		ContactGroupID: contactGroupID,
@@ -30,7 +38,7 @@ func NewShareRecipient(
 		DownloadsCount: 0,
 		CreatedAt:      now,
 		UpdatedAt:      now,
-	}
+	}, nil
 }
 
 // func (r *ShareRecipient) IncrementDownloads() {

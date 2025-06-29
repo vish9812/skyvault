@@ -3,6 +3,7 @@ package media
 import (
 	"context"
 	"skyvault/pkg/apperror"
+	"skyvault/pkg/common"
 	"skyvault/pkg/paging"
 )
 
@@ -13,7 +14,7 @@ type QueryHandlers struct {
 	storage    Storage
 }
 
-func NewQueryHandlers(repository Repository, storage Storage) *QueryHandlers {
+func NewQueryHandlers(repository Repository, storage Storage) Queries {
 	return &QueryHandlers{repository: repository, storage: storage}
 }
 
@@ -28,7 +29,7 @@ func (h *QueryHandlers) GetFile(ctx context.Context, query *GetFileQuery) (*GetF
 		return nil, apperror.NewAppError(err, "QueryHandlers.GetFile:ValidateAccess")
 	}
 
-	file, err := h.storage.OpenFile(ctx, info.GeneratedName, query.OwnerID)
+	file, err := h.storage.OpenFile(ctx, info.ID, query.OwnerID)
 	if err != nil {
 		return nil, apperror.NewAppError(err, "QueryHandlers.GetFile:OpenFile")
 	}
@@ -45,6 +46,22 @@ func (h *QueryHandlers) GetFileInfosByCategory(ctx context.Context, query *GetFi
 	}
 
 	return files, nil
+}
+
+func (h *QueryHandlers) GetFolderInfo(ctx context.Context, query *GetFolderInfoQuery) (*FolderInfo, error) {
+	info, err := h.repository.GetFolderInfo(ctx, query.OwnerID, query.FolderID)
+	if err != nil {
+		return nil, apperror.NewAppError(err, "QueryHandlers.GetFolderInfo:GetFolderInfo")
+	}
+	return info, nil
+}
+
+func (h *QueryHandlers) GetAncestors(ctx context.Context, ownerID, folderID string) ([]*common.BaseInfo, error) {
+	ancestors, err := h.repository.GetAncestors(ctx, ownerID, folderID)
+	if err != nil {
+		return nil, apperror.NewAppError(err, "QueryHandlers.GetAncestors:GetAncestors")
+	}
+	return ancestors, nil
 }
 
 func (h *QueryHandlers) GetFolderContent(ctx context.Context, query *GetFolderContentQuery) (*GetFolderContentRes, error) {

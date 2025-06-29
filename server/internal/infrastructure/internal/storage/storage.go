@@ -3,8 +3,6 @@ package storage
 import (
 	"context"
 	"errors"
-	"math"
-	"math/rand/v2"
 	"os"
 	"path/filepath"
 	"skyvault/internal/domain/media"
@@ -34,9 +32,8 @@ func (s *Storage) Health(ctx context.Context) error {
 	// Create a random owner directory
 	baseDir := filepath.Join(s.app.Config.Server.DataDir, localStorageBaseDir)
 
-	// Use a random int64 value from [max-100, max)
-	randomOwnerID := int64(math.MaxInt64 - rand.IntN(100))
-	ownerDir := getOwnerDir(baseDir, randomOwnerID)
+	randomOwnerID := utils.RandomString(20)
+	ownerDir := getOwnerDirPath(baseDir, randomOwnerID)
 	err := os.MkdirAll(ownerDir, os.ModePerm)
 	if err != nil {
 		return apperror.NewAppError(err, "s.Health:MkdirAll").WithMetadata("owner_dir", ownerDir)

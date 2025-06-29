@@ -18,15 +18,15 @@ type Repository interface {
 	// - ErrCommonDuplicateData
 	CreateContact(ctx context.Context, contact *Contact) (*Contact, error)
 
-	GetContacts(ctx context.Context, ownerID int64, pagingOpt *paging.Options, searchTerm *string) (*paging.Page[*Contact], error)
+	GetContacts(ctx context.Context, ownerID string, pagingOpt *paging.Options, searchTerm *string) (*paging.Page[*Contact], error)
 
 	// App Errors:
 	// - ErrCommonNoData
-	UpdateContact(ctx context.Context, ownerID, contactID int64, email, name string) error
+	UpdateContact(ctx context.Context, ownerID, contactID string, email, name string) error
 
 	// App Errors:
 	// - ErrCommonNoData
-	DeleteContact(ctx context.Context, ownerID, contactID int64) error
+	DeleteContact(ctx context.Context, ownerID, contactID string) error
 
 	//--------------------------------
 	// Contact Groups
@@ -38,28 +38,28 @@ type Repository interface {
 
 	// App Errors:
 	// - ErrCommonNoData
-	GetContactGroup(ctx context.Context, ownerID, groupID int64) (*ContactGroup, error)
+	GetContactGroup(ctx context.Context, ownerID, groupID string) (*ContactGroup, error)
 
-	GetContactGroups(ctx context.Context, ownerID int64, pagingOpt *paging.Options, searchTerm *string) (*paging.Page[*ContactGroup], error)
+	GetContactGroups(ctx context.Context, ownerID string, pagingOpt *paging.Options, searchTerm *string) (*paging.Page[*ContactGroup], error)
 
-	GetContactGroupMembers(ctx context.Context, ownerID int64, pagingOpt *paging.Options, groupID int64) (*paging.Page[*Contact], error)
-
-	// App Errors:
-	// - ErrCommonNoData
-	UpdateContactGroup(ctx context.Context, ownerID, groupID int64, name string) error
+	GetContactGroupMembers(ctx context.Context, ownerID string, pagingOpt *paging.Options, groupID string) (*paging.Page[*Contact], error)
 
 	// App Errors:
 	// - ErrCommonNoData
-	DeleteContactGroup(ctx context.Context, ownerID, groupID int64) error
+	UpdateContactGroup(ctx context.Context, ownerID, groupID string, name string) error
+
+	// App Errors:
+	// - ErrCommonNoData
+	DeleteContactGroup(ctx context.Context, ownerID, groupID string) error
 
 	// App Errors:
 	// - ErrCommonNoData
 	// - ErrCommonDuplicateData
-	AddContactToGroup(ctx context.Context, ownerID, groupID, contactID int64) error
+	AddContactToGroup(ctx context.Context, ownerID, groupID, contactID string) error
 
 	// App Errors:
 	// - ErrCommonNoData
-	RemoveContactFromGroup(ctx context.Context, ownerID, groupID, contactID int64) error
+	RemoveContactFromGroup(ctx context.Context, ownerID, groupID, contactID string) error
 
 	//--------------------------------
 	// Share Configs
@@ -71,33 +71,29 @@ type Repository interface {
 
 	// App Errors:
 	// - ErrCommonNoData
-	GetShareConfig(ctx context.Context, ownerID, shareID int64) (*ShareConfig, error)
+	GetShareConfig(ctx context.Context, ownerID, shareID string) (*ShareConfig, error)
 
 	// App Errors:
 	// - ErrCommonNoData
-	GetShareConfigByCustomID(ctx context.Context, ownerID int64, customID string) (*ShareConfig, error)
+	UpdateShareExpiry(ctx context.Context, ownerID, shareID string, maxDownloads *int64, expiresAt *time.Time) error
 
 	// App Errors:
 	// - ErrCommonNoData
-	UpdateShareExpiry(ctx context.Context, ownerID, shareID int64, maxDownloads *int64, expiresAt *time.Time) error
+	UpdateSharePassword(ctx context.Context, ownerID, shareID string, password *string) error
 
 	// App Errors:
 	// - ErrCommonNoData
-	UpdateSharePassword(ctx context.Context, ownerID, shareID int64, password *string) error
-
-	// App Errors:
-	// - ErrCommonNoData
-	DeleteShareConfig(ctx context.Context, ownerID, shareID int64) error
+	DeleteShareConfig(ctx context.Context, ownerID, shareID string) error
 
 	// App Errors:
 	// - ErrCommonDuplicateData
-	CreateShareRecipient(ctx context.Context, ownerID int64, recipient *ShareRecipient) (*ShareRecipient, error)
+	CreateShareRecipient(ctx context.Context, ownerID string, recipient *ShareRecipient) (*ShareRecipient, error)
 
 	// App Errors:
 	// - ErrCommonNoData
-	DeleteShareRecipient(ctx context.Context, ownerID, shareID, recipientID int64) error
+	DeleteShareRecipient(ctx context.Context, ownerID, shareID, recipientID string) error
 
 	// App Errors:
 	// - ErrCommonNoData
-	GetShareRecipientByEmail(ctx context.Context, shareID int64, email string) (*ShareRecipient, error)
+	GetShareRecipientByEmail(ctx context.Context, shareID string, email string) (*ShareRecipient, error)
 }

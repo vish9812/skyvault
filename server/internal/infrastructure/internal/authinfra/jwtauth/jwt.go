@@ -6,6 +6,7 @@ import (
 	"skyvault/internal/domain/auth"
 	"skyvault/pkg/apperror"
 	"skyvault/pkg/utils"
+	"skyvault/pkg/validate"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -22,11 +23,11 @@ var signingMethod = jwt.SigningMethodHS256
 var _ auth.Claims = (*Claims)(nil)
 
 type Claims struct {
-	ProfileID int64 `json:"profileId"`
+	ProfileID string `json:"profileId"`
 	jwt.RegisteredClaims
 }
 
-func (c *Claims) GetProfileID() int64 {
+func (c *Claims) GetProfileID() string {
 	return c.ProfileID
 }
 
@@ -45,7 +46,7 @@ func NewJWTAuth(cfg Config) *JWTAuth {
 	return &JWTAuth{cfg: cfg}
 }
 
-func (a *JWTAuth) GenerateToken(ctx context.Context, profileID int64) (string, error) {
+func (a *JWTAuth) GenerateToken(ctx context.Context, profileID string) (string, error) {
 	now := time.Now().UTC()
 	expirationTime := time.Duration(a.cfg.TokenTimeoutMin) * time.Minute
 
@@ -100,7 +101,7 @@ func (a *JWTAuth) ValidateCredentials(ctx context.Context, credentials map[auth.
 	passwordHash := *(credentials[auth.CredKeyPasswordHash].(*string))
 	password := *(credentials[auth.CredKeyPassword].(*string))
 
-	if p, err := auth.ValidatePasswordLen(password); err != nil {
+	if p, err := validate.PasswordLen(password); err != nil {
 		return apperror.NewAppError(err, "JWTAuth.ValidateCredentials:ValidatePassword")
 	} else {
 		password = p

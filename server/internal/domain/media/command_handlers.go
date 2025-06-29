@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"math"
 	"skyvault/pkg/appconfig"
 	"skyvault/pkg/apperror"
 )
@@ -16,7 +17,7 @@ type CommandHandlers struct {
 	storage    Storage
 }
 
-func NewCommandHandlers(app *appconfig.App, repository Repository, storage Storage) *CommandHandlers {
+func NewCommandHandlers(app *appconfig.App, repository Repository, storage Storage) Commands {
 	return &CommandHandlers{app: app, repository: repository, storage: storage}
 }
 
@@ -28,14 +29,14 @@ func (h *CommandHandlers) UploadFile(ctx context.Context, cmd *UploadFileCommand
 	var parentFolderInfo *FolderInfo
 	if cmd.FolderID != nil {
 		var err error
-		parentFolderInfo, err = h.repository.GetFolderInfo(ctx, *cmd.FolderID)
+		parentFolderInfo, err = h.repository.GetFolderInfo(ctx, cmd.OwnerID, *cmd.FolderID)
 		if err != nil {
 			return nil, apperror.NewAppError(err, "media.CommandHandlers.UploadFile:GetFolderInfo")
 		}
 	}
 
 	fileConfig := FileConfig{
-		MaxSizeMB: h.app.Config.Media.MaxSizeMB,
+		MaxSizeMB: h.app.Config.Media.MaxDirectUploadSizeMB,
 	}
 
 	info, err := NewFileInfo(fileConfig, cmd.OwnerID, parentFolderInfo, cmd.Name, cmd.Size, cmd.MimeType)
@@ -43,17 +44,10 @@ func (h *CommandHandlers) UploadFile(ctx context.Context, cmd *UploadFileCommand
 		return nil, apperror.NewAppError(err, "media.CommandHandlers.UploadFile:NewFileInfo")
 	}
 
-	// Start transaction
-	tx, err := h.repository.BeginTx(ctx)
-	if err != nil {
-		return nil, apperror.NewAppError(err, "media.CommandHandlers.UploadFile:BeginTx")
-	}
-	defer tx.Rollback()
-
 	// Saving to storage first to validate the file size once again, when actually reading and writing the file
-	err = h.storage.SaveFile(ctx, cmd.File, info.GeneratedName, cmd.OwnerID)
+	err = h.storage.SaveFile(ctx, cmd.File, info.ID, cmd.OwnerID)
 	if err != nil {
-		return nil, apperror.NewAppError(err, "media.CommandHandlers.UploadFile:SaveFile").WithMetadata("generated_name", info.GeneratedName)
+		return nil, apperror.NewAppError(err, "media.CommandHandlers.UploadFile:SaveFile").WithMetadata("file_id", info.ID)
 	}
 
 	// TODO: Generate previews asynchronously via background job
@@ -62,15 +56,68 @@ func (h *CommandHandlers) UploadFile(ctx context.Context, cmd *UploadFileCommand
 		return nil, apperror.NewAppError(err, "media.CommandHandlers.UploadFile:WithPreview")
 	}
 
-	repoTx := h.repository.WithTx(ctx, tx)
-	info, err = repoTx.CreateFileInfo(ctx, info)
+	info, err = h.repository.CreateFileInfo(ctx, info)
 	if err != nil {
+		// Cleanup the file from storage
+		h.storage.DeleteFile(ctx, info.ID, cmd.OwnerID)
+
 		return nil, apperror.NewAppError(err, "media.CommandHandlers.UploadFile:CreateFileInfo")
 	}
 
-	err = tx.Commit()
+	return info, nil
+}
+
+func (h *CommandHandlers) UploadChunk(ctx context.Context, cmd *UploadChunkCommand) error {
+	if cmd.ChunkIndex >= cmd.TotalChunks {
+		return apperror.NewAppError(apperror.ErrCommonInvalidValue, "media.CommandHandlers.UploadChunk:ChunkIndex").WithMetadata("chunk_index", cmd.ChunkIndex).WithMetadata("total_chunks", cmd.TotalChunks)
+	}
+
+	maxTotalChunks := int64(math.Ceil(float64(h.app.Config.Media.MaxUploadSizeMB) / float64(h.app.Config.Media.MaxChunkSizeMB)))
+	if cmd.TotalChunks > maxTotalChunks {
+		return apperror.NewAppError(apperror.ErrCommonInvalidValue, "media.CommandHandlers.UploadChunk:TotalChunks").WithMetadata("max_total_chunks", maxTotalChunks).WithMetadata("total_chunks", cmd.TotalChunks)
+	}
+
+	// Save the chunk
+	err := h.storage.SaveChunk(ctx, cmd.Chunk, cmd.UploadID, cmd.ChunkIndex, cmd.OwnerID)
 	if err != nil {
-		return nil, apperror.NewAppError(err, "media.CommandHandlers.UploadFile:Commit")
+		return apperror.NewAppError(err, "media.CommandHandlers.UploadChunk:SaveChunk")
+	}
+
+	return nil
+}
+
+func (h *CommandHandlers) FinalizeChunkedUpload(ctx context.Context, cmd *FinalizeChunkedUploadCommand) (*FileInfo, error) {
+	var parentFolderInfo *FolderInfo
+	if cmd.FolderID != nil {
+		var err error
+		parentFolderInfo, err = h.repository.GetFolderInfo(ctx, cmd.OwnerID, *cmd.FolderID)
+		if err != nil {
+			return nil, apperror.NewAppError(err, "media.CommandHandlers.FinalizeChunkedUpload:GetFolderInfo")
+		}
+	}
+
+	fileConfig := FileConfig{
+		MaxSizeMB: h.app.Config.Media.MaxUploadSizeMB,
+	}
+
+	info, err := NewFileInfo(fileConfig, cmd.OwnerID, parentFolderInfo, cmd.FileName, cmd.FileSize, cmd.MimeType)
+	if err != nil {
+		return nil, apperror.NewAppError(err, "media.CommandHandlers.FinalizeChunkedUpload:NewFileInfo")
+	}
+
+	// Finalize the chunked upload by combining chunks
+	err = h.storage.FinalizeChunkedUpload(ctx, cmd.UploadID, info.ID, cmd.OwnerID)
+	if err != nil {
+		return nil, apperror.NewAppError(err, "media.CommandHandlers.FinalizeChunkedUpload:FinalizeChunkedUpload").WithMetadata("file_id", info.ID)
+	}
+
+	// Skip preview generation for chunked uploads (will be done asynchronously via background job)
+	info, err = h.repository.CreateFileInfo(ctx, info)
+	if err != nil {
+		// Cleanup the file from storage
+		h.storage.DeleteFile(ctx, info.ID, cmd.OwnerID)
+
+		return nil, apperror.NewAppError(err, "media.CommandHandlers.FinalizeChunkedUpload:CreateFileInfo").WithMetadata("file_id", info.ID)
 	}
 
 	return info, nil
@@ -108,7 +155,7 @@ func (h *CommandHandlers) MoveFile(ctx context.Context, cmd *MoveFileCommand) er
 
 	var destFolderInfo *FolderInfo
 	if cmd.FolderID != nil {
-		destFolderInfo, err = h.repository.GetFolderInfo(ctx, *cmd.FolderID)
+		destFolderInfo, err = h.repository.GetFolderInfo(ctx, cmd.OwnerID, *cmd.FolderID)
 		if err != nil {
 			return apperror.NewAppError(err, "media.CommandHandlers.MoveFile:GetFolderInfo")
 		}
@@ -145,7 +192,7 @@ func (h *CommandHandlers) RestoreFile(ctx context.Context, cmd *RestoreFileComma
 		return apperror.NewAppError(err, "media.CommandHandlers.RestoreFile:ValidateAccess")
 	}
 
-	parentFolderIsTrashed, err := h.isParentFolderTrashed(ctx, info.FolderID)
+	parentFolderIsTrashed, err := h.isParentFolderTrashed(ctx, cmd.OwnerID, info.FolderID)
 	if err != nil {
 		return apperror.NewAppError(err, "media.CommandHandlers.RestoreFile:IsParentFolderTrashed")
 	}
@@ -168,7 +215,7 @@ func (h *CommandHandlers) CreateFolder(ctx context.Context, cmd *CreateFolderCom
 	var parentFolder *FolderInfo
 	if cmd.ParentFolderID != nil {
 		var err error
-		parentFolder, err = h.repository.GetFolderInfo(ctx, *cmd.ParentFolderID)
+		parentFolder, err = h.repository.GetFolderInfo(ctx, cmd.OwnerID, *cmd.ParentFolderID)
 		if err != nil {
 			return nil, apperror.NewAppError(err, "media.CommandHandlers.CreateFolder:GetParentFolderInfo")
 		}
@@ -188,7 +235,7 @@ func (h *CommandHandlers) CreateFolder(ctx context.Context, cmd *CreateFolderCom
 }
 
 func (h *CommandHandlers) RenameFolder(ctx context.Context, cmd *RenameFolderCommand) error {
-	info, err := h.repository.GetFolderInfo(ctx, cmd.FolderID)
+	info, err := h.repository.GetFolderInfo(ctx, cmd.OwnerID, cmd.FolderID)
 	if err != nil {
 		return apperror.NewAppError(err, "media.CommandHandlers.RenameFolder:GetFolderInfo")
 	}
@@ -209,7 +256,7 @@ func (h *CommandHandlers) RenameFolder(ctx context.Context, cmd *RenameFolderCom
 }
 
 func (h *CommandHandlers) MoveFolder(ctx context.Context, cmd *MoveFolderCommand) error {
-	info, err := h.repository.GetFolderInfo(ctx, cmd.FolderID)
+	info, err := h.repository.GetFolderInfo(ctx, cmd.OwnerID, cmd.FolderID)
 	if err != nil {
 		return apperror.NewAppError(err, "media.CommandHandlers.MoveFolder:GetFolderInfo")
 	}
@@ -221,7 +268,7 @@ func (h *CommandHandlers) MoveFolder(ctx context.Context, cmd *MoveFolderCommand
 
 	var destFolderInfo *FolderInfo
 	if cmd.ParentFolderID != nil {
-		destFolderInfo, err = h.repository.GetFolderInfo(ctx, *cmd.ParentFolderID)
+		destFolderInfo, err = h.repository.GetFolderInfo(ctx, cmd.OwnerID, *cmd.ParentFolderID)
 		if err != nil {
 			return apperror.NewAppError(err, "media.CommandHandlers.MoveFolder:GetParentFolderInfo")
 		}
@@ -254,12 +301,12 @@ func (h *CommandHandlers) TrashFolders(ctx context.Context, cmd *TrashFoldersCom
 }
 
 func (h *CommandHandlers) RestoreFolder(ctx context.Context, cmd *RestoreFolderCommand) error {
-	info, err := h.repository.GetFolderInfoTrashed(ctx, cmd.FolderID)
+	info, err := h.repository.GetFolderInfoTrashed(ctx, cmd.OwnerID, cmd.FolderID)
 	if err != nil {
 		return apperror.NewAppError(err, "media.CommandHandlers.RestoreFolder:GetFolderInfo")
 	}
 
-	parentFolderIsTrashed, err := h.isParentFolderTrashed(ctx, info.ParentFolderID)
+	parentFolderIsTrashed, err := h.isParentFolderTrashed(ctx, cmd.OwnerID, info.ParentFolderID)
 	if err != nil {
 		return apperror.NewAppError(err, "media.CommandHandlers.RestoreFolder:IsParentFolderTrashed")
 	}
@@ -300,13 +347,13 @@ func (h *CommandHandlers) RestoreFolder(ctx context.Context, cmd *RestoreFolderC
 	return nil
 }
 
-func (h *CommandHandlers) isParentFolderTrashed(ctx context.Context, folderID *int64) (bool, error) {
+func (h *CommandHandlers) isParentFolderTrashed(ctx context.Context, ownerID string, folderID *string) (bool, error) {
 	// If folderID is nil, it means it's a root folder
 	if folderID == nil {
 		return false, nil
 	}
 
-	_, err := h.repository.GetFolderInfo(ctx, *folderID)
+	_, err := h.repository.GetFolderInfo(ctx, ownerID, *folderID)
 	if err != nil {
 		if errors.Is(err, apperror.ErrCommonNoData) {
 			return true, nil

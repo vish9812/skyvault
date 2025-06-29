@@ -55,7 +55,7 @@ type GetContactGroupsQuery struct {
 }
 
 type GetContactGroupMembersQuery struct {
-	GroupID   int64
+	GroupID   string
 	PagingOpt *paging.Options
 }
 
@@ -64,11 +64,11 @@ type GetContactGroupMembersQuery struct {
 //--------------------------------
 
 type GetShareConfigQuery struct {
-	ShareID int64
+	ShareID string
 }
 
 type ValidateShareAccessQuery struct {
-	CustomID string
+	ShareID  string
 	Email    *string
 	Password *string
 }

@@ -5,6 +5,8 @@ import (
 	"net/mail"
 	"skyvault/pkg/apperror"
 	"strings"
+
+	"github.com/google/uuid"
 )
 
 const (
@@ -24,6 +26,17 @@ func Email(email string) (string, error) {
 	return mailObj.Address, nil
 }
 
+func FileName(name string) (string, error) {
+	// Remove any path separators to prevent directory traversal
+	name = strings.ReplaceAll(name, "/", "")
+	name = strings.ReplaceAll(name, "\\", "")
+
+	// Remove any null bytes that could be used to truncate strings
+	name = strings.ReplaceAll(name, "\x00", "")
+
+	return Name(name)
+}
+
 func Name(name string) (string, error) {
 	name = strings.TrimSpace(name)
 	if name == "" || len(name) > MaxLen {
@@ -40,4 +53,21 @@ func PasswordLen(pwd string) (string, error) {
 	}
 
 	return pwd, nil
+}
+
+func UUID(uuidStr string) bool {
+	return uuid.Validate(uuidStr) == nil
+}
+
+func UUIDs(uuidStrs []string) ([]string, []string) {
+	validUUIDs := make([]string, 0, len(uuidStrs))
+	invalidUUIDs := make([]string, 0)
+	for _, uuidStr := range uuidStrs {
+		if UUID(uuidStr) {
+			validUUIDs = append(validUUIDs, uuidStr)
+		} else {
+			invalidUUIDs = append(invalidUUIDs, uuidStr)
+		}
+	}
+	return validUUIDs, invalidUUIDs
 }

@@ -17,19 +17,18 @@ type fileInfoTable struct {
 	postgres.Table
 
 	// Columns
-	ID            postgres.ColumnInteger
-	OwnerID       postgres.ColumnInteger
-	FolderID      postgres.ColumnInteger
-	Name          postgres.ColumnString
-	GeneratedName postgres.ColumnString
-	Size          postgres.ColumnInteger
-	Extension     postgres.ColumnString
-	MimeType      postgres.ColumnString
-	Category      postgres.ColumnString
-	Preview       postgres.ColumnString
-	TrashedAt     postgres.ColumnTimestamp
-	CreatedAt     postgres.ColumnTimestamp
-	UpdatedAt     postgres.ColumnTimestamp
+	ID        postgres.ColumnString
+	OwnerID   postgres.ColumnString
+	FolderID  postgres.ColumnString
+	Name      postgres.ColumnString
+	Size      postgres.ColumnInteger
+	Extension postgres.ColumnString
+	MimeType  postgres.ColumnString
+	Category  postgres.ColumnString
+	Preview   postgres.ColumnString
+	TrashedAt postgres.ColumnTimestamp
+	CreatedAt postgres.ColumnTimestamp
+	UpdatedAt postgres.ColumnTimestamp
 
 	AllColumns     postgres.ColumnList
 	MutableColumns postgres.ColumnList
@@ -70,40 +69,38 @@ func newFileInfoTable(schemaName, tableName, alias string) *FileInfoTable {
 
 func newFileInfoTableImpl(schemaName, tableName, alias string) fileInfoTable {
 	var (
-		IDColumn            = postgres.IntegerColumn("id")
-		OwnerIDColumn       = postgres.IntegerColumn("owner_id")
-		FolderIDColumn      = postgres.IntegerColumn("folder_id")
-		NameColumn          = postgres.StringColumn("name")
-		GeneratedNameColumn = postgres.StringColumn("generated_name")
-		SizeColumn          = postgres.IntegerColumn("size")
-		ExtensionColumn     = postgres.StringColumn("extension")
-		MimeTypeColumn      = postgres.StringColumn("mime_type")
-		CategoryColumn      = postgres.StringColumn("category")
-		PreviewColumn       = postgres.StringColumn("preview")
-		TrashedAtColumn     = postgres.TimestampColumn("trashed_at")
-		CreatedAtColumn     = postgres.TimestampColumn("created_at")
-		UpdatedAtColumn     = postgres.TimestampColumn("updated_at")
-		allColumns          = postgres.ColumnList{IDColumn, OwnerIDColumn, FolderIDColumn, NameColumn, GeneratedNameColumn, SizeColumn, ExtensionColumn, MimeTypeColumn, CategoryColumn, PreviewColumn, TrashedAtColumn, CreatedAtColumn, UpdatedAtColumn}
-		mutableColumns      = postgres.ColumnList{OwnerIDColumn, FolderIDColumn, NameColumn, GeneratedNameColumn, SizeColumn, ExtensionColumn, MimeTypeColumn, CategoryColumn, PreviewColumn, TrashedAtColumn, CreatedAtColumn, UpdatedAtColumn}
+		IDColumn        = postgres.StringColumn("id")
+		OwnerIDColumn   = postgres.StringColumn("owner_id")
+		FolderIDColumn  = postgres.StringColumn("folder_id")
+		NameColumn      = postgres.StringColumn("name")
+		SizeColumn      = postgres.IntegerColumn("size")
+		ExtensionColumn = postgres.StringColumn("extension")
+		MimeTypeColumn  = postgres.StringColumn("mime_type")
+		CategoryColumn  = postgres.StringColumn("category")
+		PreviewColumn   = postgres.StringColumn("preview")
+		TrashedAtColumn = postgres.TimestampColumn("trashed_at")
+		CreatedAtColumn = postgres.TimestampColumn("created_at")
+		UpdatedAtColumn = postgres.TimestampColumn("updated_at")
+		allColumns      = postgres.ColumnList{IDColumn, OwnerIDColumn, FolderIDColumn, NameColumn, SizeColumn, ExtensionColumn, MimeTypeColumn, CategoryColumn, PreviewColumn, TrashedAtColumn, CreatedAtColumn, UpdatedAtColumn}
+		mutableColumns  = postgres.ColumnList{OwnerIDColumn, FolderIDColumn, NameColumn, SizeColumn, ExtensionColumn, MimeTypeColumn, CategoryColumn, PreviewColumn, TrashedAtColumn, CreatedAtColumn, UpdatedAtColumn}
 	)
 
 	return fileInfoTable{
 		Table: postgres.NewTable(schemaName, tableName, alias, allColumns...),
 
 		//Columns
-		ID:            IDColumn,
-		OwnerID:       OwnerIDColumn,
-		FolderID:      FolderIDColumn,
-		Name:          NameColumn,
-		GeneratedName: GeneratedNameColumn,
-		Size:          SizeColumn,
-		Extension:     ExtensionColumn,
-		MimeType:      MimeTypeColumn,
-		Category:      CategoryColumn,
-		Preview:       PreviewColumn,
-		TrashedAt:     TrashedAtColumn,
-		CreatedAt:     CreatedAtColumn,
-		UpdatedAt:     UpdatedAtColumn,
+		ID:        IDColumn,
+		OwnerID:   OwnerIDColumn,
+		FolderID:  FolderIDColumn,
+		Name:      NameColumn,
+		Size:      SizeColumn,
+		Extension: ExtensionColumn,
+		MimeType:  MimeTypeColumn,
+		Category:  CategoryColumn,
+		Preview:   PreviewColumn,
+		TrashedAt: TrashedAtColumn,
+		CreatedAt: CreatedAtColumn,
+		UpdatedAt: UpdatedAtColumn,
 
 		AllColumns:     allColumns,
 		MutableColumns: mutableColumns,

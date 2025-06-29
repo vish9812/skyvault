@@ -11,6 +11,7 @@ import (
 	"skyvault/internal/infrastructure/internal/repository/internal/gen_jet/skyvault/public/model"
 	. "skyvault/internal/infrastructure/internal/repository/internal/gen_jet/skyvault/public/table"
 	"skyvault/pkg/apperror"
+	"skyvault/pkg/common"
 	"skyvault/pkg/paging"
 
 	. "github.com/go-jet/jet/v2/postgres"
@@ -47,14 +48,14 @@ func (r *MediaRepository) CreateFileInfo(ctx context.Context, info *media.FileIn
 	}
 
 	stmt := FileInfo.INSERT(
-		FileInfo.MutableColumns,
+		FileInfo.AllColumns,
 	).MODEL(dbModel).RETURNING(FileInfo.AllColumns)
 
 	return runInsert[model.FileInfo, media.FileInfo](ctx, stmt, r.repository.dbTx)
 }
 
-func (r *MediaRepository) getFileInfo(ctx context.Context, fileID int64, onlyTrashed bool) (*media.FileInfo, error) {
-	whereCond := FileInfo.ID.EQ(Int64(fileID))
+func (r *MediaRepository) getFileInfo(ctx context.Context, fileID string, onlyTrashed bool) (*media.FileInfo, error) {
+	whereCond := FileInfo.ID.EQ(UUID(UUIDStr(fileID)))
 
 	if onlyTrashed {
 		whereCond = whereCond.AND(FileInfo.TrashedAt.IS_NOT_NULL())
@@ -69,26 +70,26 @@ func (r *MediaRepository) getFileInfo(ctx context.Context, fileID int64, onlyTra
 	return runSelect[model.FileInfo, media.FileInfo](ctx, stmt, r.repository.dbTx)
 }
 
-func (r *MediaRepository) GetFileInfo(ctx context.Context, fileID int64) (*media.FileInfo, error) {
+func (r *MediaRepository) GetFileInfo(ctx context.Context, fileID string) (*media.FileInfo, error) {
 	return r.getFileInfo(ctx, fileID, false)
 }
 
-func (r *MediaRepository) GetFileInfoTrashed(ctx context.Context, fileID int64) (*media.FileInfo, error) {
+func (r *MediaRepository) GetFileInfoTrashed(ctx context.Context, fileID string) (*media.FileInfo, error) {
 	return r.getFileInfo(ctx, fileID, true)
 }
 
-func (r *MediaRepository) getFileInfos(ctx context.Context, whereCond BoolExpression, pagingOpt *paging.Options, ownerID int64, folderID *int64, includeFolderID bool) (*paging.Page[*media.FileInfo], error) {
+func (r *MediaRepository) getFileInfos(ctx context.Context, whereCond BoolExpression, pagingOpt *paging.Options, ownerID string, folderID *string, includeFolderID bool) (*paging.Page[*media.FileInfo], error) {
 	if whereCond == nil {
 		whereCond = Bool(true)
 	}
 
-	whereCond = whereCond.AND(FileInfo.OwnerID.EQ(Int64(ownerID)))
+	whereCond = whereCond.AND(FileInfo.OwnerID.EQ(UUID(UUIDStr(ownerID))))
 
 	if includeFolderID {
 		if folderID == nil {
 			whereCond = whereCond.AND(FileInfo.FolderID.IS_NULL())
 		} else {
-			whereCond = whereCond.AND(FileInfo.FolderID.EQ(Int64(*folderID)))
+			whereCond = whereCond.AND(FileInfo.FolderID.EQ(UUID(UUIDStr(*folderID))))
 		}
 	}
 
@@ -134,11 +135,11 @@ func (r *MediaRepository) getFileInfos(ctx context.Context, whereCond BoolExpres
 	return page, nil
 }
 
-func (r *MediaRepository) GetFileInfos(ctx context.Context, pagingOpt *paging.Options, ownerID int64, folderID *int64) (*paging.Page[*media.FileInfo], error) {
+func (r *MediaRepository) GetFileInfos(ctx context.Context, pagingOpt *paging.Options, ownerID string, folderID *string) (*paging.Page[*media.FileInfo], error) {
 	return r.getFileInfos(ctx, nil, pagingOpt, ownerID, folderID, true)
 }
 
-func (r *MediaRepository) GetFileInfosByCategory(ctx context.Context, pagingOpt *paging.Options, ownerID int64, category media.Category) (*paging.Page[*media.FileInfo], error) {
+func (r *MediaRepository) GetFileInfosByCategory(ctx context.Context, pagingOpt *paging.Options, ownerID string, category media.Category) (*paging.Page[*media.FileInfo], error) {
 	whereCond := FileInfo.Category.EQ(String(string(category)))
 	return r.getFileInfos(ctx, whereCond, pagingOpt, ownerID, nil, false)
 }
@@ -146,22 +147,22 @@ func (r *MediaRepository) GetFileInfosByCategory(ctx context.Context, pagingOpt 
 func (r *MediaRepository) UpdateFileInfo(ctx context.Context, info *media.FileInfo) error {
 	stmt := FileInfo.UPDATE(FileInfo.MutableColumns).
 		MODEL(info).
-		WHERE(FileInfo.ID.EQ(Int64(info.ID)))
+		WHERE(FileInfo.ID.EQ(UUID(UUIDStr(info.ID))))
 
 	return runUpdateOrDelete(ctx, stmt, r.repository.dbTx)
 }
 
-func (r *MediaRepository) DeleteFileInfo(ctx context.Context, fileID int64) error {
+func (r *MediaRepository) DeleteFileInfo(ctx context.Context, fileID string) error {
 	stmt := FileInfo.DELETE().
-		WHERE(FileInfo.ID.EQ(Int64(fileID)))
+		WHERE(FileInfo.ID.EQ(UUID(UUIDStr(fileID))))
 
 	return runUpdateOrDelete(ctx, stmt, r.repository.dbTx)
 }
 
-func (r *MediaRepository) TrashFileInfos(ctx context.Context, ownerID int64, fileIDs []int64) error {
+func (r *MediaRepository) TrashFileInfos(ctx context.Context, ownerID string, fileIDs []string) error {
 	inExp := make([]Expression, 0, len(fileIDs))
 	for _, fileID := range fileIDs {
-		inExp = append(inExp, Int64(fileID))
+		inExp = append(inExp, UUID(UUIDStr(fileID)))
 	}
 
 	now := time.Now().UTC()
@@ -175,7 +176,7 @@ func (r *MediaRepository) TrashFileInfos(ctx context.Context, ownerID int64, fil
 		WHERE(
 			FileInfo.ID.IN(inExp...).
 				AND(FileInfo.TrashedAt.IS_NULL()).
-				AND(FileInfo.OwnerID.EQ(Int64(ownerID))),
+				AND(FileInfo.OwnerID.EQ(UUID(UUIDStr(ownerID)))),
 		)
 
 	return runUpdateOrDelete(ctx, stmt, r.repository.dbTx)
@@ -193,14 +194,14 @@ func (r *MediaRepository) CreateFolderInfo(ctx context.Context, info *media.Fold
 	}
 
 	stmt := FolderInfo.INSERT(
-		FolderInfo.MutableColumns,
+		FolderInfo.AllColumns,
 	).MODEL(dbModel).RETURNING(FolderInfo.AllColumns)
 
 	return runInsert[model.FolderInfo, media.FolderInfo](ctx, stmt, r.repository.dbTx)
 }
 
-func (r *MediaRepository) getFolderInfo(ctx context.Context, folderID int64, onlyTrashed bool) (*media.FolderInfo, error) {
-	whereCond := FolderInfo.ID.EQ(Int64(folderID))
+func (r *MediaRepository) getFolderInfo(ctx context.Context, ownerID, folderID string, onlyTrashed bool) (*media.FolderInfo, error) {
+	whereCond := FolderInfo.ID.EQ(UUID(UUIDStr(folderID))).AND(FolderInfo.OwnerID.EQ(UUID(UUIDStr(ownerID))))
 
 	if onlyTrashed {
 		whereCond = whereCond.AND(FolderInfo.TrashedAt.IS_NOT_NULL())
@@ -215,20 +216,20 @@ func (r *MediaRepository) getFolderInfo(ctx context.Context, folderID int64, onl
 	return runSelect[model.FolderInfo, media.FolderInfo](ctx, stmt, r.repository.dbTx)
 }
 
-func (r *MediaRepository) GetFolderInfo(ctx context.Context, folderID int64) (*media.FolderInfo, error) {
-	return r.getFolderInfo(ctx, folderID, false)
+func (r *MediaRepository) GetFolderInfo(ctx context.Context, ownerID, folderID string) (*media.FolderInfo, error) {
+	return r.getFolderInfo(ctx, ownerID, folderID, false)
 }
 
-func (r *MediaRepository) GetFolderInfoTrashed(ctx context.Context, folderID int64) (*media.FolderInfo, error) {
-	return r.getFolderInfo(ctx, folderID, true)
+func (r *MediaRepository) GetFolderInfoTrashed(ctx context.Context, ownerID, folderID string) (*media.FolderInfo, error) {
+	return r.getFolderInfo(ctx, ownerID, folderID, true)
 }
 
-func (r *MediaRepository) GetFolderInfos(ctx context.Context, pagingOpt *paging.Options, ownerID int64, parentFolderID *int64) (*paging.Page[*media.FolderInfo], error) {
-	whereCond := FolderInfo.OwnerID.EQ(Int64(ownerID))
+func (r *MediaRepository) GetFolderInfos(ctx context.Context, pagingOpt *paging.Options, ownerID string, parentFolderID *string) (*paging.Page[*media.FolderInfo], error) {
+	whereCond := FolderInfo.OwnerID.EQ(UUID(UUIDStr(ownerID)))
 	if parentFolderID == nil {
 		whereCond = whereCond.AND(FolderInfo.ParentFolderID.IS_NULL())
 	} else {
-		whereCond = whereCond.AND(FolderInfo.ParentFolderID.EQ(Int64(*parentFolderID)))
+		whereCond = whereCond.AND(FolderInfo.ParentFolderID.EQ(UUID(UUIDStr(*parentFolderID))))
 	}
 
 	whereCond = whereCond.AND(FolderInfo.TrashedAt.IS_NULL())
@@ -275,19 +276,19 @@ func (r *MediaRepository) GetFolderInfos(ctx context.Context, pagingOpt *paging.
 func (r *MediaRepository) UpdateFolderInfo(ctx context.Context, info *media.FolderInfo) error {
 	stmt := FolderInfo.UPDATE(FolderInfo.MutableColumns).
 		MODEL(info).
-		WHERE(FolderInfo.ID.EQ(Int64(info.ID)))
+		WHERE(FolderInfo.ID.EQ(UUID(UUIDStr(info.ID))))
 
 	return runUpdateOrDelete(ctx, stmt, r.repository.dbTx)
 }
 
-func (r *MediaRepository) DeleteFolderInfo(ctx context.Context, folderID int64) error {
+func (r *MediaRepository) DeleteFolderInfo(ctx context.Context, folderID string) error {
 	stmt := FolderInfo.DELETE().
-		WHERE(FolderInfo.ID.EQ(Int64(folderID)))
+		WHERE(FolderInfo.ID.EQ(UUID(UUIDStr(folderID))))
 
 	return runUpdateOrDelete(ctx, stmt, r.repository.dbTx)
 }
 
-func (r *MediaRepository) TrashFolderInfos(ctx context.Context, ownerID int64, folderIDs []int64) error {
+func (r *MediaRepository) TrashFolderInfos(ctx context.Context, ownerID string, folderIDs []string) error {
 	nestedFoldersCTE := r.getNestedFoldersCTE(ownerID, folderIDs, false)
 	trashFilesCTE := CTE("trash_files")
 
@@ -327,8 +328,8 @@ func (r *MediaRepository) TrashFolderInfos(ctx context.Context, ownerID int64, f
 	return runUpdateOrDelete(ctx, stmt, r.repository.dbTx)
 }
 
-func (r *MediaRepository) RestoreFolderInfo(ctx context.Context, ownerID int64, folderID int64) error {
-	nestedFoldersCTE := r.getNestedFoldersCTE(ownerID, []int64{folderID}, true)
+func (r *MediaRepository) RestoreFolderInfo(ctx context.Context, ownerID string, folderID string) error {
+	nestedFoldersCTE := r.getNestedFoldersCTE(ownerID, []string{folderID}, true)
 	restoreFoldersCTE := CTE("restore_folders")
 
 	now := time.Now().UTC()
@@ -368,12 +369,12 @@ func (r *MediaRepository) RestoreFolderInfo(ctx context.Context, ownerID int64, 
 }
 
 // getNestedFoldersCTE returns a CTE that returns all nested folders of the given folders, including the folders themselves.
-func (r *MediaRepository) getNestedFoldersCTE(ownerID int64, folderIDs []int64, onlyTrashed bool) CommonTableExpression {
+func (r *MediaRepository) getNestedFoldersCTE(ownerID string, folderIDs []string, onlyTrashed bool) CommonTableExpression {
 	nestedFolders := CTE("nested_folders")
 
 	inExp := make([]Expression, 0, len(folderIDs))
 	for _, folderID := range folderIDs {
-		inExp = append(inExp, Int64(folderID))
+		inExp = append(inExp, UUID(UUIDStr(folderID)))
 	}
 
 	trashedCond := FolderInfo.TrashedAt.IS_NULL()
@@ -388,7 +389,7 @@ func (r *MediaRepository) getNestedFoldersCTE(ownerID int64, folderIDs []int64, 
 			FolderInfo,
 		).WHERE(
 			FolderInfo.ID.IN(inExp...).
-				AND(FolderInfo.OwnerID.EQ(Int64(ownerID))).
+				AND(FolderInfo.OwnerID.EQ(UUID(UUIDStr(ownerID)))).
 				AND(trashedCond),
 		).UNION(
 			SELECT(
@@ -397,26 +398,82 @@ func (r *MediaRepository) getNestedFoldersCTE(ownerID int64, folderIDs []int64, 
 				FolderInfo.
 					INNER_JOIN(nestedFolders, FolderInfo.ID.From(nestedFolders).EQ(FolderInfo.ParentFolderID)),
 			).WHERE(
-				FolderInfo.OwnerID.EQ(Int64(ownerID)).
+				FolderInfo.OwnerID.EQ(UUID(UUIDStr(ownerID))).
 					AND(trashedCond),
 			),
 		),
 	)
 }
 
-func (r *MediaRepository) GetDescendantFolderIDs(ctx context.Context, ownerID, folderID int64) ([]int64, error) {
-	nestedFoldersCTE := r.getNestedFoldersCTE(ownerID, []int64{folderID}, false)
+func (r *MediaRepository) GetDescendantFolderIDs(ctx context.Context, ownerID, folderID string) ([]string, error) {
+	nestedFoldersCTE := r.getNestedFoldersCTE(ownerID, []string{folderID}, false)
 
 	stmt := SELECT(FolderInfo.ID.From(nestedFoldersCTE)).
 		FROM(nestedFoldersCTE)
 
-	var folderIDs []int64
+	var folderIDs []string
 	err := stmt.QueryContext(ctx, r.repository.dbTx, &folderIDs)
 	if err != nil {
 		return nil, apperror.NewAppError(err, "repository.GetDescendantFolderIDs:stmt.QueryContext")
 	}
 
-	return slices.DeleteFunc(folderIDs, func(id int64) bool {
+	return slices.DeleteFunc(folderIDs, func(id string) bool {
 		return id == folderID
 	}), nil
+}
+
+func (r *MediaRepository) getAncestorsCTE(ownerID, folderID string) CommonTableExpression {
+	ancestorsCTE := CTE("ancestors")
+
+	// Create a recursive CTE to traverse up the folder hierarchy
+	return ancestorsCTE.AS(
+		// Base case: Get the parent folder of the given folder (if it exists)
+		SELECT(
+			FolderInfo.ID,
+			FolderInfo.Name,
+			FolderInfo.ParentFolderID,
+		).FROM(
+			FolderInfo,
+		).WHERE(
+			FolderInfo.ID.IN(
+				SELECT(FolderInfo.ParentFolderID).
+					FROM(FolderInfo).
+					WHERE(
+						FolderInfo.ID.EQ(UUID(UUIDStr(folderID))).
+							AND(FolderInfo.OwnerID.EQ(UUID(UUIDStr(ownerID)))).
+							AND(FolderInfo.TrashedAt.IS_NULL()).
+							AND(FolderInfo.ParentFolderID.IS_NOT_NULL()),
+					),
+			).AND(
+				FolderInfo.OwnerID.EQ(UUID(UUIDStr(ownerID))).
+					AND(FolderInfo.TrashedAt.IS_NULL()),
+			),
+		).UNION(
+			// Recursive case: Get parent folders of current ancestors
+			SELECT(
+				FolderInfo.ID,
+				FolderInfo.Name,
+				FolderInfo.ParentFolderID,
+			).FROM(
+				FolderInfo.
+					INNER_JOIN(ancestorsCTE, FolderInfo.ID.EQ(FolderInfo.ParentFolderID.From(ancestorsCTE))),
+			).WHERE(
+				FolderInfo.OwnerID.EQ(UUID(UUIDStr(ownerID))).
+					AND(FolderInfo.TrashedAt.IS_NULL()),
+			),
+		),
+	)
+}
+
+func (r *MediaRepository) GetAncestors(ctx context.Context, ownerID, folderID string) ([]*common.BaseInfo, error) {
+	ancestorsCTE := r.getAncestorsCTE(ownerID, folderID)
+
+	stmt := WITH_RECURSIVE(ancestorsCTE)(
+		SELECT(
+			FolderInfo.ID.From(ancestorsCTE),
+			FolderInfo.Name.From(ancestorsCTE),
+		).FROM(ancestorsCTE),
+	)
+
+	return runSelectSliceAll[model.FolderInfo, common.BaseInfo](ctx, stmt, r.repository.dbTx)
 }

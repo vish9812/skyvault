@@ -24,14 +24,14 @@ func setupTestApp() *appconfig.App {
 				DataDir: testBasePath,
 			},
 			Media: appconfig.MediaConfig{
-				MaxSizeMB: 1,
+				MaxUploadSizeMB: 1,
 			},
 		},
 	}
 }
 
-func createTestFile(t *testing.T, baseDir string, ownerID int64, fileName string, fileContent []byte) string {
-	ownerDir := getOwnerDir(baseDir, ownerID)
+func createTestFile(t *testing.T, baseDir string, ownerID string, fileName string, fileContent []byte) string {
+	ownerDir := getOwnerDirPath(baseDir, ownerID)
 	err := os.MkdirAll(ownerDir, 0750)
 	if err != nil {
 		t.Fatalf("Failed to create test owner directory at %s: %v", ownerDir, err)
@@ -61,7 +61,7 @@ func TestSaveFile(t *testing.T) {
 	ls := NewLocalStorage(app)
 	ctx := context.Background()
 
-	ownerID := int64(1)
+	ownerID := "1"
 	fileName := "testfile.txt"
 	fileContent := []byte("testing save file")
 	fileReader := bytes.NewReader(fileContent)
@@ -69,7 +69,7 @@ func TestSaveFile(t *testing.T) {
 	err := ls.SaveFile(ctx, fileReader, fileName, ownerID)
 	require.NoError(t, err, "SaveFile should not return an error")
 
-	savePath := getFilePath(getOwnerDir(ls.baseDir, ownerID), fileName)
+	savePath := getFilePath(getOwnerDirPath(ls.baseDir, ownerID), fileName)
 	_, err = os.Stat(savePath)
 	require.NoError(t, err, "Saved file should exist")
 
@@ -88,7 +88,7 @@ func TestDeleteFile(t *testing.T) {
 	local := NewLocalStorage(app)
 	ctx := context.Background()
 
-	ownerID := int64(1)
+	ownerID := "1"
 	fileName := "testfile.txt"
 	fileContent := []byte("testing delete file")
 	savePath := createTestFile(t, local.baseDir, ownerID, fileName, fileContent)
@@ -110,7 +110,7 @@ func TestOpenFile(t *testing.T) {
 	local := NewLocalStorage(app)
 	ctx := context.Background()
 
-	ownerID := int64(1)
+	ownerID := "1"
 	fileName := "testfile.txt"
 	fileContent := []byte("testing open file")
 

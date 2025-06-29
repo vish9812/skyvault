@@ -8,7 +8,7 @@ type QueryHandlers struct {
 	repository Repository
 }
 
-func NewQueryHandlers(repository Repository) *QueryHandlers {
+func NewQueryHandlers(repository Repository) Queries {
 	return &QueryHandlers{repository: repository}
 }
 

@@ -13,11 +13,10 @@ import (
 )
 
 type ShareConfig struct {
-	ID           int64 `sql:"primary_key"`
-	CustomID     uuid.UUID
-	OwnerID      int64
-	FileID       *int64
-	FolderID     *int64
+	ID           uuid.UUID `sql:"primary_key"`
+	OwnerID      uuid.UUID
+	FileID       *uuid.UUID
+	FolderID     *uuid.UUID
 	PasswordHash *string
 	MaxDownloads *int64
 	ExpiresAt    *time.Time

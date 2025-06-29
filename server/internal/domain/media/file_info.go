@@ -1,26 +1,22 @@
 package media
 
 import (
+	"fmt"
 	"io"
 	"path/filepath"
 	"skyvault/pkg/apperror"
+	"skyvault/pkg/common"
 	"skyvault/pkg/utils"
 	"strings"
 	"time"
 )
 
 const (
-	BytesPerKB = 1 << 10
-	BytesPerMB = 1 << 20
-	BytesPerGB = 1 << 30
-)
-
-const (
-	CategoryImages    = "images"
-	CategoryDocuments = "documents"
-	CategoryVideos    = "videos"
-	CategoryAudios    = "audios"
-	CategoryOthers    = "others"
+	CategoryImage = "image"
+	CategoryText  = "text"
+	CategoryVideo = "video"
+	CategoryAudio = "audio"
+	CategoryOther = "other"
 )
 
 type FileConfig struct {
@@ -29,27 +25,25 @@ type FileConfig struct {
 
 // TODO: Generate preview asynchronously via worker
 type FileInfo struct {
-	ID            int64
-	OwnerID       int64
-	FolderID      *int64 // null if file is in root folder
-	Name          string
-	GeneratedName string
-	Size          int64 // bytes
-	Extension     *string
-	MimeType      string
-	Category      Category
-	Preview       []byte
-	CreatedAt     time.Time
-	UpdatedAt     time.Time
-	TrashedAt     *time.Time
+	ID        string
+	OwnerID   string
+	FolderID  *string // null if file is in root folder
+	Name      string
+	Size      int64 // bytes
+	Extension *string
+	MimeType  string
+	Category  Category
+	Preview   []byte
+	CreatedAt time.Time
+	UpdatedAt time.Time
+	TrashedAt *time.Time
 }
 
 // App Errors:
 // - ErrCommonNoAccess
 // - ErrCommonInvalidValue
-// - ErrMediaFileSizeLimitExceeded
-func NewFileInfo(config FileConfig, ownerID int64, parentFolder *FolderInfo, name string, size int64, mimeType string) (*FileInfo, error) {
-	var folderID *int64
+func NewFileInfo(config FileConfig, ownerID string, parentFolder *FolderInfo, name string, size int64, mimeType string) (*FileInfo, error) {
+	var folderID *string
 	if parentFolder != nil {
 		if err := parentFolder.ValidateAccess(ownerID); err != nil {
 			return nil, apperror.NewAppError(err, "media.NewFileInfo:ValidateParentAccess")
@@ -57,33 +51,36 @@ func NewFileInfo(config FileConfig, ownerID int64, parentFolder *FolderInfo, nam
 		folderID = &parentFolder.ID
 	}
 
-	if size > (config.MaxSizeMB * BytesPerMB) {
-		return nil, apperror.NewAppError(apperror.ErrMediaFileSizeLimitExceeded, "media.NewFileInfo").WithMetadata("max_size_mb", config.MaxSizeMB).WithMetadata("file_size", size)
+	if size > (config.MaxSizeMB * common.BytesPerMB) {
+		return nil, apperror.NewAppError(fmt.Errorf("%w: file size limit exceeded", apperror.ErrCommonInvalidValue), "media.NewFileInfo:FileSizeLimitExceeded").WithMetadata("max_size_mb", config.MaxSizeMB).WithMetadata("file_size_mb", size/common.BytesPerMB)
 	}
 
 	if mimeType == "" {
 		mimeType = "application/octet-stream"
 	}
 
-	generatedName := utils.UUID()
-
 	var ext *string
 	if e := filepath.Ext(name); e != "" {
 		ext = &e
 	}
 
+	id, err := utils.ID()
+	if err != nil {
+		return nil, apperror.NewAppError(err, "media.NewFileInfo:ID")
+	}
+
 	now := time.Now().UTC()
 	return &FileInfo{
-		OwnerID:       ownerID,
-		FolderID:      folderID,
-		Name:          name,
-		GeneratedName: generatedName,
-		Size:          size,
-		Extension:     ext,
-		MimeType:      mimeType,
-		Category:      getCategory(mimeType),
-		CreatedAt:     now,
-		UpdatedAt:     now,
+		ID:        id,
+		OwnerID:   ownerID,
+		FolderID:  folderID,
+		Name:      name,
+		Size:      size,
+		Extension: ext,
+		MimeType:  mimeType,
+		Category:  getCategory(mimeType),
+		CreatedAt: now,
+		UpdatedAt: now,
 	}, nil
 }
 
@@ -94,21 +91,21 @@ func getCategory(mimeType string) Category {
 	baseMime := strings.Split(mimeType, "/")[0]
 	switch baseMime {
 	case "text":
-		category = CategoryDocuments
+		category = CategoryText
 	case "image":
-		category = CategoryImages
+		category = CategoryImage
 	case "audio":
-		category = CategoryAudios
+		category = CategoryAudio
 	case "video":
-		category = CategoryVideos
+		category = CategoryVideo
 	default:
-		category = CategoryOthers
+		category = CategoryOther
 	}
 	return category
 }
 
 func (f *FileInfo) WithPreview(file io.ReadSeeker) (*FileInfo, error) {
-	if f.Category != CategoryImages {
+	if f.Category != CategoryImage {
 		return f, nil
 	}
 
@@ -140,7 +137,7 @@ func (f *FileInfo) Restore(parentFolderIsTrashed bool) {
 
 // App Errors:
 // - ErrCommonNoAccess
-func (f *FileInfo) ValidateAccess(ownerID int64) error {
+func (f *FileInfo) ValidateAccess(ownerID string) error {
 	if f.OwnerID != ownerID {
 		return apperror.NewAppError(apperror.ErrCommonNoAccess, "media.FileInfo.ValidateAccess").WithMetadata("owner_id", ownerID).WithMetadata("file_owner_id", f.OwnerID)
 	}

@@ -14,7 +14,7 @@ type Repository interface {
 
 	// App Errors:
 	// - ErrCommonNoData
-	Get(ctx context.Context, id int64) (*Profile, error)
+	Get(ctx context.Context, id string) (*Profile, error)
 
 	// App Errors:
 	// - ErrCommonNoData
@@ -26,5 +26,5 @@ type Repository interface {
 
 	// App Errors:
 	// - ErrCommonNoData
-	Delete(ctx context.Context, id int64) error
+	Delete(ctx context.Context, id string) error
 }

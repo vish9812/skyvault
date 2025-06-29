@@ -17,10 +17,10 @@ type folderInfoTable struct {
 	postgres.Table
 
 	// Columns
-	ID             postgres.ColumnInteger
-	OwnerID        postgres.ColumnInteger
+	ID             postgres.ColumnString
+	OwnerID        postgres.ColumnString
 	Name           postgres.ColumnString
-	ParentFolderID postgres.ColumnInteger
+	ParentFolderID postgres.ColumnString
 	TrashedAt      postgres.ColumnTimestamp
 	CreatedAt      postgres.ColumnTimestamp
 	UpdatedAt      postgres.ColumnTimestamp
@@ -64,10 +64,10 @@ func newFolderInfoTable(schemaName, tableName, alias string) *FolderInfoTable {
 
 func newFolderInfoTableImpl(schemaName, tableName, alias string) folderInfoTable {
 	var (
-		IDColumn             = postgres.IntegerColumn("id")
-		OwnerIDColumn        = postgres.IntegerColumn("owner_id")
+		IDColumn             = postgres.StringColumn("id")
+		OwnerIDColumn        = postgres.StringColumn("owner_id")
 		NameColumn           = postgres.StringColumn("name")
-		ParentFolderIDColumn = postgres.IntegerColumn("parent_folder_id")
+		ParentFolderIDColumn = postgres.StringColumn("parent_folder_id")
 		TrashedAtColumn      = postgres.TimestampColumn("trashed_at")
 		CreatedAtColumn      = postgres.TimestampColumn("created_at")
 		UpdatedAtColumn      = postgres.TimestampColumn("updated_at")

@@ -10,11 +10,11 @@ import (
 func TestNewAuth(t *testing.T) {
 	validPassword := "password123"
 	validEmail := "test@example.com"
-	validProfileID := int64(1)
+	validProfileID := "1"
 
 	tests := []struct {
 		name           string
-		profileID      int64
+		profileID      string
 		provider       Provider
 		providerUserID string
 		password       *string
@@ -86,22 +86,24 @@ func TestNewAuth(t *testing.T) {
 }
 
 func TestAuth_ValidateAccess(t *testing.T) {
+	validProfileID := "1"
+
 	auth := &Auth{
-		ProfileID: 1,
+		ProfileID: validProfileID,
 	}
 
 	tests := []struct {
 		name         string
-		accessedByID int64
+		accessedByID string
 		wantErr      bool
 	}{
 		{
 			name:         "valid access",
-			accessedByID: 1,
+			accessedByID: validProfileID,
 		},
 		{
 			name:         "invalid access",
-			accessedByID: 2,
+			accessedByID: "2",
 			wantErr:      true,
 		},
 	}

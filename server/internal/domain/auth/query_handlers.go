@@ -12,7 +12,7 @@ type QueryHandlers struct {
 	authenticatorFactory AuthenticatorFactory
 }
 
-func NewQueryHandlers(repository Repository, authenticatorFactory AuthenticatorFactory) *QueryHandlers {
+func NewQueryHandlers(repository Repository, authenticatorFactory AuthenticatorFactory) Queries {
 	return &QueryHandlers{
 		repository:           repository,
 		authenticatorFactory: authenticatorFactory,

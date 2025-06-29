@@ -13,7 +13,7 @@ type CommandHandlers struct {
 	authenticatorFactory AuthenticatorFactory
 }
 
-func NewCommandHandlers(repository Repository, authenticatorFactory AuthenticatorFactory) *CommandHandlers {
+func NewCommandHandlers(repository Repository, authenticatorFactory AuthenticatorFactory) Commands {
 	return &CommandHandlers{
 		repository:           repository,
 		authenticatorFactory: authenticatorFactory,

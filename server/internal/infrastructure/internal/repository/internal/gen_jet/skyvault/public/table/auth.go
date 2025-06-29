@@ -17,8 +17,8 @@ type authTable struct {
 	postgres.Table
 
 	// Columns
-	ID             postgres.ColumnInteger
-	ProfileID      postgres.ColumnInteger
+	ID             postgres.ColumnString
+	ProfileID      postgres.ColumnString
 	Provider       postgres.ColumnString
 	ProviderUserID postgres.ColumnString
 	PasswordHash   postgres.ColumnString
@@ -64,8 +64,8 @@ func newAuthTable(schemaName, tableName, alias string) *AuthTable {
 
 func newAuthTableImpl(schemaName, tableName, alias string) authTable {
 	var (
-		IDColumn             = postgres.IntegerColumn("id")
-		ProfileIDColumn      = postgres.IntegerColumn("profile_id")
+		IDColumn             = postgres.StringColumn("id")
+		ProfileIDColumn      = postgres.StringColumn("profile_id")
 		ProviderColumn       = postgres.StringColumn("provider")
 		ProviderUserIDColumn = postgres.StringColumn("provider_user_id")
 		PasswordHashColumn   = postgres.StringColumn("password_hash")

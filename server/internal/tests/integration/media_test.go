@@ -2,7 +2,7 @@ package integration
 
 import (
 	"fmt"
-	"skyvault/internal/domain/media"
+	"skyvault/pkg/common"
 	"skyvault/pkg/paging"
 	"testing"
 
@@ -20,13 +20,13 @@ func TestMediaManagementFlow(t *testing.T) {
 	_, token := createTestUser(t, env)
 
 	// Create initial folder
-	folder1 := createFolder(t, env, token, 0, "Documents")
+	folder1 := createFolder(t, env, token, "0", "Documents")
 	require.Equal(t, "Documents", folder1.Name, "created folder should have correct name")
 
 	// Upload a file to the folder
-	file1 := uploadFile(t, env, token, folder1.ID, "test.txt", media.BytesPerKB)
+	file1 := uploadFile(t, env, token, folder1.ID, "test.txt", common.BytesPerKB)
 	require.Equal(t, "test.txt", file1.Name, "uploaded file should have correct name")
-	require.Equal(t, int64(media.BytesPerKB), file1.Size, "uploaded file should have correct size")
+	require.Equal(t, int64(common.BytesPerKB), file1.Size, "uploaded file should have correct size")
 
 	// Verify folder contents
 	contents1 := getFolderContents(t, env, token, folder1.ID)
@@ -35,15 +35,15 @@ func TestMediaManagementFlow(t *testing.T) {
 	require.Len(t, contents1.FolderPage.Items, 0, "folder should not contain any subfolders")
 
 	// Verify root folder contents
-	rootContents := getFolderContents(t, env, token, 0)
+	rootContents := getFolderContents(t, env, token, "0")
 	require.Len(t, rootContents.FolderPage.Items, 1, "root should contain exactly one folder")
 	require.Equal(t, folder1.Name, rootContents.FolderPage.Items[0].Name, "folder in root should have correct name")
 	require.Len(t, rootContents.FilePage.Items, 0, "root should not contain any files")
 
 	// Download the file
-	buf := make([]byte, media.BytesPerKB)
+	buf := make([]byte, common.BytesPerKB)
 	downloadFile(t, env, token, file1.ID, buf)
-	require.Len(t, buf, media.BytesPerKB, "downloaded file should have correct size")
+	require.Len(t, buf, common.BytesPerKB, "downloaded file should have correct size")
 
 	// Rename the file
 	renameFile(t, env, token, file1.ID, "renamed.txt")
@@ -54,7 +54,7 @@ func TestMediaManagementFlow(t *testing.T) {
 	require.Equal(t, "renamed.txt", contents1Renamed.FilePage.Items[0].Name, "renamed file should have updated name")
 
 	// Create another folder
-	folder2 := createFolder(t, env, token, 0, "Archive")
+	folder2 := createFolder(t, env, token, "0", "Archive")
 	require.Equal(t, "Archive", folder2.Name, "second folder should have correct name")
 
 	// Move file to new folder
@@ -69,17 +69,17 @@ func TestMediaManagementFlow(t *testing.T) {
 	require.Equal(t, file1.ID, contents2.FilePage.Items[0].ID, "file in destination folder should be the moved file")
 
 	// Trash both folders
-	trashFolders(t, env, token, []int64{folder1.ID, folder2.ID})
+	trashFolders(t, env, token, []string{folder1.ID, folder2.ID})
 
 	// Verify folders are trashed
-	rootContentsTrashed := getFolderContents(t, env, token, 0)
+	rootContentsTrashed := getFolderContents(t, env, token, "0")
 	require.Len(t, rootContentsTrashed.FolderPage.Items, 0, "root should not contain any folders after trash")
 
 	// Restore the folder which contains the file
 	restoreFolder(t, env, token, folder2.ID)
 
 	// Verify folder is restored
-	rootContentsRestored := getFolderContents(t, env, token, 0)
+	rootContentsRestored := getFolderContents(t, env, token, "0")
 	require.Len(t, rootContentsRestored.FolderPage.Items, 1, "root should contain exactly one folder after restore")
 	require.Equal(t, folder2.ID, rootContentsRestored.FolderPage.Items[0].ID, "restored folder should be the correct one")
 
@@ -130,11 +130,11 @@ func TestPagination(t *testing.T) {
 				}
 			}
 
-			folder := createFolder(t, env, token, 0, tc.name)
+			folder := createFolder(t, env, token, "0", tc.name)
 
 			// Upload 8 files to root folder
 			for _, num := range tc.expected {
-				uploadFile(t, env, token, folder.ID, fileName(num), media.BytesPerKB)
+				uploadFile(t, env, token, folder.ID, fileName(num), common.BytesPerKB)
 			}
 
 			// Get first page (3 items) going forward

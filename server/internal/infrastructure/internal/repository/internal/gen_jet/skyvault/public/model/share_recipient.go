@@ -8,14 +8,15 @@
 package model
 
 import (
+	"github.com/google/uuid"
 	"time"
 )
 
 type ShareRecipient struct {
-	ID             int64 `sql:"primary_key"`
-	ShareConfigID  int64
-	ContactID      *int64
-	GroupID        *int64
+	ID             uuid.UUID `sql:"primary_key"`
+	ShareConfigID  uuid.UUID
+	ContactID      *uuid.UUID
+	GroupID        *uuid.UUID
 	Email          *string
 	DownloadsCount int64
 	CreatedAt      time.Time

@@ -28,12 +28,12 @@ func filesURL() string {
 	return baseURL + "/media/files"
 }
 
-func folderURL(id int64) string {
-	return fmt.Sprintf("%s/%d", foldersURL(), id)
+func folderURL(id string) string {
+	return fmt.Sprintf("%s/%s", foldersURL(), id)
 }
 
-func fileURL(id int64) string {
-	return fmt.Sprintf("%s/%d", filesURL(), id)
+func fileURL(id string) string {
+	return fmt.Sprintf("%s/%s", filesURL(), id)
 }
 
 // Helper to create test file in testdata
@@ -55,7 +55,7 @@ func createTestFile(t *testing.T, env *testEnv, name string, size int64) string 
 	return path
 }
 
-func createFolder(t *testing.T, env *testEnv, token string, parentID int64, name string) *dtos.GetFolderInfo {
+func createFolder(t *testing.T, env *testEnv, token string, parentID string, name string) *dtos.GetFolderInfo {
 	t.Helper()
 	body := map[string]string{"name": name}
 	jsonBody, err := json.Marshal(body)
@@ -75,7 +75,7 @@ func createFolder(t *testing.T, env *testEnv, token string, parentID int64, name
 	return &folderInfo
 }
 
-func uploadFile(t *testing.T, env *testEnv, token string, folderID int64, fileName string, fileSize int64) *dtos.GetFileInfo {
+func uploadFile(t *testing.T, env *testEnv, token string, folderID string, fileName string, fileSize int64) *dtos.GetFileInfo {
 	t.Helper()
 	filePath := createTestFile(t, env, fileName, fileSize)
 
@@ -105,7 +105,7 @@ func uploadFile(t *testing.T, env *testEnv, token string, folderID int64, fileNa
 	return &fileInfo
 }
 
-func getFolderContents(t *testing.T, env *testEnv, token string, folderID int64) *dtos.GetFolderContent {
+func getFolderContents(t *testing.T, env *testEnv, token string, folderID string) *dtos.GetFolderContent {
 	t.Helper()
 	req, err := http.NewRequest(http.MethodGet, folderURL(folderID)+"/content", nil)
 	require.NoError(t, err, "should create new request for folder contents")
@@ -120,7 +120,7 @@ func getFolderContents(t *testing.T, env *testEnv, token string, folderID int64)
 	return &content
 }
 
-func renameFile(t *testing.T, env *testEnv, token string, fileID int64, newName string) {
+func renameFile(t *testing.T, env *testEnv, token string, fileID string, newName string) {
 	t.Helper()
 	body := map[string]string{"name": newName}
 	jsonBody, err := json.Marshal(body)
@@ -135,9 +135,9 @@ func renameFile(t *testing.T, env *testEnv, token string, fileID int64, newName 
 	require.Equal(t, http.StatusNoContent, resp.Code, "should return status no content for file rename")
 }
 
-func moveFile(t *testing.T, env *testEnv, token string, fileID int64, newFolderID int64) {
+func moveFile(t *testing.T, env *testEnv, token string, fileID string, newFolderID string) {
 	t.Helper()
-	body := map[string]int64{"folderId": newFolderID}
+	body := map[string]string{"folderId": newFolderID}
 	jsonBody, err := json.Marshal(body)
 	require.NoError(t, err)
 
@@ -150,9 +150,9 @@ func moveFile(t *testing.T, env *testEnv, token string, fileID int64, newFolderI
 	require.Equal(t, http.StatusNoContent, resp.Code, "should return status no content for file move")
 }
 
-func trashFolders(t *testing.T, env *testEnv, token string, folderIDs []int64) {
+func trashFolders(t *testing.T, env *testEnv, token string, folderIDs []string) {
 	t.Helper()
-	body := map[string][]int64{"folderIds": folderIDs}
+	body := map[string][]string{"folderIds": folderIDs}
 	jsonBody, err := json.Marshal(body)
 	require.NoError(t, err)
 
@@ -165,7 +165,7 @@ func trashFolders(t *testing.T, env *testEnv, token string, folderIDs []int64) {
 	require.Equal(t, http.StatusNoContent, resp.Code, "should return status no content for folder trash")
 }
 
-func restoreFolder(t *testing.T, env *testEnv, token string, folderID int64) {
+func restoreFolder(t *testing.T, env *testEnv, token string, folderID string) {
 	t.Helper()
 
 	req, err := http.NewRequest(http.MethodPatch, folderURL(folderID)+"/restore", nil)
@@ -176,7 +176,7 @@ func restoreFolder(t *testing.T, env *testEnv, token string, folderID int64) {
 	require.Equal(t, http.StatusNoContent, resp.Code, "should return status no content for folder restore")
 }
 
-func downloadFile(t *testing.T, env *testEnv, token string, fileID int64, buf []byte) {
+func downloadFile(t *testing.T, env *testEnv, token string, fileID string, buf []byte) {
 	t.Helper()
 
 	req, err := http.NewRequest(http.MethodGet, fileURL(fileID)+"/download", nil)
@@ -190,7 +190,7 @@ func downloadFile(t *testing.T, env *testEnv, token string, fileID int64, buf []
 	require.NoError(t, err, "should read file content")
 }
 
-func getFolderContentsWithPaging(t *testing.T, env *testEnv, token string, folderID int64, opt *paging.Options) *dtos.GetFolderContent {
+func getFolderContentsWithPaging(t *testing.T, env *testEnv, token string, folderID string, opt *paging.Options) *dtos.GetFolderContent {
 	t.Helper()
 
 	url := fmt.Sprintf("%s/content?file-limit=%d&file-direction=%s&file-sort=%s&file-sort-by=%s",

@@ -10,6 +10,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
+	"github.com/go-chi/cors"
 	"github.com/rs/zerolog/log"
 )
 
@@ -23,6 +24,7 @@ type API struct {
 	Auth    *AuthAPI
 	Profile *ProfileAPI
 	Media   *MediaAPI
+	System  *SystemAPI
 }
 
 func NewAPI(app *appconfig.App) *API {
@@ -33,8 +35,15 @@ func (a *API) InitRoutes(infra *infrastructure.Infrastructure) *API {
 	// Base router
 	router := chi.NewRouter()
 
+	corsMiddleware := cors.New(cors.Options{
+		AllowedOrigins: []string{"*"},
+		AllowedMethods: []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
+		AllowedHeaders: []string{"*"},
+	})
+
 	// Add middleware
 	router.Use(
+		corsMiddleware.Handler,
 		middleware.RequestID,
 		middleware.Logger,
 		middleware.Recoverer,
@@ -49,7 +58,10 @@ func (a *API) InitRoutes(infra *infrastructure.Infrastructure) *API {
 
 	// API routers
 	v1Pub := chi.NewRouter()
-	v1Pvt := chi.NewRouter().With(middlewares.JWT(infra.Auth.JWT))
+	v1Pvt := chi.NewRouter().With(
+		middlewares.JWT(infra.Auth.JWT),
+		middlewares.RequestSizeLimit(a.app.Config),
+	)
 
 	// Mount routers
 	router.Mount("/api/v1/pub", v1Pub)

@@ -3,7 +3,9 @@ package middlewares
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net/http"
+	"skyvault/internal/api/helper"
 	"skyvault/internal/domain/auth"
 	"skyvault/pkg/apperror"
 	"skyvault/pkg/applog"
@@ -19,13 +21,13 @@ func JWT(authenticator auth.Authenticator) func(http.Handler) http.Handler {
 			logger := applog.GetLoggerFromContext(r.Context())
 			tokenStr := r.Header.Get("Authorization")
 			if tokenStr == "" {
-				logger.Error().Msg("missing Authorization header. Redirecting to /sign-in")
+				logger.Warn().Msg("missing Authorization header. Redirecting to /sign-in")
 				http.Redirect(w, r, "/sign-in", http.StatusSeeOther)
 				return
 			}
 
 			if !strings.HasPrefix(tokenStr, "Bearer ") {
-				logger.Error().Msg("invalid Authorization header, need Bearer token. Redirecting to /sign-in")
+				logger.Warn().Msg("invalid Authorization header, need Bearer token. Redirecting to /sign-in")
 				http.Redirect(w, r, "/sign-in", http.StatusSeeOther)
 				return
 			}
@@ -35,7 +37,7 @@ func JWT(authenticator auth.Authenticator) func(http.Handler) http.Handler {
 			claims, err := authenticator.ValidateToken(r.Context(), tokenStr)
 			if err != nil {
 				if errors.Is(err, apperror.ErrAuthTokenExpired) {
-					logger.Debug().Msg("token expired, redirecting to /sign-in")
+					logger.Debug().Err(err).Msg("token expired, redirecting to /sign-in")
 					http.Redirect(w, r, "/sign-in", http.StatusSeeOther)
 					return
 				}
@@ -45,9 +47,7 @@ func JWT(authenticator auth.Authenticator) func(http.Handler) http.Handler {
 					http.Redirect(w, r, "/sign-in", http.StatusSeeOther)
 					return
 				}
-				errMsg := "failed to get claims from token"
-				logger.Error().Err(err).Msg(errMsg)
-				http.Error(w, errMsg, http.StatusInternalServerError)
+				helper.RespondError(w, r, fmt.Errorf("failed to get claims from token: %w", err))
 				return
 			}
 
@@ -56,7 +56,7 @@ func JWT(authenticator auth.Authenticator) func(http.Handler) http.Handler {
 
 			logger = logger.
 				With().
-				Int64("session_profile_id", profileID).
+				Str("session_profile_id", profileID).
 				Logger()
 			ctx = context.WithValue(ctx, common.CtxKeyLogger, logger)
 

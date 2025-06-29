@@ -22,11 +22,8 @@ bin/
 go.work
 go.work.sum
 
-# env file
-.env
-*.env
-
 # others
-.data
-static
+.data/
+static/
 **/testdata/
+__debug*

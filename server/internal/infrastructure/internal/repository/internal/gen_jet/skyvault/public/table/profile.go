@@ -17,7 +17,7 @@ type profileTable struct {
 	postgres.Table
 
 	// Columns
-	ID        postgres.ColumnInteger
+	ID        postgres.ColumnString
 	Email     postgres.ColumnString
 	FullName  postgres.ColumnString
 	Avatar    postgres.ColumnString
@@ -63,7 +63,7 @@ func newProfileTable(schemaName, tableName, alias string) *ProfileTable {
 
 func newProfileTableImpl(schemaName, tableName, alias string) profileTable {
 	var (
-		IDColumn        = postgres.IntegerColumn("id")
+		IDColumn        = postgres.StringColumn("id")
 		EmailColumn     = postgres.StringColumn("email")
 		FullNameColumn  = postgres.StringColumn("full_name")
 		AvatarColumn    = postgres.StringColumn("avatar")

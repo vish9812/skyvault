@@ -28,9 +28,12 @@ func NewCommandHandlers(app *appconfig.App, repository Repository, mediaReposito
 
 func (h *CommandHandlers) CreateContact(ctx context.Context, cmd *CreateContactCommand) (*Contact, error) {
 	profileID := common.GetProfileIDFromContext(ctx)
-	contact := NewContact(profileID, cmd.Email, cmd.Name)
+	contact, err := NewContact(profileID, cmd.Email, cmd.Name)
+	if err != nil {
+		return nil, apperror.NewAppError(err, "sharing.CommandHandlers.CreateContact:NewContact")
+	}
 
-	contact, err := h.repository.CreateContact(ctx, contact)
+	contact, err = h.repository.CreateContact(ctx, contact)
 	if err != nil {
 		return nil, apperror.NewAppError(err, "sharing.CommandHandlers.CreateContact:CreateContact")
 	}
@@ -64,9 +67,12 @@ func (h *CommandHandlers) DeleteContact(ctx context.Context, cmd *DeleteContactC
 
 func (h *CommandHandlers) CreateContactGroup(ctx context.Context, cmd *CreateContactGroupCommand) (*ContactGroup, error) {
 	profileID := common.GetProfileIDFromContext(ctx)
-	group := NewContactGroup(profileID, cmd.Name)
+	group, err := NewContactGroup(profileID, cmd.Name)
+	if err != nil {
+		return nil, apperror.NewAppError(err, "sharing.CommandHandlers.CreateContactGroup:NewContactGroup")
+	}
 
-	group, err := h.repository.CreateContactGroup(ctx, group)
+	group, err = h.repository.CreateContactGroup(ctx, group)
 	if err != nil {
 		return nil, apperror.NewAppError(err, "sharing.CommandHandlers.CreateContactGroup:CreateContactGroup")
 	}
@@ -134,7 +140,7 @@ func (h *CommandHandlers) CreateShare(ctx context.Context, cmd *CreateShareComma
 	}
 
 	if cmd.FolderID != nil {
-		folderInfo, err := h.mediaRepository.GetFolderInfo(ctx, *cmd.FolderID)
+		folderInfo, err := h.mediaRepository.GetFolderInfo(ctx, profileID, *cmd.FolderID)
 		if err != nil {
 			return nil, apperror.NewAppError(err, "sharing.CommandHandlers.CreateShare:GetFolderInfo")
 		}
@@ -225,9 +231,10 @@ func (h *CommandHandlers) DeleteShare(ctx context.Context, cmd *DeleteShareComma
 
 func (h *CommandHandlers) AddShareRecipient(ctx context.Context, cmd *AddShareRecipientCommand) (*ShareRecipient, error) {
 	var tx *sql.Tx
+	var err error
 	repoTx := h.repository
 	if cmd.SaveAsContact {
-		tx, err := repoTx.BeginTx(ctx)
+		tx, err = repoTx.BeginTx(ctx)
 		if err != nil {
 			return nil, apperror.NewAppError(err, "sharing.CommandHandlers.AddShareRecipient:BeginTx")
 		}
@@ -254,12 +261,15 @@ func (h *CommandHandlers) AddShareRecipient(ctx context.Context, cmd *AddShareRe
 // add a check to see if the recipient has blocked the sender.
 // Don't inform the sender if the recipient has blocked them.
 
-func addShareRecipient(ctx context.Context, repoTx Repository, profileID, shareConfigID int64, recInput *ShareRecipientInput) (*ShareRecipient, error) {
+func addShareRecipient(ctx context.Context, repoTx Repository, profileID, shareConfigID string, recInput *ShareRecipientInput) (*ShareRecipient, error) {
 	var nonContactEmail *string
-	var contactID *int64
+	var contactID *string
 	if recInput.SaveAsContact {
-		contact := NewContact(profileID, *recInput.Email, *recInput.Name)
-		contact, err := repoTx.CreateContact(ctx, contact)
+		contact, err := NewContact(profileID, *recInput.Email, *recInput.Name)
+		if err != nil {
+			return nil, apperror.NewAppError(err, "sharing.addShareRecipient:NewContact")
+		}
+		contact, err = repoTx.CreateContact(ctx, contact)
 		if err != nil {
 			return nil, apperror.NewAppError(err, "sharing.addShareRecipient:CreateContact")
 		}
@@ -268,9 +278,12 @@ func addShareRecipient(ctx context.Context, repoTx Repository, profileID, shareC
 		nonContactEmail = recInput.Email
 	}
 
-	recipient := NewShareRecipient(shareConfigID, contactID, recInput.ContactGroupID, nonContactEmail)
+	recipient, err := NewShareRecipient(shareConfigID, contactID, recInput.ContactGroupID, nonContactEmail)
+	if err != nil {
+		return nil, apperror.NewAppError(err, "sharing.addShareRecipient:NewShareRecipient")
+	}
 
-	_, err := repoTx.CreateShareRecipient(ctx, profileID, recipient)
+	_, err = repoTx.CreateShareRecipient(ctx, profileID, recipient)
 	if err != nil {
 		return nil, apperror.NewAppError(err, "sharing.addShareRecipient:CreateShareRecipient")
 	}
