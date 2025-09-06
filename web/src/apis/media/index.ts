@@ -1,5 +1,5 @@
-import { get, handleJSONResponse, post, postFormData } from "@sv/apis/common";
-import { BYTES_PER, ROOT_FOLDER_ID, ROOT_FOLDER_NAME } from "@sv/utils/consts";
+import { get, handleJSONResponse, post, postFormData, ROOT_URL } from "@sv/apis/common";
+import { BYTES_PER, ROOT_FOLDER_ID, ROOT_FOLDER_NAME, LOCAL_STORAGE_KEYS } from "@sv/utils/consts";
 import Random from "@sv/utils/random";
 import type {
   FileInfo,
@@ -166,4 +166,43 @@ export function uploadFiles(
   });
 
   return files;
+}
+
+export async function downloadFile(fileId: string, fileName: string): Promise<void> {
+  const token = localStorage.getItem(LOCAL_STORAGE_KEYS.TOKEN);
+  if (!token) throw new Error("No token found");
+
+  try {
+    // Fetch the file with authorization header
+    const response = await fetch(`${ROOT_URL}/${urlMedia}/files/${fileId}/download`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(`Download failed: ${response.statusText}`);
+    }
+
+    // Get the blob from the response
+    const blob = await response.blob();
+    
+    // Create a link element to trigger the download
+    const link = document.createElement('a');
+    const url = window.URL.createObjectURL(blob);
+    
+    link.href = url;
+    link.download = fileName;
+    link.setAttribute('style', 'display: none');
+    
+    document.body.appendChild(link);
+    link.click();
+    
+    // Clean up
+    document.body.removeChild(link);
+    window.URL.revokeObjectURL(url);
+  } catch (error) {
+    console.error('Download failed:', error);
+    throw error;
+  }
 }
