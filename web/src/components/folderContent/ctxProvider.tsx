@@ -1,5 +1,5 @@
 import { createSignal, ParentProps, useContext } from "solid-js";
-import CTX, { CtxType } from "./ctx";
+import CTX, { CtxType, SelectedItem } from "./ctx";
 import { CLIENT_URLS, FOLDER_CONTENT_TYPES } from "@sv/utils/consts";
 import { useNavigate } from "@solidjs/router";
 
@@ -8,20 +8,34 @@ const DOUBLE_TAP_DELAY = 500; // ms
 export function CtxProvider(props: ParentProps) {
   const navigate = useNavigate();
   const [tapTimer, setTapTimer] = createSignal<number | null>(null);
+  const [selectedItem, setSelectedItem] = createSignal<SelectedItem | null>(null);
 
   const handleFolderNavigation = (id: string) => {
     navigate(`${CLIENT_URLS.DRIVE}/${id}`);
   };
 
+  const clearSelection = () => {
+    setSelectedItem(null);
+  };
+
   const handleTap = (
     type: string,
     id: string,
+    name: string,
     singleTapAction?: () => void
   ) => {
     if (tapTimer() === null) {
       // First tap, start timer for potential second tap
       const timer = window.setTimeout(() => {
         // If timer completes, it was a single tap
+        // For files, show context menu by selecting the item
+        if (type === FOLDER_CONTENT_TYPES.FILE) {
+          setSelectedItem({ id, type, name });
+        } else {
+          // For folders, clear selection (folders don't have context menu yet)
+          clearSelection();
+        }
+        
         if (singleTapAction) {
           singleTapAction();
         }
@@ -33,6 +47,9 @@ export function CtxProvider(props: ParentProps) {
       // Second tap within the delay - it's a double tap
       window.clearTimeout(tapTimer()!);
       setTapTimer(null);
+      
+      // Clear any selection on double tap
+      clearSelection();
 
       // Only navigate if it's a folder
       if (type === FOLDER_CONTENT_TYPES.FOLDER) {
@@ -43,6 +60,8 @@ export function CtxProvider(props: ParentProps) {
 
   const val: CtxType = {
     handleTap,
+    selectedItem,
+    clearSelection,
   };
 
   return <CTX.Provider value={val}>{props.children}</CTX.Provider>;

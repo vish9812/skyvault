@@ -16,17 +16,20 @@ function ListItem(props: ListItemProps) {
   const ctx = useCtx();
   const [isDownloading, setIsDownloading] = createSignal(false);
 
+  const isSelected = () => ctx.selectedItem()?.id === props.item.id;
+
   const handleClick = () => {
-    ctx.handleTap(props.type, props.item.id);
+    ctx.handleTap(props.type, props.item.id, props.item.name);
   };
 
   const handleDownload = async (e: Event) => {
-    e.stopPropagation(); // Prevent triggering the main click
+    e.stopPropagation();
     if (isDownloading() || props.type !== FOLDER_CONTENT_TYPES.FILE) return;
     
     setIsDownloading(true);
     try {
       await downloadFile(props.item.id, props.item.name);
+      ctx.clearSelection(); // Clear selection after download
     } catch (error) {
       console.error('Download failed:', error);
     } finally {
@@ -36,7 +39,11 @@ function ListItem(props: ListItemProps) {
 
   return (
     <div
-      class="grid grid-cols-[2rem_1fr_6rem_2rem] md:grid-cols-[2rem_1fr_6rem_9rem_2rem] items-center py-3 px-3 hover:bg-bg-muted border-t border-border first:border-t-0 cursor-pointer group"
+      class={`grid grid-cols-[2rem_1fr_6rem_2rem] md:grid-cols-[2rem_1fr_6rem_9rem_2rem] items-center py-3 px-3 border-t border-border first:border-t-0 cursor-pointer transition-colors ${
+        isSelected() 
+          ? "bg-primary-lighter" 
+          : "hover:bg-bg-muted"
+      }`}
       onClick={handleClick}
     >
       <span>
@@ -55,9 +62,9 @@ function ListItem(props: ListItemProps) {
       </div>
       <div class="hidden md:block">{Format.date(props.item.updatedAt)}</div>
       <div class="flex justify-center">
-        <Show when={props.type === FOLDER_CONTENT_TYPES.FILE}>
+        <Show when={isSelected() && props.type === FOLDER_CONTENT_TYPES.FILE}>
           <button
-            class="w-6 h-6 rounded-full flex-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-bg-subtle"
+            class="w-8 h-8 rounded-md flex-center hover:bg-bg-muted transition-colors"
             onClick={handleDownload}
             disabled={isDownloading()}
             title="Download file"
