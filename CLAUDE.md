@@ -125,6 +125,8 @@ Each domain follows CQRS pattern with:
 - Configurable storage directory via environment variables
 - Chunked upload support for large files
 - File categorization (image, video, audio, text, other)
+- Streaming file processing to minimize memory usage
+- Resource management handled by Go's HTTP server and OS-level limits
 
 ## Testing
 
