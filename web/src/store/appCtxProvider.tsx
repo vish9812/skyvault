@@ -11,7 +11,7 @@ import {
   Show,
   useContext,
 } from "solid-js";
-import AppCtx, { AppCtxType, DefaultSystemConfig } from "./appCtx";
+import AppCtx, { DefaultSystemConfig } from "./appCtx";
 
 export function AppCtxProvider(props: ParentProps) {
   const navigate = useNavigate();
@@ -23,13 +23,8 @@ export function AppCtxProvider(props: ParentProps) {
   }
 
   // System config only loads when user is authenticated
-  const [systemConfig] = createResource(async () => {
-    try {
-      return await getSystemConfig();
-    } catch (error) {
-      console.warn("Failed to load system config, using defaults:", error);
-      return DefaultSystemConfig;
-    }
+  const [systemConfig] = createResource(getSystemConfig, {
+    initialValue: DefaultSystemConfig,
   });
 
   // Current folder id
@@ -51,15 +46,17 @@ export function AppCtxProvider(props: ParentProps) {
     }
   });
 
-  const val: AppCtxType = {
-    currentFolderId,
-    systemConfig: systemConfig()!,
-  };
-
   return (
     <div>
       <Show when={!systemConfig.loading} fallback={<LoadingBackdrop />}>
-        <AppCtx.Provider value={val}>{props.children}</AppCtx.Provider>
+        <AppCtx.Provider
+          value={{
+            currentFolderId,
+            systemConfig: systemConfig()!,
+          }}
+        >
+          {props.children}
+        </AppCtx.Provider>
       </Show>
     </div>
   );

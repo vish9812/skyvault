@@ -34,12 +34,8 @@ export default function UploadFiles(props: Props) {
   // Get upload limits from system config
   const maxFileSize = appCtx.systemConfig.maxDirectUploadSizeMB * BYTES_PER.MB;
   const maxTotalSize = appCtx.systemConfig.maxUploadSizeMB * BYTES_PER.MB;
-  const maxFilesCount = Math.floor(maxTotalSize / maxFileSize);
 
-  const isUploadDisabled = () =>
-    isLoading() ||
-    selectedFilesCount() === 0 ||
-    selectedFilesCount() > maxFilesCount;
+  const isUploadDisabled = () => isLoading() || selectedFilesCount() === 0;
 
   const selectedFilesSize = () => {
     return Object.values(selectedFiles).reduce(
@@ -76,12 +72,7 @@ export default function UploadFiles(props: Props) {
 
   const validateFiles = (files: FileList | File[]): string | null => {
     const newFiles = Array.from(files);
-
-    // Check length
     const existingFiles = Object.values(selectedFiles);
-    if (newFiles.length + existingFiles.length > maxFilesCount) {
-      return `Too many files selected. Max is ${maxFilesCount} files.`;
-    }
 
     // Process existing files
     const existingFileNames = new Set<string>();
@@ -205,6 +196,11 @@ export default function UploadFiles(props: Props) {
     let errMsg = "";
 
     const uploadedFiles = uploadFiles(
+      {
+        maxDirectUploadSizeMB: appCtx.systemConfig.maxDirectUploadSizeMB,
+        maxUploadSizeMB: appCtx.systemConfig.maxUploadSizeMB,
+        maxChunkSizeMB: appCtx.systemConfig.maxChunkSizeMB,
+      },
       files,
       appCtx.currentFolderId(),
       (id, progress) => {
@@ -358,8 +354,8 @@ export default function UploadFiles(props: Props) {
               select files
             </p>
             <p class="text-xs text-neutral-light mt-1">
-              Maximum file size: {Format.size(maxFileSize)} • Maximum files:{" "}
-              {maxFilesCount}
+              Maximum single file size: {Format.size(maxFileSize)} • Maximum all
+              files size: {Format.size(maxTotalSize)}
             </p>
           </div>
         </div>

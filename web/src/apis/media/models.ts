@@ -1,5 +1,11 @@
 import { CATEGORY } from "@sv/utils/fileUtils";
 
+export interface UploadConfig {
+  maxDirectUploadSizeMB: number;
+  maxUploadSizeMB: number;
+  maxChunkSizeMB: number;
+}
+
 export interface UploadFileInfo {
   id: string;
   file: File;

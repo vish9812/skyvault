@@ -11,7 +11,6 @@ import (
 	"skyvault/pkg/apperror"
 	"skyvault/pkg/applog"
 	"skyvault/pkg/common"
-	"skyvault/pkg/concurrency"
 	"skyvault/pkg/paging"
 	"skyvault/pkg/validate"
 	"strconv"
@@ -27,45 +26,18 @@ const (
 )
 
 type MediaAPI struct {
-	api                *API
-	app                *appconfig.App
-	commands           media.Commands
-	queries            media.Queries
-	concurrencyManager *concurrency.DynamicConcurrencyManager
+	api      *API
+	app      *appconfig.App
+	commands media.Commands
+	queries  media.Queries
 }
 
 func NewMediaAPI(a *API, app *appconfig.App, commands media.Commands, queries media.Queries) *MediaAPI {
-	// Create dynamic concurrency configuration
-	concurrencyConfig := concurrency.NewDynamicConcurrencyConfig(
-		app.Config.Server.ExpectedActiveUsers,
-		app.Config.Media.MaxChunkSizeMB,
-		app.Config.Media.MaxDirectUploadSizeMB,
-		app.Config.Media.MemoryBasedLimits,
-		app.Config.Server.ServerMemoryGB,
-		app.Config.Server.MemoryReservationPercent,
-		app.Config.Media.FallbackGlobalUploads,
-		app.Config.Media.FallbackGlobalChunks,
-		app.Config.Media.FallbackPerUserUploads,
-		app.Config.Media.FallbackPerUserChunks,
-	)
-
-	// Log the calculated concurrency limits
-	app.Logger.Info().
-		Float64("available_memory_gb", concurrencyConfig.AvailableMemoryGB).
-		Float64("usable_memory_gb", concurrencyConfig.UsableMemoryGB).
-		Int64("global_upload_limit", concurrencyConfig.GlobalUploadLimit).
-		Int64("global_chunk_limit", concurrencyConfig.GlobalChunkLimit).
-		Int64("per_user_upload_limit", concurrencyConfig.PerUserUploadLimit).
-		Int64("per_user_chunk_limit", concurrencyConfig.PerUserChunkLimit).
-		Bool("memory_based_limits", app.Config.Media.MemoryBasedLimits).
-		Msg("dynamic concurrency limits calculated")
-
 	return &MediaAPI{
-		api:                a,
-		app:                app,
-		commands:           commands,
-		queries:            queries,
-		concurrencyManager: concurrency.NewDynamicConcurrencyManager(concurrencyConfig),
+		api:      a,
+		app:      app,
+		commands: commands,
+		queries:  queries,
 	}
 }
 
@@ -82,7 +54,7 @@ func (a *MediaAPI) InitRoutes() *MediaAPI {
 
 			// Single file operations
 			r.Route(fmt.Sprintf("/{%s}", urlParamFileID), func(r chi.Router) {
-				r.Get("/download", a.DownloadFile)
+				r.Post("/download", a.DownloadFile)
 				r.Patch("/rename", a.RenameFile)
 				r.Patch("/move", a.MoveFile)
 				r.Patch("/restore", a.RestoreFile)
@@ -121,13 +93,6 @@ func (a *MediaAPI) InitRoutes() *MediaAPI {
 
 func (a *MediaAPI) UploadFile(w http.ResponseWriter, r *http.Request) {
 	profileID := common.GetProfileIDFromContext(r.Context())
-
-	// Acquire semaphores for upload
-	if err := a.concurrencyManager.AcquireUpload(r.Context(), profileID); err != nil {
-		helper.RespondError(w, r, apperror.NewAppError(err, "mediaAPI.UploadFile:AcquireUpload"))
-		return
-	}
-	defer a.concurrencyManager.ReleaseUpload(profileID)
 
 	// Allocate max. 15MB for in-memory parsing.
 	err := r.ParseMultipartForm(15 * common.BytesPerMB)
@@ -175,13 +140,6 @@ func (a *MediaAPI) UploadFile(w http.ResponseWriter, r *http.Request) {
 
 func (a *MediaAPI) UploadChunk(w http.ResponseWriter, r *http.Request) {
 	profileID := common.GetProfileIDFromContext(r.Context())
-
-	// Acquire semaphores for chunk upload
-	if err := a.concurrencyManager.AcquireChunk(r.Context(), profileID); err != nil {
-		helper.RespondError(w, r, apperror.NewAppError(err, "mediaAPI.UploadChunk:AcquireChunk"))
-		return
-	}
-	defer a.concurrencyManager.ReleaseChunk(profileID)
 
 	// Parse multipart form with configurable memory limit for chunks
 	err := r.ParseMultipartForm(15 * common.BytesPerMB)
@@ -234,13 +192,6 @@ func (a *MediaAPI) UploadChunk(w http.ResponseWriter, r *http.Request) {
 
 func (a *MediaAPI) FinalizeChunkedUpload(w http.ResponseWriter, r *http.Request) {
 	profileID := common.GetProfileIDFromContext(r.Context())
-
-	// Acquire semaphores for upload finalization
-	if err := a.concurrencyManager.AcquireUpload(r.Context(), profileID); err != nil {
-		helper.RespondError(w, r, apperror.NewAppError(err, "mediaAPI.FinalizeChunkedUpload:AcquireUpload"))
-		return
-	}
-	defer a.concurrencyManager.ReleaseUpload(profileID)
 
 	var folderID *string
 	if id := chi.URLParam(r, urlParamFolderID); validate.UUID(id) {

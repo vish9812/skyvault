@@ -6,6 +6,7 @@ import ListSkeleton from "./listSkeleton";
 import ListView from "./listView";
 import GridView from "./gridView";
 import { CtxProvider } from "./ctxProvider";
+import useCtx from "./ctxProvider";
 
 interface FolderContentProps {
   content: FolderContentType | undefined;
@@ -14,30 +15,41 @@ interface FolderContentProps {
 }
 
 function FolderContentWithCtx(props: FolderContentProps) {
+  const ctx = useCtx();
+
+  const handleContainerClick = (e: Event) => {
+    // Clear selection when clicking on empty space
+    if (e.target === e.currentTarget) {
+      ctx.clearSelection();
+    }
+  };
+
   return (
-    <Show
-      when={!props.loading && props.content}
-      fallback={
-        <Show when={props.isListView} fallback={<GridSkeleton />}>
-          <ListSkeleton />
-        </Show>
-      }
-    >
+    <div onClick={handleContainerClick} class="min-h-full">
       <Show
-        when={
-          props.content!.folderPage.items.length ||
-          props.content!.filePage.items.length
+        when={!props.loading && props.content}
+        fallback={
+          <Show when={props.isListView} fallback={<GridSkeleton />}>
+            <ListSkeleton />
+          </Show>
         }
-        fallback={<EmptyState />}
       >
         <Show
-          when={props.isListView}
-          fallback={<GridView content={props.content!} />}
+          when={
+            props.content!.folderPage.items.length ||
+            props.content!.filePage.items.length
+          }
+          fallback={<EmptyState />}
         >
-          <ListView content={props.content!} />
+          <Show
+            when={props.isListView}
+            fallback={<GridView content={props.content!} />}
+          >
+            <ListView content={props.content!} />
+          </Show>
         </Show>
       </Show>
-    </Show>
+    </div>
   );
 }
 

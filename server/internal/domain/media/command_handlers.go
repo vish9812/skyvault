@@ -72,7 +72,7 @@ func (h *CommandHandlers) UploadChunk(ctx context.Context, cmd *UploadChunkComma
 		return apperror.NewAppError(apperror.ErrCommonInvalidValue, "media.CommandHandlers.UploadChunk:ChunkIndex").WithMetadata("chunk_index", cmd.ChunkIndex).WithMetadata("total_chunks", cmd.TotalChunks)
 	}
 
-	maxTotalChunks := int64(math.Ceil(float64(h.app.Config.Media.MaxUploadSizeMB) / float64(h.app.Config.Media.MaxChunkSizeMB)))
+	maxTotalChunks := int64(math.Ceil(float64(h.app.Config.Media.MaxDirectUploadSizeMB) / float64(h.app.Config.Media.MaxChunkSizeMB)))
 	if cmd.TotalChunks > maxTotalChunks {
 		return apperror.NewAppError(apperror.ErrCommonInvalidValue, "media.CommandHandlers.UploadChunk:TotalChunks").WithMetadata("max_total_chunks", maxTotalChunks).WithMetadata("total_chunks", cmd.TotalChunks)
 	}
