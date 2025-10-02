@@ -1,4 +1,93 @@
-# SkyVault Web TODO - Sharing Feature
+# SkyVault Web TODO
+
+## File and Folder Management
+
+### Epic 1: File Operations
+
+#### 1.1 Download File
+- [ ] Add download button/option in file context menu or file actions
+- [ ] Make GET request to `/api/v1/media/files/{file-id}/download`
+- [ ] Handle file download in browser (triggers browser download)
+- [ ] Add appropriate icons and loading states
+
+#### 1.2 Rename File
+- [ ] Add rename option in file context menu
+- [ ] Create rename modal/dialog with input field
+- [ ] Validate file name input (non-empty, reasonable length)
+- [ ] Make PATCH request to `/api/v1/media/files/{file-id}/rename`
+- [ ] Update file name in UI after success
+- [ ] Handle validation errors from backend
+
+#### 1.3 Move File
+- [ ] Add move option in file context menu
+- [ ] Create folder selection dialog/tree view
+- [ ] Allow selecting target folder (including root)
+- [ ] Make PATCH request to `/api/v1/media/files/{file-id}/move`
+- [ ] Remove file from current view after success
+- [ ] Handle folder hierarchy validation errors
+
+#### 1.4 Trash File
+- [ ] Add delete/trash option in file context menu
+- [ ] Show confirmation dialog before deletion
+- [ ] Make DELETE request to `/api/v1/media/files/` with fileIds array
+- [ ] Remove file from current view after success
+- [ ] Show success feedback to user
+- [ ] Handle invalid file ID errors
+
+### Epic 2: Folder Operations
+
+#### 2.1 Rename Folder
+- [ ] Add rename option in folder context menu
+- [ ] Create rename modal/dialog with input field
+- [ ] Validate folder name input (non-empty, reasonable length)
+- [ ] Make PATCH request to `/api/v1/media/folders/{folder-id}/rename`
+- [ ] Update folder name in UI after success
+- [ ] Handle validation errors from backend
+
+#### 2.2 Move Folder
+- [ ] Add move option in folder context menu
+- [ ] Create folder selection dialog (exclude current folder and descendants)
+- [ ] Allow selecting target parent folder (including root)
+- [ ] Make PATCH request to `/api/v1/media/folders/{folder-id}/move`
+- [ ] Remove folder from current view after success
+- [ ] Handle circular dependency validation errors
+
+#### 2.3 Trash Folder
+- [ ] Add delete/trash option in folder context menu
+- [ ] Show confirmation dialog with warning about contents
+- [ ] Make DELETE request to `/api/v1/media/folders/` with folderIds array
+- [ ] Remove folder from current view after success
+- [ ] Show success feedback to user
+- [ ] Handle invalid folder ID errors
+
+### UI/UX Implementation Details
+
+#### Context Menu System
+- [ ] Implement right-click context menus for files and folders
+- [ ] Include relevant options based on item type
+- [ ] Use consistent styling with existing UI components
+
+#### Modals and Dialogs
+- [ ] Create reusable modal components for rename operations
+- [ ] Implement folder picker component for move operations
+- [ ] Add confirmation dialogs for destructive operations (trash)
+- [ ] Ensure proper keyboard navigation and accessibility
+
+#### Error Handling
+- [ ] Display user-friendly error messages for API failures
+- [ ] Handle network errors gracefully with retry options
+- [ ] Validate input on frontend before API calls
+- [ ] Show loading states during operations
+
+#### State Management
+- [ ] Update local state after successful operations
+- [ ] Refresh folder contents when items are moved/deleted
+- [ ] Handle optimistic updates where appropriate
+- [ ] Maintain consistent state across components
+
+---
+
+## Sharing Feature
 
 ## Epic 1: Contact Management System
 

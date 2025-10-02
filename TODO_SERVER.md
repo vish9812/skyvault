@@ -1,4 +1,62 @@
-# SkyVault Server TODO - Sharing Feature
+# SkyVault Server TODO
+
+## File and Folder Management
+
+### Epic 1: File Operations
+
+#### 1.1 Download File
+**Status:** ✅ Implemented
+- **API Endpoint:** `GET /api/v1/media/files/{file-id}/download`
+- **Implementation:** `DownloadFile` handler in media_api.go:346
+- **Method:** Uses `http.ServeContent` to serve file with proper headers
+
+#### 1.2 Rename File
+**Status:** ✅ Implemented
+- **API Endpoint:** `PATCH /api/v1/media/files/{file-id}/rename`
+- **Implementation:** `RenameFile` handler in media_api.go:403
+- **Request Body:** `{"name": "new-filename.ext"}`
+- **Response:** 204 No Content on success
+
+#### 1.3 Move File
+**Status:** ✅ Implemented
+- **API Endpoint:** `PATCH /api/v1/media/files/{file-id}/move`
+- **Implementation:** `MoveFile` handler in media_api.go:436
+- **Request Body:** `{"folderId": "target-folder-uuid"}` (empty string for root)
+- **Response:** 204 No Content on success
+
+#### 1.4 Trash File
+**Status:** ✅ Implemented
+- **API Endpoint:** `DELETE /api/v1/media/files/`
+- **Implementation:** `TrashFiles` handler in media_api.go:371 (supports bulk)
+- **Request Body:** `{"fileIds": ["file-uuid-1"]}`
+- **Response:** 204 No Content on success
+
+### Epic 2: Folder Operations
+
+#### 2.1 Rename Folder
+**Status:** ✅ Implemented
+- **API Endpoint:** `PATCH /api/v1/media/folders/{folder-id}/rename`
+- **Implementation:** `RenameFolder` handler in media_api.go:569
+- **Request Body:** `{"name": "new-folder-name"}`
+- **Response:** 204 No Content on success
+
+#### 2.2 Move Folder
+**Status:** ✅ Implemented
+- **API Endpoint:** `PATCH /api/v1/media/folders/{folder-id}/move`
+- **Implementation:** `MoveFolder` handler in media_api.go:602
+- **Request Body:** `{"folderId": "target-parent-folder-uuid"}` (empty string for root)
+- **Response:** 204 No Content on success
+
+#### 2.3 Trash Folder
+**Status:** ✅ Implemented
+- **API Endpoint:** `DELETE /api/v1/media/folders/`
+- **Implementation:** `TrashFolders` handler in media_api.go:536 (supports bulk)
+- **Request Body:** `{"folderIds": ["folder-uuid-1"]}`
+- **Response:** 204 No Content on success
+
+---
+
+## Sharing Feature
 
 ## Epic 1: Contact Management System
 
