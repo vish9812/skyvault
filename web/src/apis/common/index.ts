@@ -107,3 +107,20 @@ export async function handleJSONResponse<T>(res: Response): Promise<T> {
 
   return res.json() as T;
 }
+
+export async function handleBlobResponse(res: Response): Promise<Blob> {
+  if (!res.ok) {
+    let msg = "";
+    try {
+      const data = (await res.json()) as ErrRes;
+      msg = data.code;
+    } catch (e) {
+      // If the response is not JSON, try to parse it as text
+      if (e instanceof SyntaxError) {
+        msg = await res.text();
+      }
+    }
+    throw new Error(msg);
+  }
+  return res.blob();
+}

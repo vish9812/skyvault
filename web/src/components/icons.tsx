@@ -260,16 +260,14 @@ const icons = {
     return (
       <svg
         xmlns="http://www.w3.org/2000/svg"
-        fill="none"
         viewBox="0 0 24 24"
-        stroke-width="1.5"
-        stroke="currentColor"
+        fill="currentColor"
         class={`w-${size} h-${size} ${color}`}
       >
         <path
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3"
+          fill-rule="evenodd"
+          d="M10.5 3.75a6 6 0 0 0-5.98 6.496A5.25 5.25 0 0 0 6.75 20.25H18a4.5 4.5 0 0 0 2.206-8.423 3.75 3.75 0 0 0-4.133-4.303A6.001 6.001 0 0 0 10.5 3.75Zm2.25 6a.75.75 0 0 0-1.5 0v4.94l-1.72-1.72a.75.75 0 0 0-1.06 1.06l3 3a.75.75 0 0 0 1.06 0l3-3a.75.75 0 1 0-1.06-1.06l-1.72 1.72V9.75Z"
+          clip-rule="evenodd"
         />
       </svg>
     );
@@ -281,16 +279,14 @@ const icons = {
     return (
       <svg
         xmlns="http://www.w3.org/2000/svg"
-        fill="none"
         viewBox="0 0 24 24"
-        stroke-width="1.5"
-        stroke="currentColor"
+        fill="currentColor"
         class={`w-${size} h-${size} ${color}`}
       >
         <path
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          d="M6.75 12a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0ZM12.75 12a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0ZM18.75 12a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0Z"
+          fill-rule="evenodd"
+          d="M4.5 12a1.5 1.5 0 1 1 3 0 1.5 1.5 0 0 1-3 0Zm6 0a1.5 1.5 0 1 1 3 0 1.5 1.5 0 0 1-3 0Zm6 0a1.5 1.5 0 1 1 3 0 1.5 1.5 0 0 1-3 0Z"
+          clip-rule="evenodd"
         />
       </svg>
     );

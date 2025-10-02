@@ -7,7 +7,7 @@ export interface SelectedItem {
 }
 
 export interface CtxType {
-  handleTap: (type: string, id: string, name: string, singleTapAction?: () => void) => void;
+  handleTap: (tappedItem: SelectedItem, singleTapAction?: () => void) => void;
   selectedItem: () => SelectedItem | null;
   clearSelection: () => void;
 }

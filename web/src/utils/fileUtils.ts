@@ -34,8 +34,25 @@ function mimeToCategory(mimeType: string): CATEGORY {
   }
 }
 
+function downloadBlob(blob: Blob, fileName: string) {
+  const link = document.createElement("a");
+  const url = window.URL.createObjectURL(blob);
+
+  link.href = url;
+  link.download = fileName;
+  link.setAttribute("style", "display: none");
+
+  document.body.appendChild(link);
+  link.click();
+
+  // Clean up
+  document.body.removeChild(link);
+  window.URL.revokeObjectURL(url);
+}
+
 const FileUtils = {
   mimeToCategory,
+  downloadBlob,
 } as const;
 
 export default FileUtils;

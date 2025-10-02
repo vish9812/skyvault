@@ -1,10 +1,9 @@
+import { downloadFile } from "@sv/apis/media";
 import type { FileInfo, FolderInfo } from "@sv/apis/media/models";
-import { FileIcon } from "@sv/components/icons";
-import Icon from "@sv/components/icons";
+import Icon, { FileIcon } from "@sv/components/icons";
 import { FOLDER_CONTENT_TYPES } from "@sv/utils/consts";
 import Format from "@sv/utils/format";
 import { Show, createSignal } from "solid-js";
-import { downloadFile } from "@sv/apis/media";
 import useCtx from "./ctxProvider";
 
 interface GridItemProps {
@@ -19,19 +18,23 @@ function GridItem(props: GridItemProps) {
   const isSelected = () => ctx.selectedItem()?.id === props.item.id;
 
   const handleClick = () => {
-    ctx.handleTap(props.type, props.item.id, props.item.name);
+    ctx.handleTap({
+      id: props.item.id,
+      type: props.type,
+      name: props.item.name,
+    });
   };
 
   const handleDownload = async (e: Event) => {
     e.stopPropagation();
     if (isDownloading() || props.type !== FOLDER_CONTENT_TYPES.FILE) return;
-    
+
     setIsDownloading(true);
     try {
       await downloadFile(props.item.id, props.item.name);
       ctx.clearSelection(); // Clear selection after download
     } catch (error) {
-      console.error('Download failed:', error);
+      console.error("Download failed:", error);
     } finally {
       setIsDownloading(false);
     }
@@ -40,8 +43,8 @@ function GridItem(props: GridItemProps) {
   return (
     <div
       class={`w-40 h-40 md:w-48 md:h-48 bg-white rounded-lg border shadow-sm transition-all cursor-pointer relative ${
-        isSelected() 
-          ? "border-primary shadow-md" 
+        isSelected()
+          ? "border-primary shadow-md"
           : "border-border hover:border-primary hover:shadow-md"
       }`}
       onClick={handleClick}

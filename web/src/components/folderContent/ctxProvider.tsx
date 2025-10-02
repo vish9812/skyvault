@@ -1,16 +1,19 @@
+import { useNavigate } from "@solidjs/router";
+import { CLIENT_URLS, FOLDER_CONTENT_TYPES } from "@sv/utils/consts";
 import { createSignal, ParentProps, useContext } from "solid-js";
 import CTX, { CtxType, SelectedItem } from "./ctx";
-import { CLIENT_URLS, FOLDER_CONTENT_TYPES } from "@sv/utils/consts";
-import { useNavigate } from "@solidjs/router";
 
 const DOUBLE_TAP_DELAY = 500; // ms
 
 export function CtxProvider(props: ParentProps) {
   const navigate = useNavigate();
   const [tapTimer, setTapTimer] = createSignal<number | null>(null);
-  const [selectedItem, setSelectedItem] = createSignal<SelectedItem | null>(null);
+  const [selectedItem, setSelectedItem] = createSignal<SelectedItem | null>(
+    null
+  );
 
   const handleFolderNavigation = (id: string) => {
+    clearSelection();
     navigate(`${CLIENT_URLS.DRIVE}/${id}`);
   };
 
@@ -19,23 +22,17 @@ export function CtxProvider(props: ParentProps) {
   };
 
   const handleTap = (
-    type: string,
-    id: string,
-    name: string,
+    tappedItem: SelectedItem,
     singleTapAction?: () => void
   ) => {
     if (tapTimer() === null) {
       // First tap, start timer for potential second tap
       const timer = window.setTimeout(() => {
         // If timer completes, it was a single tap
-        // For files, show context menu by selecting the item
-        if (type === FOLDER_CONTENT_TYPES.FILE) {
-          setSelectedItem({ id, type, name });
-        } else {
-          // For folders, clear selection (folders don't have context menu yet)
-          clearSelection();
-        }
-        
+
+        // Show context menu by selecting the item
+        setSelectedItem(tappedItem);
+
         if (singleTapAction) {
           singleTapAction();
         }
@@ -47,13 +44,13 @@ export function CtxProvider(props: ParentProps) {
       // Second tap within the delay - it's a double tap
       window.clearTimeout(tapTimer()!);
       setTapTimer(null);
-      
+
       // Clear any selection on double tap
       clearSelection();
 
       // Only navigate if it's a folder
-      if (type === FOLDER_CONTENT_TYPES.FOLDER) {
-        handleFolderNavigation(id);
+      if (tappedItem.type === FOLDER_CONTENT_TYPES.FOLDER) {
+        handleFolderNavigation(tappedItem.id);
       }
     }
   };

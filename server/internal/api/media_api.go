@@ -82,7 +82,7 @@ func (a *MediaAPI) InitRoutes() *MediaAPI {
 
 			// Single file operations
 			r.Route(fmt.Sprintf("/{%s}", urlParamFileID), func(r chi.Router) {
-				r.Get("/download", a.DownloadFile)
+				r.Post("/download", a.DownloadFile)
 				r.Patch("/rename", a.RenameFile)
 				r.Patch("/move", a.MoveFile)
 				r.Patch("/restore", a.RestoreFile)
