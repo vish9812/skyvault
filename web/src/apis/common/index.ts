@@ -1,6 +1,8 @@
 import { LOCAL_STORAGE_KEYS } from "@sv/utils/consts";
 
-export const ROOT_URL = `${import.meta.env.VITE_SERVER_URL}/api/v1`;
+// In production (same origin), use relative URL. In dev, use full URL to backend.
+const SERVER_URL = import.meta.env.VITE_SERVER_URL || "";
+export const ROOT_URL = `${SERVER_URL}/api/v1`;
 // public api root url
 export const ROOT_URL_PUB = `${ROOT_URL}/pub`;
 
