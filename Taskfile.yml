@@ -135,7 +135,7 @@ tasks:
     deps: [build]
     cmds:
       - rm -rf {{.SERVER_STATIC_DIR}}
-      - ln -s web/dist {{.SERVER_STATIC_DIR}}
+      - ln -s ../web/dist {{.SERVER_STATIC_DIR}}
       - task: server:run
 
   dev:
