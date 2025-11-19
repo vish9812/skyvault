@@ -179,7 +179,7 @@ func restoreFolder(t *testing.T, env *testEnv, token string, folderID string) {
 func downloadFile(t *testing.T, env *testEnv, token string, fileID string, buf []byte) {
 	t.Helper()
 
-	req, err := http.NewRequest(http.MethodGet, fileURL(fileID)+"/download", nil)
+	req, err := http.NewRequest(http.MethodPost, fileURL(fileID)+"/download", nil)
 	require.NoError(t, err, "should create new request for file download")
 	req.Header.Set("Authorization", "Bearer "+token)
 
