@@ -34,6 +34,8 @@ const fileUploadErrorMessages: Record<string, string> = {
   [COMMON_ERR_KEYS.DUPLICATE]: "This file already exists.",
   MEDIA_FILE_SIZE_LIMIT_EXCEEDED:
     "File size exceeds the maximum allowed size. Please try again with a smaller file.",
+  STORAGE_QUOTA_EXCEEDED:
+    "You don't have enough storage space. Please free up space or upgrade your quota.",
 };
 
 export function getFileUploadErrorMessage(code: string): string {

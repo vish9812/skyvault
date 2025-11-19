@@ -31,9 +31,12 @@ export default function UploadFiles(props: Props) {
   const [error, setError] = createSignal("");
   const [isDragOver, setIsDragOver] = createSignal(false);
 
-  // Get upload limits from system config
+  // Get upload limits from system config and storage quota
   const maxFileSize = appCtx.systemConfig.maxDirectUploadSizeMB * BYTES_PER.MB;
-  const maxTotalSize = appCtx.systemConfig.maxUploadSizeMB * BYTES_PER.MB;
+  const availableStorage = () => {
+    const usage = appCtx.storageUsage();
+    return usage.quotaBytes - usage.usedBytes;
+  };
 
   const isUploadDisabled = () => isLoading() || selectedFilesCount() === 0;
 
@@ -91,11 +94,9 @@ export default function UploadFiles(props: Props) {
       newFileNames.add(file.name);
       totalSize += file.size;
 
-      // Check total size
-      if (totalSize > maxTotalSize) {
-        return `Total size of all files is too large. Max is ${Format.size(
-          maxTotalSize
-        )}.`;
+      // Check available storage quota
+      if (totalSize > availableStorage()) {
+        return `Not enough storage space. You need ${Format.size(totalSize)} but only have ${Format.size(availableStorage())} available.`;
       }
     }
 
@@ -198,7 +199,6 @@ export default function UploadFiles(props: Props) {
     const uploadedFiles = uploadFiles(
       {
         maxDirectUploadSizeMB: appCtx.systemConfig.maxDirectUploadSizeMB,
-        maxUploadSizeMB: appCtx.systemConfig.maxUploadSizeMB,
         maxChunkSizeMB: appCtx.systemConfig.maxChunkSizeMB,
       },
       files,
@@ -252,8 +252,9 @@ export default function UploadFiles(props: Props) {
     setIsLoading(false);
     setError(errMsg);
 
-    // If no errors, close modal after brief delay to show success
+    // If no errors, refresh storage usage and close modal after brief delay
     if (!errMsg) {
+      appCtx.refreshStorageUsage();
       setTimeout(() => {
         props.closeModal();
       }, 1500);
@@ -354,8 +355,8 @@ export default function UploadFiles(props: Props) {
               select files
             </p>
             <p class="text-xs text-neutral-light mt-1">
-              Maximum single file size: {Format.size(maxFileSize)} • Maximum all
-              files size: {Format.size(maxTotalSize)}
+              Maximum single file size: {Format.size(maxFileSize)} • Available
+              storage: {Format.size(availableStorage())}
             </p>
           </div>
         </div>

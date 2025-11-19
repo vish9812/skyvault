@@ -2,7 +2,6 @@ import { CATEGORY } from "@sv/utils/fileUtils";
 
 export interface UploadConfig {
   maxDirectUploadSizeMB: number;
-  maxUploadSizeMB: number;
   maxChunkSizeMB: number;
 }
 

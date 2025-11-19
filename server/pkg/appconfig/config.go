@@ -12,11 +12,11 @@ import (
 )
 
 type Config struct {
-	Server ServerConfig
-	DB     DBConfig
-	Auth   AuthConfig
-	Media  MediaConfig
-	Log    LogConfig
+	Server  ServerConfig
+	DB      DBConfig
+	Auth    AuthConfig
+	Storage StorageConfig
+	Log     LogConfig
 }
 
 type ServerConfig struct {
@@ -57,10 +57,8 @@ type AuthConfig struct {
 	JWT JWTConfig
 }
 
-type MediaConfig struct {
-	MaxUploadSizeMB       int64 // Max upload size even when including chunking strategy.
-	MaxDirectUploadSizeMB int64 // Max size allowed for an upload, before chunking strategy is applied. This value must be less than MaxUploadSizeMB.
-	MaxChunkSizeMB        int64 // Max size of a chunk. This value must be less than MaxDirectUploadSizeMB.
+type StorageConfig struct {
+	DefaultQuotaMB int64 // Default storage quota for new users in MB
 }
 
 type LogConfig struct {
@@ -102,10 +100,8 @@ func LoadConfig(path string, isDev bool) *Config {
 	config.Auth.JWT.Key = []byte(envMap["AUTH__JWT__KEY"])
 	config.Auth.JWT.TokenTimeoutMin = getIntOrZero(envMap["AUTH__JWT__TOKEN_TIMEOUT_MIN"])
 
-	// Media config
-	config.Media.MaxUploadSizeMB = getInt64OrZero(envMap["MEDIA__MAX_UPLOAD_SIZE_MB"])
-	config.Media.MaxDirectUploadSizeMB = getInt64OrZero(envMap["MEDIA__MAX_DIRECT_UPLOAD_SIZE_MB"])
-	config.Media.MaxChunkSizeMB = getInt64OrZero(envMap["MEDIA__MAX_CHUNK_SIZE_MB"])
+	// Storage config
+	config.Storage.DefaultQuotaMB = getInt64OrZero(envMap["STORAGE__DEFAULT_QUOTA_MB"])
 
 	// Log config
 	config.Log.Level = envMap["LOG__LEVEL"]
@@ -267,33 +263,13 @@ func (c *Config) validate(logger zerolog.Logger, isDev bool) {
 		logger.Warn().Msgf("JWT token timeout not set, using default timeout %d minutes", c.Auth.JWT.TokenTimeoutMin)
 	}
 
-	// Media
-	if c.Media.MaxUploadSizeMB <= 0 {
-		c.Media.MaxUploadSizeMB = 100
+	// Storage
+	if c.Storage.DefaultQuotaMB <= 0 {
+		c.Storage.DefaultQuotaMB = 1024 // 1GB default
 		if isDev {
-			c.Media.MaxUploadSizeMB = 1024 // 1GB
+			c.Storage.DefaultQuotaMB = 10240 // 10GB for development
 		}
-		logger.Warn().Msgf("media max size not set, using default size %dMB", c.Media.MaxUploadSizeMB)
-	}
-
-	if c.Media.MaxDirectUploadSizeMB > c.Media.MaxUploadSizeMB {
-		c.Media.MaxDirectUploadSizeMB = 50
-		logger.Warn().Msgf("media max direct upload size is greater than max upload size, using default size %dMB", c.Media.MaxDirectUploadSizeMB)
-	}
-
-	if c.Media.MaxDirectUploadSizeMB <= 0 {
-		c.Media.MaxDirectUploadSizeMB = 50
-		logger.Warn().Msgf("media max single upload size not set, using default size %dMB", c.Media.MaxDirectUploadSizeMB)
-	}
-
-	if c.Media.MaxChunkSizeMB <= 0 {
-		c.Media.MaxChunkSizeMB = 10
-		logger.Warn().Msgf("media max chunk size not set, using default size %dMB", c.Media.MaxChunkSizeMB)
-	}
-
-	if c.Media.MaxChunkSizeMB > c.Media.MaxDirectUploadSizeMB {
-		c.Media.MaxChunkSizeMB = 10
-		logger.Warn().Msgf("media max chunk size is greater than max direct upload size, using default size %dMB", c.Media.MaxChunkSizeMB)
+		logger.Warn().Msgf("storage default quota not set, using default %dMB", c.Storage.DefaultQuotaMB)
 	}
 
 	// Logging

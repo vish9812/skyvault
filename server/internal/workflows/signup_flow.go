@@ -69,6 +69,14 @@ func (f *SignUpFlow) Run(ctx context.Context, req *SignUpReq) (*SignUpRes, error
 		return nil, apperror.NewAppError(err, "SignUpFlow.Run:Create")
 	}
 
+	// Set default storage quota for new user
+	quotaBytes := f.app.Config.Storage.DefaultQuotaMB * 1024 * 1024 // Convert MB to bytes
+	pro.SetQuota(quotaBytes)
+	err = profileRepoTx.Update(ctx, pro)
+	if err != nil {
+		return nil, apperror.NewAppError(err, "SignUpFlow.Run:UpdateQuota")
+	}
+
 	token, err := authCmdTx.SignUp(ctx, &auth.SignUpCommand{
 		ProfileID:      pro.ID,
 		Provider:       req.Provider,

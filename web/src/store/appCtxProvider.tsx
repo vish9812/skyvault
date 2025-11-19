@@ -1,6 +1,7 @@
 import { useLocation, useMatch, useNavigate, useParams } from "@solidjs/router";
 import { getProfile } from "@sv/apis/auth";
 import { getSystemConfig } from "@sv/apis/system";
+import { fetchStorageUsage } from "@sv/apis/profile";
 import LoadingBackdrop from "@sv/components/ui/loadingBackdrop";
 import { CLIENT_URLS, ROOT_FOLDER_ID } from "@sv/utils/consts";
 import {
@@ -11,7 +12,7 @@ import {
   Show,
   useContext,
 } from "solid-js";
-import AppCtx, { DefaultSystemConfig } from "./appCtx";
+import AppCtx, { DefaultSystemConfig, DefaultStorageUsage } from "./appCtx";
 
 export function AppCtxProvider(props: ParentProps) {
   const navigate = useNavigate();
@@ -26,6 +27,14 @@ export function AppCtxProvider(props: ParentProps) {
   const [systemConfig] = createResource(getSystemConfig, {
     initialValue: DefaultSystemConfig,
   });
+
+  // Storage usage
+  const [storageUsage, { refetch: refetchStorageUsage }] = createResource(
+    () => fetchStorageUsage(profile.id),
+    {
+      initialValue: DefaultStorageUsage,
+    }
+  );
 
   // Current folder id
   const location = useLocation();
@@ -48,11 +57,16 @@ export function AppCtxProvider(props: ParentProps) {
 
   return (
     <div>
-      <Show when={!systemConfig.loading} fallback={<LoadingBackdrop />}>
+      <Show
+        when={!systemConfig.loading && !storageUsage.loading}
+        fallback={<LoadingBackdrop />}
+      >
         <AppCtx.Provider
           value={{
             currentFolderId,
             systemConfig: systemConfig()!,
+            storageUsage,
+            refreshStorageUsage: refetchStorageUsage,
           }}
         >
           {props.children}

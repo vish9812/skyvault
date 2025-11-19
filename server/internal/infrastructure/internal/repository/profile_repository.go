@@ -82,3 +82,19 @@ func (r *ProfileRepository) Delete(ctx context.Context, id string) error {
 
 	return runUpdateOrDelete(ctx, stmt, r.repository.dbTx)
 }
+
+func (r *ProfileRepository) IncrementStorageUsage(ctx context.Context, profileID string, bytes int64) error {
+	stmt := Profile.UPDATE(Profile.StorageUsedBytes).
+		SET(Profile.StorageUsedBytes.SET(Profile.StorageUsedBytes.ADD(Int64(bytes)))).
+		WHERE(Profile.ID.EQ(UUID(UUIDStr(profileID))))
+
+	return runUpdateOrDelete(ctx, stmt, r.repository.dbTx)
+}
+
+func (r *ProfileRepository) DecrementStorageUsage(ctx context.Context, profileID string, bytes int64) error {
+	stmt := Profile.UPDATE(Profile.StorageUsedBytes).
+		SET(Profile.StorageUsedBytes.SET(Profile.StorageUsedBytes.SUB(Int64(bytes)))).
+		WHERE(Profile.ID.EQ(UUID(UUIDStr(profileID))))
+
+	return runUpdateOrDelete(ctx, stmt, r.repository.dbTx)
+}

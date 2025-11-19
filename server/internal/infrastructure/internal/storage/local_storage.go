@@ -105,7 +105,7 @@ func (s *LocalStorage) SaveFile(ctx context.Context, file io.ReadSeeker, name, o
 		return apperror.NewAppError(err, "storage.LocalStorage.SaveFile:Seek").WithMetadata("file_path", filePath)
 	}
 
-	err = s.write(ownerDirPath, filePath, file, s.app.Config.Media.MaxDirectUploadSizeMB)
+	err = s.write(ownerDirPath, filePath, file, media.MaxDirectUploadSizeMB)
 	if err != nil {
 		return apperror.NewAppError(err, "storage.LocalStorage.SaveFile:write").WithMetadata("file_path", filePath)
 	}
@@ -117,7 +117,7 @@ func (s *LocalStorage) SaveChunk(ctx context.Context, chunk io.Reader, uploadID 
 	chunksDirPath := getChunksDirPath(s.baseDir, ownerID, uploadID)
 	chunkPath := getChunkPath(chunksDirPath, chunkIndex)
 
-	err := s.write(chunksDirPath, chunkPath, chunk, s.app.Config.Media.MaxChunkSizeMB)
+	err := s.write(chunksDirPath, chunkPath, chunk, media.MaxChunkSizeMB)
 	if err != nil {
 		return apperror.NewAppError(err, "storage.LocalStorage.SaveChunk:write").WithMetadata("chunk_path", chunkPath)
 	}
@@ -165,7 +165,7 @@ func (s *LocalStorage) FinalizeChunkedUpload(ctx context.Context, uploadID strin
 
 	// Combine all chunks
 	var totalSize int64
-	maxSize := s.app.Config.Media.MaxUploadSizeMB * common.BytesPerMB
+	maxSize := int64(media.MaxFileSizeMB) * common.BytesPerMB
 
 	for _, chunkFile := range chunkFiles {
 		chunk, err := os.Open(chunkFile)

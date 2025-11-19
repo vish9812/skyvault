@@ -22,3 +22,10 @@ func (r *GetProfileRes) SetAvatarBase64(avatar []byte) {
 
 	r.AvatarBase64 = base64.StdEncoding.EncodeToString(avatar)
 }
+
+type StorageUsageRes struct {
+	UsedBytes  int64 `json:"usedBytes"`
+	QuotaBytes int64 `json:"quotaBytes"`
+	UsedMB     int64 `json:"usedMB"`
+	QuotaMB    int64 `json:"quotaMB"`
+}

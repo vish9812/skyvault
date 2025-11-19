@@ -32,11 +32,12 @@ func InitAPI(app *appconfig.App, infra *infrastructure.Infrastructure) *api.API 
 	mediaCmdRoot := media.NewCommandsSanitizer(mediaCmd)
 	mediaQrs := media.NewQueryHandlers(infra.Repository.Media, infra.Storage.LocalStorage)
 	mediaQrsRoot := media.NewQueriesSanitizer(mediaQrs)
+	uploadFileFlow := workflows.NewUploadFileFlow(mediaCmdRoot, infra.Repository.Media, infra.Repository.Profile)
 
 	// Init API
 	apiServer := api.NewAPI(app).InitRoutes(infra)
 	apiServer.Auth = api.NewAuthAPI(apiServer, signUpFlow, signInFlow).InitRoutes()
-	apiServer.Media = api.NewMediaAPI(apiServer, app, mediaCmdRoot, mediaQrsRoot).InitRoutes()
+	apiServer.Media = api.NewMediaAPI(apiServer, app, mediaCmdRoot, mediaQrsRoot, uploadFileFlow).InitRoutes()
 	apiServer.Profile = api.NewProfileAPI(apiServer, proCmdRoot, proQrsRoot).InitRoutes()
 	apiServer.System = api.NewSystemAPI(apiServer).InitRoutes()
 

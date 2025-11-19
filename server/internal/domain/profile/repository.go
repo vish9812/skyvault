@@ -27,4 +27,14 @@ type Repository interface {
 	// App Errors:
 	// - ErrCommonNoData
 	Delete(ctx context.Context, id string) error
+
+	// IncrementStorageUsage atomically increments the storage used by the specified bytes.
+	// App Errors:
+	// - ErrCommonNoData
+	IncrementStorageUsage(ctx context.Context, profileID string, bytes int64) error
+
+	// DecrementStorageUsage atomically decrements the storage used by the specified bytes.
+	// App Errors:
+	// - ErrCommonNoData
+	DecrementStorageUsage(ctx context.Context, profileID string, bytes int64) error
 }

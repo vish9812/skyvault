@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"skyvault/internal/api/helper"
 	"skyvault/internal/api/helper/dtos"
+	"skyvault/internal/domain/media"
 
 	"github.com/go-chi/chi/v5"
 )
@@ -28,12 +29,9 @@ func (s *SystemAPI) InitRoutes() *SystemAPI {
 }
 
 func (s *SystemAPI) GetConfig(w http.ResponseWriter, r *http.Request) {
-	config := s.api.app.Config.Media
-
 	dto := dtos.SystemConfigDTO{
-		MaxUploadSizeMB:       config.MaxUploadSizeMB,
-		MaxDirectUploadSizeMB: config.MaxDirectUploadSizeMB,
-		MaxChunkSizeMB:        config.MaxChunkSizeMB,
+		MaxDirectUploadSizeMB: media.MaxDirectUploadSizeMB,
+		MaxChunkSizeMB:        media.MaxChunkSizeMB,
 	}
 
 	helper.RespondJSON(w, http.StatusOK, dto)

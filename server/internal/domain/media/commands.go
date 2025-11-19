@@ -10,6 +10,11 @@ import (
 // For more than 50, use a background job.
 
 type Commands interface {
+	// WithTxRepository creates a new instance of Commands with the given Repository.
+	//
+	// WithTxRepository is to be used when the commands across domains(workflows) need to be executed in a transaction.
+	WithTxRepository(ctx context.Context, repository Repository) Commands
+
 	//--------------------------------
 	// Files
 	//--------------------------------

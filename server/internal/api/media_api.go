@@ -7,6 +7,7 @@ import (
 	"skyvault/internal/api/helper"
 	"skyvault/internal/api/helper/dtos"
 	"skyvault/internal/domain/media"
+	"skyvault/internal/workflows"
 	"skyvault/pkg/appconfig"
 	"skyvault/pkg/apperror"
 	"skyvault/pkg/applog"
@@ -26,18 +27,20 @@ const (
 )
 
 type MediaAPI struct {
-	api      *API
-	app      *appconfig.App
-	commands media.Commands
-	queries  media.Queries
+	api            *API
+	app            *appconfig.App
+	commands       media.Commands
+	queries        media.Queries
+	uploadFileFlow *workflows.UploadFileFlow
 }
 
-func NewMediaAPI(a *API, app *appconfig.App, commands media.Commands, queries media.Queries) *MediaAPI {
+func NewMediaAPI(a *API, app *appconfig.App, commands media.Commands, queries media.Queries, uploadFileFlow *workflows.UploadFileFlow) *MediaAPI {
 	return &MediaAPI{
-		api:      a,
-		app:      app,
-		commands: commands,
-		queries:  queries,
+		api:            a,
+		app:            app,
+		commands:       commands,
+		queries:        queries,
+		uploadFileFlow: uploadFileFlow,
 	}
 }
 
@@ -122,7 +125,7 @@ func (a *MediaAPI) UploadFile(w http.ResponseWriter, r *http.Request) {
 		File:     file,
 	}
 
-	fileInfo, err := a.commands.UploadFile(r.Context(), cmd)
+	fileInfo, err := a.uploadFileFlow.UploadFile(r.Context(), cmd)
 	if err != nil {
 		helper.RespondError(w, r, apperror.NewAppError(err, "mediaAPI.UploadFile:UploadFile").WithMetadata("file_name", handler.Filename).WithMetadata("folder_id", folderID))
 		return
@@ -227,7 +230,7 @@ func (a *MediaAPI) FinalizeChunkedUpload(w http.ResponseWriter, r *http.Request)
 		TotalChunks: req.TotalChunks,
 	}
 
-	fileInfo, err := a.commands.FinalizeChunkedUpload(r.Context(), cmd)
+	fileInfo, err := a.uploadFileFlow.FinalizeChunkedUpload(r.Context(), cmd)
 	if err != nil {
 		helper.RespondError(w, r, apperror.NewAppError(err, "mediaAPI.FinalizeChunkedUpload:FinalizeChunkedUpload").WithMetadata("upload_id", uploadID))
 		return

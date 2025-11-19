@@ -9,6 +9,16 @@ import (
 	"skyvault/pkg/apperror"
 )
 
+const (
+	// MaxDirectUploadSizeMB is the maximum file size for direct (non-chunked) uploads
+	MaxDirectUploadSizeMB = 50 // 50MB
+	// MaxChunkSizeMB is the size of each chunk for chunked uploads
+	MaxChunkSizeMB = 10 // 10MB
+	// MaxFileSizeMB is the maximum size for a single file (applies to chunked uploads)
+	// This is a per-file sanity limit; the actual limit is determined by user's storage quota
+	MaxFileSizeMB = 10240 // 10GB
+)
+
 var _ Commands = (*CommandHandlers)(nil)
 
 type CommandHandlers struct {
@@ -19,6 +29,10 @@ type CommandHandlers struct {
 
 func NewCommandHandlers(app *appconfig.App, repository Repository, storage Storage) Commands {
 	return &CommandHandlers{app: app, repository: repository, storage: storage}
+}
+
+func (h *CommandHandlers) WithTxRepository(ctx context.Context, repository Repository) Commands {
+	return &CommandHandlers{app: h.app, repository: repository, storage: h.storage}
 }
 
 //--------------------------------
@@ -36,7 +50,7 @@ func (h *CommandHandlers) UploadFile(ctx context.Context, cmd *UploadFileCommand
 	}
 
 	fileConfig := FileConfig{
-		MaxSizeMB: h.app.Config.Media.MaxDirectUploadSizeMB,
+		MaxSizeMB: MaxDirectUploadSizeMB,
 	}
 
 	info, err := NewFileInfo(fileConfig, cmd.OwnerID, parentFolderInfo, cmd.Name, cmd.Size, cmd.MimeType)
@@ -72,7 +86,7 @@ func (h *CommandHandlers) UploadChunk(ctx context.Context, cmd *UploadChunkComma
 		return apperror.NewAppError(apperror.ErrCommonInvalidValue, "media.CommandHandlers.UploadChunk:ChunkIndex").WithMetadata("chunk_index", cmd.ChunkIndex).WithMetadata("total_chunks", cmd.TotalChunks)
 	}
 
-	maxTotalChunks := int64(math.Ceil(float64(h.app.Config.Media.MaxDirectUploadSizeMB) / float64(h.app.Config.Media.MaxChunkSizeMB)))
+	maxTotalChunks := int64(math.Ceil(float64(MaxDirectUploadSizeMB) / float64(MaxChunkSizeMB)))
 	if cmd.TotalChunks > maxTotalChunks {
 		return apperror.NewAppError(apperror.ErrCommonInvalidValue, "media.CommandHandlers.UploadChunk:TotalChunks").WithMetadata("max_total_chunks", maxTotalChunks).WithMetadata("total_chunks", cmd.TotalChunks)
 	}
@@ -97,7 +111,7 @@ func (h *CommandHandlers) FinalizeChunkedUpload(ctx context.Context, cmd *Finali
 	}
 
 	fileConfig := FileConfig{
-		MaxSizeMB: h.app.Config.Media.MaxUploadSizeMB,
+		MaxSizeMB: MaxFileSizeMB,
 	}
 
 	info, err := NewFileInfo(fileConfig, cmd.OwnerID, parentFolderInfo, cmd.FileName, cmd.FileSize, cmd.MimeType)
