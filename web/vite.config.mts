@@ -13,6 +13,13 @@ export default defineConfig({
   ],
   server: {
     port: 3000,
+    proxy: {
+      // Forward all API requests to the Go server
+      "/api": {
+        target: "http://localhost:8090",
+        changeOrigin: true,
+      },
+    },
   },
   build: {
     target: "esnext",

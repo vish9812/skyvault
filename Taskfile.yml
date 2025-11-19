@@ -29,14 +29,14 @@ tasks:
     dir: server
     desc: Create a new DB.
     cmd: >
-      docker exec -it ${DB__CONTAINER__NAME} 
+      docker exec -it ${DB__CONTAINER__NAME}
       createdb --username=${DB__USER} ${DB__NAME}
 
   drop-db:
     dir: server
     desc: Drop the DB.
     cmd: >
-      docker exec -it ${DB__CONTAINER__NAME} 
+      docker exec -it ${DB__CONTAINER__NAME}
       dropdb --username=${DB__USER} ${DB__NAME}
 
   migrate-up:
@@ -71,7 +71,7 @@ tasks:
     desc: Build and run the server application
     deps: [server:build]
     cmds:
-      - "{{.SERVER_BUILD_OUTPUT}}"
+      - "{{.SERVER_BUILD_OUTPUT}} -dev -env dev.env"
 
   server:test:
     dir: server
@@ -139,8 +139,17 @@ tasks:
       - task: server:run
 
   dev:
-    desc: Run the server and web development server
-    deps: [web:dev, server:run]
+    desc: Run both server and web in development mode (use 2 terminals or run manually)
+    cmds:
+      - echo "Development mode requires 2 terminals:"
+      - echo "  Terminal 1- task server:run"
+      - echo "  Terminal 2- task web:dev"
+      - echo ""
+      - echo "Or use VS Code:"
+      - echo "  1. Press F5 to start Go server"
+      - echo "  2. Run 'task web:dev' in terminal"
+      - echo ""
+      - echo "Then open http://localhost:3000 in your browser"
 
   test:
     desc: Run the tests

@@ -5,7 +5,6 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	"path/filepath"
 	"skyvault/internal/domain/auth"
 	"skyvault/internal/domain/media"
 	"skyvault/internal/domain/profile"
@@ -100,9 +99,9 @@ func (r *Repository) withTx(_ context.Context, tx *sql.Tx) *Repository {
 }
 
 func (r *Repository) migrateUp() {
-	migrationPath := filepath.Join(r.app.Config.Server.Path, "internal/infrastructure/internal/repository/internal/migrations")
-	migrationDirURL := fmt.Sprintf("file://%s", migrationPath)
-	logger := r.app.Logger.With().Str("where", "migrateUp").Str("migration_path", migrationDirURL).Logger()
+	migrationDir := r.app.Config.Server.MigrationsDir
+	migrationDirURL := fmt.Sprintf("file://%s", migrationDir)
+	logger := r.app.Logger.With().Str("where", "migrateUp").Str("migration_dir", migrationDirURL).Logger()
 
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()

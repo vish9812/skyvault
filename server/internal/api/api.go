@@ -52,10 +52,6 @@ func (a *API) InitRoutes(infra *infrastructure.Infrastructure) *API {
 		middlewares.EnhanceContext(a.app),
 	)
 
-	// Serve static files
-	fs := http.FileServer(http.Dir("static"))
-	router.Handle("/*", fs)
-
 	// API routers
 	v1Pub := chi.NewRouter()
 	v1Pvt := chi.NewRouter().With(
@@ -63,9 +59,13 @@ func (a *API) InitRoutes(infra *infrastructure.Infrastructure) *API {
 		middlewares.RequestSizeLimit(a.app.Config),
 	)
 
-	// Mount routers
+	// Mount routers BEFORE static handler
 	router.Mount("/api/v1/pub", v1Pub)
 	router.Mount("/api/v1", v1Pvt)
+
+	// Serve static files with SPA fallback
+	// This must come AFTER API routes to not interfere with them
+	router.Get("/*", spaHandler("static"))
 
 	// Health check endpoint
 	v1Pub.Get("/health", func(w http.ResponseWriter, r *http.Request) {

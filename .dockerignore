@@ -1,0 +1,68 @@
+# Git
+.git
+.gitignore
+.gitattributes
+
+# Documentation
+*.md
+!README.md
+docs/
+
+# CI/CD
+.github/
+
+# Environment files
+*.env
+!.env.example
+.env.*
+
+# IDE
+.claude/
+.cursor/
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Server build artifacts
+server/bin/
+server/.data/
+server/static/
+
+# Web artifacts
+web/node_modules/
+web/dist/
+web/.solid/
+# Note: web/package.json and web/pnpm-lock.yaml are needed for Docker build
+
+# Testing
+*_test.go
+*test*.go
+server/internal/tests/
+coverage.out
+
+# Development
+Makefile
+Taskfile.yml
+docker-compose.yml
+server/compose.yml
+server/dev.env
+server/test.env
+
+# Docker meta files (not needed in the image itself)
+Dockerfile
+.dockerignore
+# Note: docker-entrypoint.sh IS needed for COPY in Dockerfile
+
+# Logs
+*.log
+
+# Temporary files
+tmp/
+temp/
+*.tmp

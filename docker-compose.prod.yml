@@ -1,0 +1,47 @@
+name: skyvault
+
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: skyvault-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${DB__NAME:-skyvault}
+      POSTGRES_USER: ${DB__USER:-skyvault}
+      POSTGRES_PASSWORD: ${DB__PASS}
+    volumes:
+      - data-db:/var/lib/postgresql/data
+    networks:
+      - skyvault-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -d $${POSTGRES_DB} -U $${POSTGRES_USER}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  app:
+    image: ghcr.io/vish9812/skyvault:${VERSION:-latest}
+    container_name: skyvault-app
+    restart: unless-stopped
+    ports:
+      - "${SERVER__PORT:-8090}:8090"
+    volumes:
+      - data-app:/app/data
+      - ./.env:/app/.env:ro  # Mount .env file as read-only
+    networks:
+      - skyvault-network
+    depends_on:
+      db:
+        condition: service_healthy
+    # Healthcheck is inherited from Dockerfile
+
+volumes:
+  data-db:
+    driver: local
+  data-app:
+    driver: local
+
+networks:
+  skyvault-network:
+    driver: bridge

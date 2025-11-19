@@ -20,10 +20,11 @@ type Config struct {
 }
 
 type ServerConfig struct {
-	Path    string
-	DataDir string
-	Port    int
-	Addr    string
+	Path          string
+	MigrationsDir string
+	DataDir       string
+	Port          int
+	Addr          string
 }
 
 type DBContainerConfig struct {
@@ -33,9 +34,8 @@ type DBContainerConfig struct {
 }
 
 type DBHostConfig struct {
-	Name   string
-	Port   int
-	Volume string
+	Name string
+	Port int
 }
 
 type DBConfig struct {
@@ -81,6 +81,7 @@ func LoadConfig(path string, isDev bool) *Config {
 
 	// Server config
 	config.Server.Path = envMap["SERVER__PATH"]
+	config.Server.MigrationsDir = envMap["SERVER__MIGRATIONS_DIR"]
 	config.Server.DataDir = envMap["SERVER__DATA_DIR"]
 	config.Server.Port = getIntOrZero(envMap["SERVER__PORT"])
 	config.Server.Addr = envMap["SERVER__ADDR"]
@@ -91,7 +92,6 @@ func LoadConfig(path string, isDev bool) *Config {
 	config.DB.Container.Port = getIntOrZero(envMap["DB__CONTAINER__PORT"])
 	config.DB.Host.Name = envMap["DB__HOST__NAME"]
 	config.DB.Host.Port = getIntOrZero(envMap["DB__HOST__PORT"])
-	config.DB.Host.Volume = envMap["DB__HOST__VOLUME"]
 	config.DB.Name = envMap["DB__NAME"]
 	config.DB.User = envMap["DB__USER"]
 	config.DB.Pass = envMap["DB__PASS"]
@@ -171,6 +171,11 @@ func (c *Config) validate(logger zerolog.Logger, isDev bool) {
 		logger.Warn().Msg("app path not set, using current dir")
 	}
 
+	if c.Server.MigrationsDir == "" {
+		c.Server.MigrationsDir = filepath.Join(c.Server.Path, "internal/infrastructure/internal/repository/internal/migrations")
+		logger.Warn().Msg("migrations dir not set, using default migrations dir")
+	}
+
 	if c.Server.DataDir == "" {
 		c.Server.DataDir = filepath.Join(c.Server.Path, ".data")
 		logger.Warn().Msg("data dir not set, using default '.data' dir")
@@ -215,11 +220,6 @@ func (c *Config) validate(logger zerolog.Logger, isDev bool) {
 	if c.DB.Host.Port <= 0 {
 		c.DB.Host.Port = 5432
 		logger.Warn().Msg("database host port not set, using default port 5432")
-	}
-
-	if c.DB.Host.Volume == "" {
-		c.DB.Host.Volume = filepath.Join(c.Server.DataDir, "db")
-		logger.Warn().Msgf("database host volume not set, using default volume: %s", c.DB.Host.Volume)
 	}
 
 	if c.DB.Name == "" {

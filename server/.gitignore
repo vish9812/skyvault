@@ -25,5 +25,6 @@ go.work.sum
 # others
 .data/
 static/
+static
 **/testdata/
 __debug*
