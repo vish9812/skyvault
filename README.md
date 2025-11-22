@@ -21,8 +21,10 @@ SkyVault is a self-hosted cloud storage solution designed to help you securely s
 
 - 🔐 **Secure Authentication**: JWT-based authentication system
 - 📁 **Folder Management**: Create and navigate through folder structures
-- 📤 **File Upload**: Upload files with support for chunked uploads for large files
+- 📤 **File Upload**: Upload files with support for resumable chunked uploads for large files
 - 📥 **File Download**: Download your files anytime
+- 💾 **Storage Quotas**: Per-user storage limits with real-time usage tracking
+- 📊 **Storage Monitoring**: Visual storage quota display with usage indicators
 - 📱 **Mobile-First UI**: Responsive design optimized for mobile devices
 - 🎨 **Modern Interface**: Built with SolidJS and Tailwind CSS
 - 🚀 **High Performance**: Go backend with clean architecture
@@ -91,33 +93,38 @@ SkyVault is a self-hosted cloud storage solution designed to help you securely s
 
 SkyVault is configured through environment variables in the `.env` file:
 
-| Variable                           | Description                           | Default           |
-| ---------------------------------- | ------------------------------------- | ----------------- |
-| `SERVER__PORT`                     | Port to expose the application        | `8090`            |
-| `DB__NAME`                         | PostgreSQL database name              | `skyvault`        |
-| `DB__USER`                         | PostgreSQL username                   | `skyvault`        |
-| `DB__PASS`                         | PostgreSQL password                   | ⚠️ **Required**   |
-| `AUTH__JWT__KEY`                   | JWT secret key (min 32 chars)         | ⚠️ **Required**   |
-| `AUTH__JWT__TOKEN_TIMEOUT_MIN`     | Token expiration in minutes           | `43200` (30 days) |
-| `MEDIA__MAX_UPLOAD_SIZE_MB`        | Maximum upload size                   | `10240` (10GB)    |
-| `MEDIA__MAX_DIRECT_UPLOAD_SIZE_MB` | Max size before chunking              | `5000` (5GB)      |
-| `MEDIA__MAX_CHUNK_SIZE_MB`         | Maximum chunk size                    | `100` (100MB)     |
-| `LOG__LEVEL`                       | Logging level (debug/info/warn/error) | `info`            |
+| Variable                       | Description                           | Default           |
+| ------------------------------ | ------------------------------------- | ----------------- |
+| `SERVER__PORT`                 | Port to expose the application        | `8090`            |
+| `DB__NAME`                     | PostgreSQL database name              | `skyvault`        |
+| `DB__USER`                     | PostgreSQL username                   | `skyvault`        |
+| `DB__PASS`                     | PostgreSQL password                   | ⚠️ **Required**   |
+| `AUTH__JWT__KEY`               | JWT secret key (min 32 chars)         | ⚠️ **Required**   |
+| `AUTH__JWT__TOKEN_TIMEOUT_MIN` | Token expiration in minutes           | `43200` (30 days) |
+| `STORAGE__DEFAULT_QUOTA_MB`    | Default storage quota for new users   | `10240` (10GB)    |
+| `LOG__LEVEL`                   | Logging level (debug/info/warn/error) | `info`            |
 
-### Storage Limits
+### Storage Quotas
 
-You can customize storage limits by modifying the `MEDIA__*` variables:
+SkyVault supports per-user storage quotas. You can configure the default quota for new users:
 
 ```bash
-# Allow uploads up to 20GB
-MEDIA__MAX_UPLOAD_SIZE_MB=20480
+# Set default storage quota to 50GB for new users
+STORAGE__DEFAULT_QUOTA_MB=51200
 
-# Use chunking for files over 10GB
-MEDIA__MAX_DIRECT_UPLOAD_SIZE_MB=10240
+# Set to 100GB for generous storage
+STORAGE__DEFAULT_QUOTA_MB=102400
 
-# 200MB chunks for faster uploads
-MEDIA__MAX_CHUNK_SIZE_MB=200
+# Set to 1TB for unlimited storage feel
+STORAGE__DEFAULT_QUOTA_MB=1048576
 ```
+
+**Features:**
+- Each user has their own storage quota
+- Real-time storage usage tracking displayed in the UI
+- Visual indicators when approaching storage limits (80% = warning, 95% = critical)
+- Automatic validation prevents uploads exceeding available storage
+- Resumable chunked uploads for large files with concurrent upload protection
 
 ## 🛠️ Management
 
@@ -287,8 +294,13 @@ skyvault/
 ### Storage
 
 - **Type**: Local filesystem storage
-- **Features**: Chunked uploads, streaming downloads
-- **Limits**: Configurable via environment variables
+- **Features**:
+  - Per-user storage quotas
+  - Real-time usage tracking
+  - Resumable chunked uploads for large files
+  - Streaming downloads
+  - Concurrent upload protection
+- **Configuration**: Default quota configurable via `STORAGE__DEFAULT_QUOTA_MB`
 
 ## 🗺️ Roadmap
 
@@ -296,8 +308,10 @@ skyvault/
 
 - JWT-based authentication
 - Folder creation and navigation
-- File upload with chunking support
+- File upload with resumable chunked uploads
 - File download
+- Per-user storage quotas with real-time tracking
+- Storage usage visualization in UI
 
 ### In Progress 🚧
 

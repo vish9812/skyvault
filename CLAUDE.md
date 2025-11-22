@@ -88,6 +88,7 @@ Each domain follows CQRS pattern with:
 - Kobalte UI components for accessibility
 - TanStack Query for server state management
 - File upload with progress tracking and chunked uploads
+- Real-time storage quota display with visual indicators
 
 ## Code Conventions
 
@@ -123,7 +124,10 @@ Each domain follows CQRS pattern with:
 
 - Local file system storage implementation
 - Configurable storage directory via environment variables
-- Chunked upload support for large files
+- Per-user storage quotas (configurable default quota for new users)
+- Storage usage tracking and display in UI
+- Upload sessions for resumable chunked uploads
+- Chunked upload support for large files with concurrent upload protection
 - File categorization (image, video, audio, text, other)
 - Streaming file processing to minimize memory usage
 - Resource management handled by Go's HTTP server and OS-level limits
