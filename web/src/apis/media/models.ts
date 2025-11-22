@@ -58,3 +58,11 @@ export interface FolderContent {
   filePage: Page<FileInfo>;
   folderPage: Page<FolderInfo>;
 }
+
+export interface CreateUploadSessionResponse {
+  uploadId: string;
+  fileName: string;
+  fileSize: number;
+  totalChunks: number;
+  expiresAt: string;
+}

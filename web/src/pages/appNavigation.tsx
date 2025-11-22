@@ -1,5 +1,6 @@
 import { A } from "@solidjs/router";
 import CreateUpload from "@sv/components/createUpload";
+import StorageQuotaBar from "@sv/components/storageQuotaBar";
 import { CLIENT_URLS } from "@sv/utils/consts";
 import { For, Show } from "solid-js";
 
@@ -119,26 +120,30 @@ function AppNavigation() {
       </div>
 
       {/* Desktop sidebar */}
-      <aside class="hidden md:block w-64 h-screen bg-white border-r border-border fixed left-0 top-0 overflow-y-auto p-4">
-        <h1 class="gradient-text text-center">SkyVault</h1>
+      <aside class="hidden md:flex md:flex-col w-64 h-screen bg-white border-r border-border fixed left-0 top-0">
+        <div class="flex-1 overflow-y-auto p-4">
+          <h1 class="gradient-text text-center">SkyVault</h1>
 
-        <CreateUpload />
+          <CreateUpload />
 
-        <nav class="space-y-1">
-          <For each={navItems}>
-            {(item) => (
-              <A
-                href={item.href}
-                title={item.label}
-                class="link-no-underline flex items-center gap-3 px-3 py-2 rounded-md font-medium"
-                activeClass="bg-secondary-light/30"
-              >
-                {item.icon()}
-                <span>{item.label}</span>
-              </A>
-            )}
-          </For>
-        </nav>
+          <nav class="space-y-1">
+            <For each={navItems}>
+              {(item) => (
+                <A
+                  href={item.href}
+                  title={item.label}
+                  class="link-no-underline flex items-center gap-3 px-3 py-2 rounded-md font-medium"
+                  activeClass="bg-secondary-light/30"
+                >
+                  {item.icon()}
+                  <span>{item.label}</span>
+                </A>
+              )}
+            </For>
+          </nav>
+        </div>
+
+        <StorageQuotaBar />
       </aside>
     </>
   );

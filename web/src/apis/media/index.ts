@@ -7,8 +7,8 @@ import {
 } from "@sv/apis/common";
 import { BYTES_PER, ROOT_FOLDER_ID, ROOT_FOLDER_NAME } from "@sv/utils/consts";
 import FileUtils from "@sv/utils/fileUtils";
-import Random from "@sv/utils/random";
 import type {
+  CreateUploadSessionResponse,
   FileInfo,
   FolderContent,
   FolderInfo,
@@ -74,10 +74,24 @@ export async function uploadFileChunked(
 ): Promise<FileInfo> {
   const maxChunkSize = uploadConfig.maxChunkSizeMB * BYTES_PER.MB;
   const totalChunks = Math.ceil(file.size / maxChunkSize);
-  const uploadId = Random.id();
+
+  // Step 1: Create upload session (allocates quota upfront)
+  const sessionRes = await post(
+    `${urlFolders}/${folderId}/files/upload-sessions`,
+    {
+      fileName: file.name,
+      fileSize: file.size,
+      mimeType: file.type || "application/octet-stream",
+      totalChunks,
+    }
+  );
+  const session =
+    await handleJSONResponse<CreateUploadSessionResponse>(sessionRes);
+  const uploadId = session.uploadId;
+
   const chunksUrl = `${urlFolders}/${folderId}/files/chunks`;
 
-  // Create all chunk upload promises in parallel
+  // Step 2: Create all chunk upload promises in parallel
   const chunkPromises: Promise<Response>[] = [];
   let completedChunks = 0;
 
@@ -121,7 +135,7 @@ export async function uploadFileChunked(
   // Wait for all chunks to complete
   await Promise.all(chunkPromises);
 
-  // All chunks uploaded successfully, now finalize
+  // Step 3: All chunks uploaded successfully, now finalize
   const finalizeRes = await post(`${chunksUrl}/${uploadId}/finalize`, {
     fileName: file.name,
     fileSize: file.size,
