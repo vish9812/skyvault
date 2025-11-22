@@ -24,6 +24,8 @@ const (
 	MaxDirectUploadSizeMB = 50 // 50MB
 	// MaxChunkSizeMB is the size of each chunk for chunked uploads
 	MaxChunkSizeMB = 10 // 10MB
+	// SizeToleranceBytes is the allowed variance between claimed and actual file sizes (for headers/metadata)
+	SizeToleranceBytes = 64 * 1024 // 64KB
 )
 
 // TODO: Generate preview asynchronously via worker

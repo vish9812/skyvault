@@ -24,6 +24,7 @@ type UploadSession struct {
 	MimeType       string
 	TotalChunks    int64
 	QuotaAllocated int64 // Amount of quota reserved for this upload
+	UploadedBytes  int64 // Actual bytes uploaded so far (cumulative across all chunks)
 	CreatedAt      time.Time
 	ExpiresAt      time.Time
 }
@@ -87,6 +88,7 @@ func NewUploadSession(ownerID string, parentFolder *FolderInfo, fileName string,
 		MimeType:       mimeType,
 		TotalChunks:    totalChunks,
 		QuotaAllocated: fileSize, // Reserve the full file size upfront
+		UploadedBytes:  0,        // No bytes uploaded yet
 		CreatedAt:      now,
 		ExpiresAt:      expiresAt,
 	}, nil

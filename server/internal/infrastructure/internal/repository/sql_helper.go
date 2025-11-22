@@ -336,6 +336,26 @@ func runInsert[TDBModel any, TRes any](ctx context.Context, stmt Statement, dbTx
 	return &resModel, nil
 }
 
+// runUpdate is to be used with Update statements that return a value (using RETURNING clause)
+//
+// App Errors:
+// - ErrCommonNoData
+func runUpdate[TDBModel any, TRes any](ctx context.Context, stmt Statement, dbTx qrm.DB) (*TRes, error) {
+	var dbModel TDBModel
+	err := stmt.QueryContext(ctx, dbTx, &dbModel)
+	if err != nil {
+		return nil, apperror.NewAppError(err, "repository.runUpdate:QueryContext")
+	}
+
+	var resModel TRes
+	err = copier.Copy(&resModel, &dbModel)
+	if err != nil {
+		return nil, apperror.NewAppError(fmt.Errorf("failed to copy the db model to the res model: %w", err), "repository.runUpdate:Copy")
+	}
+
+	return &resModel, nil
+}
+
 // runInsertNoReturn is to be used with Insert statements that do not return a value
 //
 // App Errors:

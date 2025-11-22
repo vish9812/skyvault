@@ -63,8 +63,9 @@ func TestSaveFile(t *testing.T) {
 	fileContent := []byte("testing save file")
 	fileReader := bytes.NewReader(fileContent)
 
-	err := ls.SaveFile(ctx, fileReader, fileName, ownerID)
+	bytesWritten, err := ls.SaveFile(ctx, fileReader, fileName, ownerID)
 	require.NoError(t, err, "SaveFile should not return an error")
+	require.Equal(t, int64(len(fileContent)), bytesWritten, "Bytes written should match file content length")
 
 	savePath := getFilePath(getOwnerDirPath(ls.baseDir, ownerID), fileName)
 	_, err = os.Stat(savePath)
@@ -75,7 +76,7 @@ func TestSaveFile(t *testing.T) {
 	require.Equal(t, fileContent, content, "Saved file content should match")
 
 	// Save the same file again
-	err = ls.SaveFile(ctx, fileReader, fileName, ownerID)
+	_, err = ls.SaveFile(ctx, fileReader, fileName, ownerID)
 	require.ErrorIs(t, err, apperror.ErrCommonDuplicateData, "SaveFile should return ErrDuplicateData when file already exists")
 }
 

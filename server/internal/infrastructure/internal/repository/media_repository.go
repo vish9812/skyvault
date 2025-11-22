@@ -4,6 +4,7 @@ package repository
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"slices"
 	"time"
 
@@ -224,6 +225,39 @@ func (r *MediaRepository) GetUploadSessionForOwner(ctx context.Context, ownerID,
 	// Validate access
 	if err := session.ValidateAccess(ownerID); err != nil {
 		return nil, apperror.NewAppError(err, "repository.GetUploadSessionForOwner:ValidateAccess")
+	}
+
+	return session, nil
+}
+
+func (r *MediaRepository) IncrementUploadedBytes(ctx context.Context, sessionID string, bytesToAdd int64) (*media.UploadSession, error) {
+	// Atomically increment uploaded_bytes and return the updated session
+	// This prevents race conditions where multiple chunks could be uploaded concurrently
+	stmt := UploadSession.UPDATE(UploadSession.UploadedBytes).
+		SET(UploadSession.UploadedBytes.ADD(Int(bytesToAdd))).
+		WHERE(
+			UploadSession.ID.EQ(UUID(UUIDStr(sessionID))).
+				// Ensure we don't exceed the allocated file size (prevent quota bypass)
+				AND(UploadSession.UploadedBytes.ADD(Int(bytesToAdd)).LT_EQ(UploadSession.FileSize)),
+		).
+		RETURNING(UploadSession.AllColumns)
+
+	session, err := runUpdate[model.UploadSession, media.UploadSession](ctx, stmt, r.repository.dbTx)
+	if err != nil {
+		// Check if it was a conditional update failure (would exceed file size)
+		if errors.Is(err, apperror.ErrCommonNoData) {
+			// Fetch the current session to provide better error context
+			currentSession, fetchErr := r.GetUploadSession(ctx, sessionID)
+			if fetchErr != nil {
+				return nil, apperror.NewAppError(err, "repository.IncrementUploadedBytes:ExceededQuota")
+			}
+			return nil, apperror.NewAppError(apperror.ErrCommonInvalidValue, "repository.IncrementUploadedBytes:ExceededQuota").
+				WithMetadata("session_id", sessionID).
+				WithMetadata("bytes_to_add", bytesToAdd).
+				WithMetadata("current_uploaded", currentSession.UploadedBytes).
+				WithMetadata("file_size", currentSession.FileSize)
+		}
+		return nil, apperror.NewAppError(err, "repository.IncrementUploadedBytes:runUpdate")
 	}
 
 	return session, nil

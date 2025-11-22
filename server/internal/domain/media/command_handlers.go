@@ -95,8 +95,8 @@ func (h *CommandHandlers) UploadFile(ctx context.Context, cmd *UploadFileCommand
 		return nil, apperror.NewAppError(err, "media.CommandHandlers.UploadFile:NewFileInfo")
 	}
 
-	// Step 4: Save file to physical storage
-	err = h.storage.SaveFile(ctx, cmd.File, info.ID, cmd.OwnerID)
+	// Step 4: Save file to physical storage and get actual bytes written
+	actualBytes, err := h.storage.SaveFile(ctx, cmd.File, info.ID, cmd.OwnerID)
 	if err != nil {
 		// Rollback: deallocate the storage we just allocated
 		h.profileRepository.DecrementStorageUsage(ctx, cmd.OwnerID, cmd.Size)
@@ -104,21 +104,57 @@ func (h *CommandHandlers) UploadFile(ctx context.Context, cmd *UploadFileCommand
 			WithMetadata("file_id", info.ID)
 	}
 
-	// Step 5: Generate preview (TODO: move to async background job)
-	info, err = info.WithPreview(cmd.File)
-	if err != nil {
-		// Rollback: deallocate storage and delete physical file
+	// Step 5: Validate actual bytes against claimed size (prevent quota bypass)
+	// Allow ±64KB tolerance for headers/metadata
+	sizeDifference := actualBytes - cmd.Size
+	if sizeDifference < 0 {
+		sizeDifference = -sizeDifference
+	}
+	if sizeDifference > SizeToleranceBytes {
+		// Client lied about file size - rollback everything
 		h.storage.DeleteFile(ctx, info.ID, cmd.OwnerID)
 		h.profileRepository.DecrementStorageUsage(ctx, cmd.OwnerID, cmd.Size)
+		return nil, apperror.NewAppError(apperror.ErrCommonInvalidValue, "media.CommandHandlers.UploadFile:SizeMismatch").
+			WithMetadata("claimed_size", cmd.Size).
+			WithMetadata("actual_size", actualBytes).
+			WithMetadata("tolerance", SizeToleranceBytes)
+	}
+
+	// Step 6: Adjust quota if there's a difference (within tolerance)
+	if actualBytes != cmd.Size {
+		if actualBytes > cmd.Size {
+			// Allocate additional bytes
+			err = h.profileRepository.AtomicAllocateStorage(ctx, cmd.OwnerID, actualBytes-cmd.Size)
+			if err != nil {
+				// Rollback: delete file and deallocate initial quota
+				h.storage.DeleteFile(ctx, info.ID, cmd.OwnerID)
+				h.profileRepository.DecrementStorageUsage(ctx, cmd.OwnerID, cmd.Size)
+				return nil, apperror.NewAppError(err, "media.CommandHandlers.UploadFile:AllocateAdditionalStorage").
+					WithMetadata("additional_bytes", actualBytes-cmd.Size)
+			}
+		} else {
+			// Deallocate unused bytes
+			h.profileRepository.DecrementStorageUsage(ctx, cmd.OwnerID, cmd.Size-actualBytes)
+		}
+		// Update file info with actual size
+		info.Size = actualBytes
+	}
+
+	// Step 7: Generate preview (TODO: move to async background job)
+	info, err = info.WithPreview(cmd.File)
+	if err != nil {
+		// Rollback: deallocate storage (actual bytes) and delete physical file
+		h.storage.DeleteFile(ctx, info.ID, cmd.OwnerID)
+		h.profileRepository.DecrementStorageUsage(ctx, cmd.OwnerID, actualBytes)
 		return nil, apperror.NewAppError(err, "media.CommandHandlers.UploadFile:WithPreview")
 	}
 
-	// Step 6: Create file info record in database
+	// Step 8: Create file info record in database
 	info, err = h.repository.CreateFileInfo(ctx, info)
 	if err != nil {
-		// Rollback: deallocate storage and delete physical file
+		// Rollback: deallocate storage (actual bytes) and delete physical file
 		h.storage.DeleteFile(ctx, info.ID, cmd.OwnerID)
-		h.profileRepository.DecrementStorageUsage(ctx, cmd.OwnerID, cmd.Size)
+		h.profileRepository.DecrementStorageUsage(ctx, cmd.OwnerID, actualBytes)
 		return nil, apperror.NewAppError(err, "media.CommandHandlers.UploadFile:CreateFileInfo")
 	}
 
@@ -153,10 +189,21 @@ func (h *CommandHandlers) UploadChunk(ctx context.Context, cmd *UploadChunkComma
 			WithMetadata("provided_total_chunks", cmd.TotalChunks)
 	}
 
-	// Step 5: Save the chunk to disk
-	err = h.storage.SaveChunk(ctx, cmd.Chunk, cmd.UploadID, cmd.ChunkIndex, cmd.OwnerID)
+	// Step 5: Save the chunk to disk and get actual bytes written
+	actualBytes, err := h.storage.SaveChunk(ctx, cmd.Chunk, cmd.UploadID, cmd.ChunkIndex, cmd.OwnerID)
 	if err != nil {
 		return apperror.NewAppError(err, "media.CommandHandlers.UploadChunk:SaveChunk")
+	}
+
+	// Step 6: Atomically increment session's uploaded bytes and validate against quota
+	// This prevents quota bypass by tracking cumulative actual bytes across all chunks
+	_, err = h.repository.IncrementUploadedBytes(ctx, session.ID, actualBytes)
+	if err != nil {
+		// Rollback: delete the chunk we just saved
+		h.storage.DeleteChunk(ctx, cmd.UploadID, cmd.ChunkIndex, cmd.OwnerID)
+		return apperror.NewAppError(err, "media.CommandHandlers.UploadChunk:IncrementUploadedBytes").
+			WithMetadata("actual_bytes", actualBytes).
+			WithMetadata("chunk_index", cmd.ChunkIndex)
 	}
 
 	return nil
@@ -176,7 +223,40 @@ func (h *CommandHandlers) FinalizeChunkedUpload(ctx context.Context, cmd *Finali
 		return nil, apperror.NewAppError(err, "media.CommandHandlers.FinalizeChunkedUpload:ValidateExpiration")
 	}
 
-	// Step 3: Get parent folder info from session (or override if specified in command)
+	// Step 3: Validate actual uploaded bytes against claimed size and adjust quota if needed
+	// This is the final validation to ensure the total size across all chunks is correct
+	actualBytes := session.UploadedBytes
+	claimedSize := session.FileSize
+	sizeDifference := actualBytes - claimedSize
+	if sizeDifference < 0 {
+		sizeDifference = -sizeDifference
+	}
+	if sizeDifference > SizeToleranceBytes {
+		// Total uploaded bytes don't match claimed size - this shouldn't happen if chunks were validated
+		return nil, apperror.NewAppError(apperror.ErrCommonInvalidValue, "media.CommandHandlers.FinalizeChunkedUpload:SizeMismatch").
+			WithMetadata("claimed_size", claimedSize).
+			WithMetadata("actual_size", actualBytes).
+			WithMetadata("tolerance", SizeToleranceBytes).
+			WithMetadata("session_id", session.ID)
+	}
+
+	// Adjust quota if there's a difference (within tolerance)
+	if actualBytes != claimedSize {
+		if actualBytes > claimedSize {
+			// Allocate additional bytes
+			err = h.profileRepository.AtomicAllocateStorage(ctx, cmd.OwnerID, actualBytes-claimedSize)
+			if err != nil {
+				return nil, apperror.NewAppError(err, "media.CommandHandlers.FinalizeChunkedUpload:AllocateAdditionalStorage").
+					WithMetadata("additional_bytes", actualBytes-claimedSize).
+					WithMetadata("session_id", session.ID)
+			}
+		} else {
+			// Deallocate unused bytes
+			h.profileRepository.DecrementStorageUsage(ctx, cmd.OwnerID, claimedSize-actualBytes)
+		}
+	}
+
+	// Step 4: Get parent folder info from session (or override if specified in command)
 	var parentFolderInfo *FolderInfo
 	folderID := cmd.FolderID
 	if folderID == nil {
@@ -189,14 +269,14 @@ func (h *CommandHandlers) FinalizeChunkedUpload(ctx context.Context, cmd *Finali
 		}
 	}
 
-	// Step 4: Create file info entity using session data
-	info, err := NewFileInfo(cmd.OwnerID, parentFolderInfo, session.FileName, session.FileSize, session.MimeType)
+	// Step 5: Create file info entity using session data (with actual bytes)
+	info, err := NewFileInfo(cmd.OwnerID, parentFolderInfo, session.FileName, actualBytes, session.MimeType)
 	if err != nil {
 		// Note: Session persists with allocated quota for retry
 		return nil, apperror.NewAppError(err, "media.CommandHandlers.FinalizeChunkedUpload:NewFileInfo")
 	}
 
-	// Step 5: Finalize the chunked upload by combining chunks into final file
+	// Step 6: Finalize the chunked upload by combining chunks into final file
 	err = h.storage.FinalizeChunkedUpload(ctx, cmd.UploadID, info.ID, cmd.OwnerID)
 	if err != nil {
 		// Note: Session persists with allocated quota for retry
@@ -205,7 +285,7 @@ func (h *CommandHandlers) FinalizeChunkedUpload(ctx context.Context, cmd *Finali
 			WithMetadata("file_id", info.ID)
 	}
 
-	// Step 6: Create file info record in database
+	// Step 7: Create file info record in database
 	// Note: Preview generation for chunked uploads will be done asynchronously via background job
 	info, err = h.repository.CreateFileInfo(ctx, info)
 	if err != nil {
@@ -216,7 +296,7 @@ func (h *CommandHandlers) FinalizeChunkedUpload(ctx context.Context, cmd *Finali
 			WithMetadata("file_id", info.ID)
 	}
 
-	// Step 7: Delete upload session (quota is now tracked in profile.storage_used)
+	// Step 8: Delete upload session (quota is now tracked in profile.storage_used)
 	err = h.repository.DeleteUploadSession(ctx, session.ID)
 	if err != nil {
 		// Log error but don't fail the upload - file was successfully created

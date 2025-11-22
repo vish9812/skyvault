@@ -66,6 +66,13 @@ type Repository interface {
 	// - ErrCommonNoAccess
 	GetUploadSessionForOwner(ctx context.Context, ownerID, sessionID string) (*UploadSession, error)
 
+	// IncrementUploadedBytes atomically increments the uploaded_bytes field for a session.
+	// Returns the updated session after increment.
+	// App Errors:
+	// - ErrCommonNoData
+	// - ErrCommonInvalidValue (if incrementing would exceed file_size)
+	IncrementUploadedBytes(ctx context.Context, sessionID string, bytesToAdd int64) (*UploadSession, error)
+
 	// DeleteUploadSession deletes an upload session by ID.
 	// App Errors:
 	// - ErrCommonNoData

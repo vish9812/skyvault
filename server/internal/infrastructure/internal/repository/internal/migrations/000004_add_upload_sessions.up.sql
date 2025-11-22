@@ -8,6 +8,7 @@ create table if not exists upload_session (
     folder_id uuid references folder_info(id) on delete set null,
     total_chunks int not null check (total_chunks > 0),
     quota_allocated bigint not null check (quota_allocated > 0),
+    uploaded_bytes bigint not null default 0 check (uploaded_bytes >= 0),
     created_at timestamp not null default now(),
     expires_at timestamp not null
 );
