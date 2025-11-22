@@ -1,5 +1,5 @@
-import { SystemConfig } from "@sv/apis/system";
 import { StorageUsage } from "@sv/apis/profile";
+import { SystemConfig } from "@sv/apis/system";
 import { Accessor, createContext } from "solid-js";
 
 export const DefaultSystemConfig: SystemConfig = {
@@ -8,10 +8,8 @@ export const DefaultSystemConfig: SystemConfig = {
 } as const;
 
 export const DefaultStorageUsage: StorageUsage = {
-  usedBytes: 0,
-  quotaBytes: 0,
-  usedMB: 0,
-  quotaMB: 0,
+  used: 0,
+  quota: 0,
 } as const;
 
 export interface AppCtxType {

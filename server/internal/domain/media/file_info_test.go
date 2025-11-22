@@ -3,7 +3,6 @@ package media
 import (
 	"bytes"
 	"io"
-	"skyvault/pkg/common"
 	"skyvault/pkg/utils"
 	"testing"
 	"time"
@@ -43,15 +42,6 @@ func TestNewFileInfo(t *testing.T) {
 			size:        1024,
 			mimeType:    "text/plain",
 			expectError: false,
-		},
-		{
-			name:         "exceeds max direct upload size",
-			ownerID:      "100",
-			parentFolder: nil,
-			fileName:     "test.txt",
-			size:         (MaxDirectUploadSizeMB + 1) * common.BytesPerMB,
-			mimeType:     "text/plain",
-			expectError:  true,
 		},
 		{
 			name:    "parent folder different owner",

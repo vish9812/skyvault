@@ -3,7 +3,6 @@ package media
 import (
 	"fmt"
 	"skyvault/pkg/apperror"
-	"skyvault/pkg/common"
 	"skyvault/pkg/utils"
 	"time"
 )
@@ -51,15 +50,6 @@ func NewUploadSession(ownerID string, parentFolder *FolderInfo, fileName string,
 	if totalChunks <= 0 {
 		return nil, apperror.NewAppError(fmt.Errorf("%w: total chunks must be positive", apperror.ErrCommonInvalidValue), "media.NewUploadSession:InvalidTotalChunks").
 			WithMetadata("total_chunks", totalChunks)
-	}
-
-	// Validate chunks don't exceed maximum allowed based on direct upload size limit
-	// maxTotalChunks = MaxDirectUploadSizeMB / MaxChunkSizeMB
-	maxTotalChunks := int64((MaxDirectUploadSizeMB * common.BytesPerMB) / (MaxChunkSizeMB * common.BytesPerMB))
-	if totalChunks > maxTotalChunks {
-		return nil, apperror.NewAppError(fmt.Errorf("%w: too many chunks", apperror.ErrCommonInvalidValue), "media.NewUploadSession:TooManyChunks").
-			WithMetadata("total_chunks", totalChunks).
-			WithMetadata("max_total_chunks", maxTotalChunks)
 	}
 
 	// Validate file name

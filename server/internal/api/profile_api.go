@@ -53,12 +53,9 @@ func (a *ProfileAPI) GetStorageUsage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	const bytesPerMB = 1024 * 1024
 	res := &dtos.StorageUsageRes{
-		UsedBytes:  pro.StorageUsed,
-		QuotaBytes: pro.StorageQuota,
-		UsedMB:     pro.StorageUsed / bytesPerMB,
-		QuotaMB:    pro.StorageQuota / bytesPerMB,
+		Used:  pro.StorageUsed,
+		Quota: pro.StorageQuota,
 	}
 
 	helper.RespondJSON(w, http.StatusOK, res)

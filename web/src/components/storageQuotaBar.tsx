@@ -8,8 +8,8 @@ export default function StorageQuotaBar() {
   const storageUsage = () => appCtx.storageUsage();
   const usagePercentage = () => {
     const usage = storageUsage();
-    if (usage.quotaBytes === 0) return 0;
-    return Math.min((usage.usedBytes / usage.quotaBytes) * 100, 100);
+    if (usage.quota === 0) return 0;
+    return Math.min((usage.used / usage.quota) * 100, 100);
   };
 
   const isNearLimit = () => usagePercentage() >= 80;
@@ -20,8 +20,8 @@ export default function StorageQuotaBar() {
       <div class="text-xs text-neutral-light mb-1 flex justify-between items-center">
         <span>Storage</span>
         <span>
-          {Format.size(storageUsage().usedBytes)} /{" "}
-          {Format.size(storageUsage().quotaBytes)}
+          {Format.size(storageUsage().used)} /{" "}
+          {Format.size(storageUsage().quota)}
         </span>
       </div>
 

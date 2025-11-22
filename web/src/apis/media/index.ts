@@ -159,7 +159,7 @@ export function uploadFiles(
 ): UploadFileResult[] {
   const files = uFiles.map((uFile) => {
     const useChunkedUpload =
-      uFile.file.size > uploadConfig.maxChunkSizeMB * BYTES_PER.MB;
+      uFile.file.size > uploadConfig.maxDirectUploadSizeMB * BYTES_PER.MB;
 
     const file = useChunkedUpload
       ? uploadFileChunked(

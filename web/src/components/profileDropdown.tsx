@@ -38,8 +38,8 @@ function ProfileDropdown() {
         <DropdownMenu.Content class="bg-white rounded-lg shadow-md border border-border-strong min-w-[200px] mt-2">
           {/* Storage info */}
           <div class="px-4 py-2 border-b border-border text-xs text-neutral-light">
-            Storage: {Format.size(appCtx.storageUsage().usedBytes)} /{" "}
-            {Format.size(appCtx.storageUsage().quotaBytes)}
+            Storage: {Format.size(appCtx.storageUsage().used)} /{" "}
+            {Format.size(appCtx.storageUsage().quota)}
           </div>
 
           <DropdownMenu.Item class="dropdown-item" onSelect={handleLogout}>

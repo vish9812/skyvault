@@ -1,11 +1,9 @@
 package media
 
 import (
-	"fmt"
 	"io"
 	"path/filepath"
 	"skyvault/pkg/apperror"
-	"skyvault/pkg/common"
 	"skyvault/pkg/utils"
 	"strings"
 	"time"
@@ -54,10 +52,6 @@ func NewFileInfo(ownerID string, parentFolder *FolderInfo, name string, size int
 			return nil, apperror.NewAppError(err, "media.NewFileInfo:ValidateParentAccess")
 		}
 		folderID = &parentFolder.ID
-	}
-
-	if size > (MaxDirectUploadSizeMB * common.BytesPerMB) {
-		return nil, apperror.NewAppError(fmt.Errorf("%w: file size limit exceeded", apperror.ErrCommonInvalidValue), "media.NewFileInfo:FileSizeLimitExceeded").WithMetadata("max_direct_upload_size_mb", MaxDirectUploadSizeMB).WithMetadata("file_size_mb", size/common.BytesPerMB)
 	}
 
 	if mimeType == "" {

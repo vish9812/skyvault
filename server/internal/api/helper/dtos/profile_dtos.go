@@ -24,8 +24,6 @@ func (r *GetProfileRes) SetAvatarBase64(avatar []byte) {
 }
 
 type StorageUsageRes struct {
-	UsedBytes  int64 `json:"usedBytes"`
-	QuotaBytes int64 `json:"quotaBytes"`
-	UsedMB     int64 `json:"usedMB"`
-	QuotaMB    int64 `json:"quotaMB"`
+	Used  int64 `json:"used"`
+	Quota int64 `json:"quota"`
 }

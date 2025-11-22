@@ -1,5 +1,5 @@
-import type { StorageUsage } from "./models";
 import { get, handleJSONResponse } from "@sv/apis/common";
+import type { StorageUsage } from "./models";
 
 export async function fetchStorageUsage(
   profileId: string

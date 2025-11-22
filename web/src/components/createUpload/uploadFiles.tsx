@@ -31,11 +31,10 @@ export default function UploadFiles(props: Props) {
   const [error, setError] = createSignal("");
   const [isDragOver, setIsDragOver] = createSignal(false);
 
-  // Get upload limits from system config and storage quota
-  const maxFileSize = appCtx.systemConfig.maxDirectUploadSizeMB * BYTES_PER.MB;
+  // Get available storage quota
   const availableStorage = () => {
     const usage = appCtx.storageUsage();
-    return usage.quotaBytes - usage.usedBytes;
+    return usage.quota - usage.used;
   };
 
   const isUploadDisabled = () => isLoading() || selectedFilesCount() === 0;
@@ -64,12 +63,6 @@ export default function UploadFiles(props: Props) {
       return `File name "${file.name}" is invalid. Max length is ${VALIDATIONS.MAX_LENGTH}.`;
     }
 
-    if (file.size > maxFileSize) {
-      return `File "${file.name}" is too large. Max size is ${Format.size(
-        maxFileSize
-      )}.`;
-    }
-
     return null;
   };
 
@@ -96,7 +89,9 @@ export default function UploadFiles(props: Props) {
 
       // Check available storage quota
       if (totalSize > availableStorage()) {
-        return `Not enough storage space. You need ${Format.size(totalSize)} but only have ${Format.size(availableStorage())} available.`;
+        return `Not enough storage space. You need ${Format.size(
+          totalSize
+        )} but only have ${Format.size(availableStorage())} available.`;
       }
     }
 
@@ -355,8 +350,7 @@ export default function UploadFiles(props: Props) {
               select files
             </p>
             <p class="text-xs text-neutral-light mt-1">
-              Maximum single file size: {Format.size(maxFileSize)} • Available
-              storage: {Format.size(availableStorage())}
+              Available storage: {Format.size(availableStorage())}
             </p>
           </div>
         </div>
