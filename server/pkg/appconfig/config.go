@@ -265,9 +265,9 @@ func (c *Config) validate(logger zerolog.Logger, isDev bool) {
 
 	// Storage
 	if c.Storage.DefaultQuotaMB <= 0 {
-		c.Storage.DefaultQuotaMB = 1024 // 1GB default
+		c.Storage.DefaultQuotaMB = 10240 // 10GB default
 		if isDev {
-			c.Storage.DefaultQuotaMB = 10240 // 10GB for development
+			c.Storage.DefaultQuotaMB = 1024 // 1GB for development
 		}
 		logger.Warn().Msgf("storage default quota not set, using default %dMB", c.Storage.DefaultQuotaMB)
 	}

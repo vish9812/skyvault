@@ -17,14 +17,14 @@ type profileTable struct {
 	postgres.Table
 
 	// Columns
-	ID                postgres.ColumnString
-	Email             postgres.ColumnString
-	FullName          postgres.ColumnString
-	Avatar            postgres.ColumnString
-	CreatedAt         postgres.ColumnTimestamp
-	UpdatedAt         postgres.ColumnTimestamp
-	StorageQuotaBytes postgres.ColumnInteger
-	StorageUsedBytes  postgres.ColumnInteger
+	ID           postgres.ColumnString
+	Email        postgres.ColumnString
+	FullName     postgres.ColumnString
+	Avatar       postgres.ColumnString
+	CreatedAt    postgres.ColumnTimestamp
+	UpdatedAt    postgres.ColumnTimestamp
+	StorageQuota postgres.ColumnInteger
+	StorageUsed  postgres.ColumnInteger
 
 	AllColumns     postgres.ColumnList
 	MutableColumns postgres.ColumnList
@@ -65,30 +65,30 @@ func newProfileTable(schemaName, tableName, alias string) *ProfileTable {
 
 func newProfileTableImpl(schemaName, tableName, alias string) profileTable {
 	var (
-		IDColumn                = postgres.StringColumn("id")
-		EmailColumn             = postgres.StringColumn("email")
-		FullNameColumn          = postgres.StringColumn("full_name")
-		AvatarColumn            = postgres.StringColumn("avatar")
-		CreatedAtColumn         = postgres.TimestampColumn("created_at")
-		UpdatedAtColumn         = postgres.TimestampColumn("updated_at")
-		StorageQuotaBytesColumn = postgres.IntegerColumn("storage_quota_bytes")
-		StorageUsedBytesColumn  = postgres.IntegerColumn("storage_used_bytes")
-		allColumns              = postgres.ColumnList{IDColumn, EmailColumn, FullNameColumn, AvatarColumn, CreatedAtColumn, UpdatedAtColumn, StorageQuotaBytesColumn, StorageUsedBytesColumn}
-		mutableColumns          = postgres.ColumnList{EmailColumn, FullNameColumn, AvatarColumn, CreatedAtColumn, UpdatedAtColumn, StorageQuotaBytesColumn, StorageUsedBytesColumn}
+		IDColumn           = postgres.StringColumn("id")
+		EmailColumn        = postgres.StringColumn("email")
+		FullNameColumn     = postgres.StringColumn("full_name")
+		AvatarColumn       = postgres.StringColumn("avatar")
+		CreatedAtColumn    = postgres.TimestampColumn("created_at")
+		UpdatedAtColumn    = postgres.TimestampColumn("updated_at")
+		StorageQuotaColumn = postgres.IntegerColumn("storage_quota")
+		StorageUsedColumn  = postgres.IntegerColumn("storage_used")
+		allColumns         = postgres.ColumnList{IDColumn, EmailColumn, FullNameColumn, AvatarColumn, CreatedAtColumn, UpdatedAtColumn, StorageQuotaColumn, StorageUsedColumn}
+		mutableColumns     = postgres.ColumnList{EmailColumn, FullNameColumn, AvatarColumn, CreatedAtColumn, UpdatedAtColumn, StorageQuotaColumn, StorageUsedColumn}
 	)
 
 	return profileTable{
 		Table: postgres.NewTable(schemaName, tableName, alias, allColumns...),
 
 		//Columns
-		ID:                IDColumn,
-		Email:             EmailColumn,
-		FullName:          FullNameColumn,
-		Avatar:            AvatarColumn,
-		CreatedAt:         CreatedAtColumn,
-		UpdatedAt:         UpdatedAtColumn,
-		StorageQuotaBytes: StorageQuotaBytesColumn,
-		StorageUsedBytes:  StorageUsedBytesColumn,
+		ID:           IDColumn,
+		Email:        EmailColumn,
+		FullName:     FullNameColumn,
+		Avatar:       AvatarColumn,
+		CreatedAt:    CreatedAtColumn,
+		UpdatedAt:    UpdatedAtColumn,
+		StorageQuota: StorageQuotaColumn,
+		StorageUsed:  StorageUsedColumn,
 
 		AllColumns:     allColumns,
 		MutableColumns: mutableColumns,

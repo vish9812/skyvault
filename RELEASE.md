@@ -13,15 +13,18 @@ This guide describes the process for creating a new release of SkyVault.
 ### 1. Prepare the Release
 
 1. **Update version numbers** (if applicable):
+
    - `web/package.json` - Update version field
    - `README.md` - Update version badge
 
 2. **Update CHANGELOG** (create if it doesn't exist):
+
    - Document all changes since the last release
    - Group changes by category (Features, Bug Fixes, Breaking Changes, etc.)
    - Include links to relevant PRs and issues
 
 3. **Test the build locally**:
+
    ```bash
    # Clean build
    task nuke
@@ -48,15 +51,18 @@ This guide describes the process for creating a new release of SkyVault.
 1. **Navigate to the repository** on GitHub
 
 2. **Go to Releases**:
+
    - Click on "Releases" in the right sidebar
    - Click "Draft a new release"
 
 3. **Create a new tag**:
+
    - Click "Choose a tag"
    - Enter the version number (e.g., `v1.0.0`)
    - Click "Create new tag: v1.0.0 on publish"
 
 4. **Fill in release details**:
+
    - **Release title**: `SkyVault v1.0.0` (or appropriate version)
    - **Description**: Use this template:
 
@@ -64,6 +70,7 @@ This guide describes the process for creating a new release of SkyVault.
    ## What's New in v1.0.0
 
    ### Features
+
    - 🔐 JWT-based authentication system
    - 📁 Folder creation and navigation
    - 📤 File upload with chunked upload support (up to 10GB)
@@ -76,14 +83,18 @@ This guide describes the process for creating a new release of SkyVault.
    Quick start with Docker:
 
    \`\`\`bash
+
    # Download configuration files
+
    wget https://raw.githubusercontent.com/yourusername/skyvault/v1.0.0/.env.example -O .env
    wget https://raw.githubusercontent.com/yourusername/skyvault/v1.0.0/docker-compose.prod.yml
 
    # Edit .env with your settings
+
    nano .env
 
    # Start SkyVault
+
    docker compose -f docker-compose.prod.yml up -d
    \`\`\`
 
@@ -93,7 +104,9 @@ This guide describes the process for creating a new release of SkyVault.
 
    The Docker image is available at:
    ```
-   ghcr.io/yourusername/skyvault:v1.0.0
+
+   ghcr.io/yourusername/skyvault:1.0.0
+
    ```
 
    ### Full Changelog
@@ -111,12 +124,13 @@ Once you publish the release, GitHub Actions will automatically:
 
 1. Build the Docker image for both `linux/amd64` and `linux/arm64`
 2. Push the image to GitHub Container Registry with tags:
-   - `ghcr.io/yourusername/skyvault:v1.0.0`
-   - `ghcr.io/yourusername/skyvault:v1`
+   - `ghcr.io/yourusername/skyvault:1.0.0`
+   - `ghcr.io/yourusername/skyvault:1`
    - `ghcr.io/yourusername/skyvault:latest`
 3. Generate build attestation for security
 
 You can monitor the build progress:
+
 - Go to the "Actions" tab in your GitHub repository
 - Click on the "Build and Publish Release" workflow
 - Watch the build progress
@@ -126,9 +140,10 @@ You can monitor the build progress:
 1. **Wait for the build to complete** (usually 5-10 minutes)
 
 2. **Test the Docker image**:
+
    ```bash
    # Pull the image
-   docker pull ghcr.io/yourusername/skyvault:v1.0.0
+   docker pull ghcr.io/yourusername/skyvault:1.0.0
 
    # Test with docker-compose
    docker compose -f docker-compose.prod.yml up -d
@@ -148,6 +163,7 @@ You can monitor the build progress:
 ### 5. Announce the Release
 
 1. **Update social media** (if applicable):
+
    - Twitter/X
    - Reddit (r/selfhosted)
    - Discord communities
@@ -163,16 +179,19 @@ You can monitor the build progress:
 For urgent bug fixes:
 
 1. Create a branch from the release tag:
+
    ```bash
    git checkout -b hotfix/v1.0.1 v1.0.0
    ```
 
 2. Make the fix and commit:
+
    ```bash
    git commit -m "Fix critical bug in authentication"
    ```
 
 3. Merge back to main:
+
    ```bash
    git checkout main
    git merge hotfix/v1.0.1

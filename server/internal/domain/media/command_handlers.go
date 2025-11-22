@@ -5,34 +5,26 @@ import (
 	"database/sql"
 	"errors"
 	"math"
+	"skyvault/internal/domain/profile"
 	"skyvault/pkg/appconfig"
 	"skyvault/pkg/apperror"
-)
-
-const (
-	// MaxDirectUploadSizeMB is the maximum file size for direct (non-chunked) uploads
-	MaxDirectUploadSizeMB = 50 // 50MB
-	// MaxChunkSizeMB is the size of each chunk for chunked uploads
-	MaxChunkSizeMB = 10 // 10MB
-	// MaxFileSizeMB is the maximum size for a single file (applies to chunked uploads)
-	// This is a per-file sanity limit; the actual limit is determined by user's storage quota
-	MaxFileSizeMB = 10240 // 10GB
 )
 
 var _ Commands = (*CommandHandlers)(nil)
 
 type CommandHandlers struct {
-	app        *appconfig.App
-	repository Repository
-	storage    Storage
+	app               *appconfig.App
+	profileRepository profile.Repository
+	repository        Repository
+	storage           Storage
 }
 
-func NewCommandHandlers(app *appconfig.App, repository Repository, storage Storage) Commands {
-	return &CommandHandlers{app: app, repository: repository, storage: storage}
+func NewCommandHandlers(app *appconfig.App, profileRepository profile.Repository, repository Repository, storage Storage) Commands {
+	return &CommandHandlers{app: app, profileRepository: profileRepository, repository: repository, storage: storage}
 }
 
 func (h *CommandHandlers) WithTxRepository(ctx context.Context, repository Repository) Commands {
-	return &CommandHandlers{app: h.app, repository: repository, storage: h.storage}
+	return &CommandHandlers{app: h.app, profileRepository: h.profileRepository, repository: repository, storage: h.storage}
 }
 
 //--------------------------------
@@ -40,6 +32,7 @@ func (h *CommandHandlers) WithTxRepository(ctx context.Context, repository Repos
 //--------------------------------
 
 func (h *CommandHandlers) UploadFile(ctx context.Context, cmd *UploadFileCommand) (*FileInfo, error) {
+	// Step 1: Get parent folder info (if specified)
 	var parentFolderInfo *FolderInfo
 	if cmd.FolderID != nil {
 		var err error
@@ -49,32 +42,46 @@ func (h *CommandHandlers) UploadFile(ctx context.Context, cmd *UploadFileCommand
 		}
 	}
 
-	fileConfig := FileConfig{
-		MaxSizeMB: MaxDirectUploadSizeMB,
+	// Step 2: Atomically allocate storage quota BEFORE doing any file operations
+	// This prevents race conditions where multiple concurrent uploads could exceed quota
+	err := h.profileRepository.AtomicAllocateStorage(ctx, cmd.OwnerID, cmd.Size)
+	if err != nil {
+		return nil, apperror.NewAppError(err, "media.CommandHandlers.UploadFile:AtomicAllocateStorage").
+			WithMetadata("file_size", cmd.Size)
 	}
 
-	info, err := NewFileInfo(fileConfig, cmd.OwnerID, parentFolderInfo, cmd.Name, cmd.Size, cmd.MimeType)
+	// Step 3: Create file info entity
+	info, err := NewFileInfo(cmd.OwnerID, parentFolderInfo, cmd.Name, cmd.Size, cmd.MimeType)
 	if err != nil {
+		// Rollback: deallocate the storage we just allocated
+		h.profileRepository.DecrementStorageUsage(ctx, cmd.OwnerID, cmd.Size)
 		return nil, apperror.NewAppError(err, "media.CommandHandlers.UploadFile:NewFileInfo")
 	}
 
-	// Saving to storage first to validate the file size once again, when actually reading and writing the file
+	// Step 4: Save file to physical storage
 	err = h.storage.SaveFile(ctx, cmd.File, info.ID, cmd.OwnerID)
 	if err != nil {
-		return nil, apperror.NewAppError(err, "media.CommandHandlers.UploadFile:SaveFile").WithMetadata("file_id", info.ID)
+		// Rollback: deallocate the storage we just allocated
+		h.profileRepository.DecrementStorageUsage(ctx, cmd.OwnerID, cmd.Size)
+		return nil, apperror.NewAppError(err, "media.CommandHandlers.UploadFile:SaveFile").
+			WithMetadata("file_id", info.ID)
 	}
 
-	// TODO: Generate previews asynchronously via background job
+	// Step 5: Generate preview (TODO: move to async background job)
 	info, err = info.WithPreview(cmd.File)
 	if err != nil {
+		// Rollback: deallocate storage and delete physical file
+		h.storage.DeleteFile(ctx, info.ID, cmd.OwnerID)
+		h.profileRepository.DecrementStorageUsage(ctx, cmd.OwnerID, cmd.Size)
 		return nil, apperror.NewAppError(err, "media.CommandHandlers.UploadFile:WithPreview")
 	}
 
+	// Step 6: Create file info record in database
 	info, err = h.repository.CreateFileInfo(ctx, info)
 	if err != nil {
-		// Cleanup the file from storage
+		// Rollback: deallocate storage and delete physical file
 		h.storage.DeleteFile(ctx, info.ID, cmd.OwnerID)
-
+		h.profileRepository.DecrementStorageUsage(ctx, cmd.OwnerID, cmd.Size)
 		return nil, apperror.NewAppError(err, "media.CommandHandlers.UploadFile:CreateFileInfo")
 	}
 
@@ -101,6 +108,7 @@ func (h *CommandHandlers) UploadChunk(ctx context.Context, cmd *UploadChunkComma
 }
 
 func (h *CommandHandlers) FinalizeChunkedUpload(ctx context.Context, cmd *FinalizeChunkedUploadCommand) (*FileInfo, error) {
+	// Step 1: Get parent folder info (if specified)
 	var parentFolderInfo *FolderInfo
 	if cmd.FolderID != nil {
 		var err error
@@ -110,28 +118,41 @@ func (h *CommandHandlers) FinalizeChunkedUpload(ctx context.Context, cmd *Finali
 		}
 	}
 
-	fileConfig := FileConfig{
-		MaxSizeMB: MaxFileSizeMB,
+	// Step 2: Atomically allocate storage quota BEFORE combining chunks
+	// This prevents race conditions where multiple concurrent uploads could exceed quota
+	err := h.profileRepository.AtomicAllocateStorage(ctx, cmd.OwnerID, cmd.FileSize)
+	if err != nil {
+		return nil, apperror.NewAppError(err, "media.CommandHandlers.FinalizeChunkedUpload:AtomicAllocateStorage").
+			WithMetadata("file_size", cmd.FileSize)
 	}
 
-	info, err := NewFileInfo(fileConfig, cmd.OwnerID, parentFolderInfo, cmd.FileName, cmd.FileSize, cmd.MimeType)
+	// Step 3: Create file info entity
+	info, err := NewFileInfo(cmd.OwnerID, parentFolderInfo, cmd.FileName, cmd.FileSize, cmd.MimeType)
 	if err != nil {
+		// Rollback: deallocate the storage we just allocated
+		h.profileRepository.DecrementStorageUsage(ctx, cmd.OwnerID, cmd.FileSize)
 		return nil, apperror.NewAppError(err, "media.CommandHandlers.FinalizeChunkedUpload:NewFileInfo")
 	}
 
-	// Finalize the chunked upload by combining chunks
+	// Step 4: Finalize the chunked upload by combining chunks into final file
 	err = h.storage.FinalizeChunkedUpload(ctx, cmd.UploadID, info.ID, cmd.OwnerID)
 	if err != nil {
-		return nil, apperror.NewAppError(err, "media.CommandHandlers.FinalizeChunkedUpload:FinalizeChunkedUpload").WithMetadata("file_id", info.ID)
+		// Rollback: deallocate the storage we just allocated
+		// Note: FinalizeChunkedUpload will handle chunk cleanup on failure
+		h.profileRepository.DecrementStorageUsage(ctx, cmd.OwnerID, cmd.FileSize)
+		return nil, apperror.NewAppError(err, "media.CommandHandlers.FinalizeChunkedUpload:FinalizeChunkedUpload").
+			WithMetadata("file_id", info.ID)
 	}
 
-	// Skip preview generation for chunked uploads (will be done asynchronously via background job)
+	// Step 5: Create file info record in database
+	// Note: Preview generation for chunked uploads will be done asynchronously via background job
 	info, err = h.repository.CreateFileInfo(ctx, info)
 	if err != nil {
-		// Cleanup the file from storage
+		// Rollback: deallocate storage and delete the finalized file
 		h.storage.DeleteFile(ctx, info.ID, cmd.OwnerID)
-
-		return nil, apperror.NewAppError(err, "media.CommandHandlers.FinalizeChunkedUpload:CreateFileInfo").WithMetadata("file_id", info.ID)
+		h.profileRepository.DecrementStorageUsage(ctx, cmd.OwnerID, cmd.FileSize)
+		return nil, apperror.NewAppError(err, "media.CommandHandlers.FinalizeChunkedUpload:CreateFileInfo").
+			WithMetadata("file_id", info.ID)
 	}
 
 	return info, nil

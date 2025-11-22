@@ -83,17 +83,55 @@ func (r *ProfileRepository) Delete(ctx context.Context, id string) error {
 	return runUpdateOrDelete(ctx, stmt, r.repository.dbTx)
 }
 
+func (r *ProfileRepository) AtomicAllocateStorage(ctx context.Context, profileID string, bytes int64) error {
+	stmt := Profile.UPDATE(Profile.StorageUsed).
+		SET(Profile.StorageUsed.SET(Profile.StorageUsed.ADD(Int64(bytes)))).
+		WHERE(
+			Profile.ID.EQ(UUID(UUIDStr(profileID))).
+				AND(Profile.StorageUsed.ADD(Int64(bytes)).LT_EQ(Profile.StorageQuota)),
+		)
+
+	result, err := stmt.ExecContext(ctx, r.repository.dbTx)
+	if err != nil {
+		return apperror.NewAppError(err, "repository.AtomicAllocateStorage:ExecContext")
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return apperror.NewAppError(err, "repository.AtomicAllocateStorage:RowsAffected")
+	}
+
+	if rowsAffected == 0 {
+		// Either profile doesn't exist or quota would be exceeded
+		// Try to fetch profile to provide better error context
+		pro, err := r.Get(ctx, profileID)
+		if err != nil {
+			// Profile doesn't exist
+			return apperror.NewAppError(err, "repository.AtomicAllocateStorage:Get")
+		}
+
+		// Quota would be exceeded
+		return apperror.NewAppError(apperror.ErrStorageQuotaExceeded, "repository.AtomicAllocateStorage:QuotaCheck").
+			WithMetadata("profile_id", profileID).
+			WithMetadata("requested_bytes", bytes).
+			WithMetadata("storage_quota_bytes", pro.StorageQuota).
+			WithMetadata("storage_used_bytes", pro.StorageUsed)
+	}
+
+	return nil
+}
+
 func (r *ProfileRepository) IncrementStorageUsage(ctx context.Context, profileID string, bytes int64) error {
-	stmt := Profile.UPDATE(Profile.StorageUsedBytes).
-		SET(Profile.StorageUsedBytes.SET(Profile.StorageUsedBytes.ADD(Int64(bytes)))).
+	stmt := Profile.UPDATE(Profile.StorageUsed).
+		SET(Profile.StorageUsed.SET(Profile.StorageUsed.ADD(Int64(bytes)))).
 		WHERE(Profile.ID.EQ(UUID(UUIDStr(profileID))))
 
 	return runUpdateOrDelete(ctx, stmt, r.repository.dbTx)
 }
 
 func (r *ProfileRepository) DecrementStorageUsage(ctx context.Context, profileID string, bytes int64) error {
-	stmt := Profile.UPDATE(Profile.StorageUsedBytes).
-		SET(Profile.StorageUsedBytes.SET(Profile.StorageUsedBytes.SUB(Int64(bytes)))).
+	stmt := Profile.UPDATE(Profile.StorageUsed).
+		SET(Profile.StorageUsed.SET(Profile.StorageUsed.SUB(Int64(bytes)))).
 		WHERE(Profile.ID.EQ(UUID(UUIDStr(profileID))))
 
 	return runUpdateOrDelete(ctx, stmt, r.repository.dbTx)

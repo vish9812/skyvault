@@ -14,12 +14,14 @@ This is the first public release of SkyVault, a self-hosted cloud storage soluti
 ### ✨ Features
 
 #### Authentication
+
 - JWT-based authentication system
 - Secure password hashing with bcrypt
 - Token-based session management with configurable expiration
 - Sign up and sign in functionality
 
 #### File Management
+
 - File upload with drag-and-drop support
 - Chunked upload for large files (up to 10GB)
   - Automatic chunking for files over 5GB
@@ -29,12 +31,14 @@ This is the first public release of SkyVault, a self-hosted cloud storage soluti
 - File size limits configurable via environment variables
 
 #### Folder Management
+
 - Create nested folder structures
 - Navigate through folder hierarchy
 - Breadcrumb navigation
 - Parent folder navigation
 
 #### User Interface
+
 - Mobile-first responsive design
 - Built with SolidJS for high performance
 - Styled with Tailwind CSS 4
@@ -44,6 +48,7 @@ This is the first public release of SkyVault, a self-hosted cloud storage soluti
 - Intuitive file and folder interactions
 
 #### Backend
+
 - Clean Architecture with CQRS pattern
 - Domain-driven design
 - RESTful API with Chi router
@@ -54,6 +59,7 @@ This is the first public release of SkyVault, a self-hosted cloud storage soluti
 - Health check endpoint for monitoring
 
 #### Deployment
+
 - Docker-based deployment
 - Multi-stage Dockerfile for optimized image size
 - Docker Compose configuration for production
@@ -63,6 +69,7 @@ This is the first public release of SkyVault, a self-hosted cloud storage soluti
 - Support for both amd64 and arm64 architectures
 
 #### Developer Experience
+
 - Task-based build system with Taskfile
 - Separate development and test environments
 - Hot reload for frontend development
@@ -73,6 +80,7 @@ This is the first public release of SkyVault, a self-hosted cloud storage soluti
 ### 🏗️ Architecture
 
 #### Backend Stack
+
 - **Language**: Go 1.23
 - **Framework**: Chi router
 - **Database**: PostgreSQL 16
@@ -81,6 +89,7 @@ This is the first public release of SkyVault, a self-hosted cloud storage soluti
 - **Logging**: zerolog
 
 #### Frontend Stack
+
 - **Framework**: SolidJS 1.9
 - **Build Tool**: Vite 6
 - **Styling**: Tailwind CSS 4
@@ -122,6 +131,7 @@ This is the first public release of SkyVault, a self-hosted cloud storage soluti
 ### 🔮 Coming Soon
 
 See [TODO.md](TODO.md) for planned features:
+
 - File operations (rename, move, delete)
 - Folder operations (rename, move, delete)
 - Contact management system
@@ -136,23 +146,29 @@ See [TODO.md](TODO.md) for planned features:
 ### [Version] - YYYY-MM-DD
 
 #### Added
+
 - New features
 
 #### Changed
+
 - Changes to existing functionality
 
 #### Deprecated
+
 - Features that will be removed in upcoming releases
 
 #### Removed
+
 - Removed features
 
 #### Fixed
+
 - Bug fixes
 
 #### Security
+
 - Security improvements or fixes
 
 ---
 
-[1.0.0]: https://github.com/yourusername/skyvault/releases/tag/v1.0.0
+[1.0.0]: https://github.com/vish9812/skyvault/releases/tag/v1.0.0

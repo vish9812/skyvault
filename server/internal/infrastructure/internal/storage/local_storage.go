@@ -164,9 +164,8 @@ func (s *LocalStorage) FinalizeChunkedUpload(ctx context.Context, uploadID strin
 	defer finalFile.Close()
 
 	// Combine all chunks
-	var totalSize int64
-	maxSize := int64(media.MaxFileSizeMB) * common.BytesPerMB
-
+	// Note: File size is validated by quota checks before this method is called
+	// Individual chunks are already validated to be <= MaxChunkSizeMB when uploaded
 	for _, chunkFile := range chunkFiles {
 		chunk, err := os.Open(chunkFile)
 		if err != nil {
@@ -179,7 +178,7 @@ func (s *LocalStorage) FinalizeChunkedUpload(ctx context.Context, uploadID strin
 			return apperror.NewAppError(err, "storage.LocalStorage.FinalizeChunkedUpload:OpenChunk").WithMetadata("chunk_file", chunkFile)
 		}
 
-		written, err := io.Copy(finalFile, chunk)
+		_, err = io.Copy(finalFile, chunk)
 		chunk.Close()
 
 		if err != nil {
@@ -190,17 +189,6 @@ func (s *LocalStorage) FinalizeChunkedUpload(ctx context.Context, uploadID strin
 			}
 
 			return apperror.NewAppError(err, "storage.LocalStorage.FinalizeChunkedUpload:CopyChunk").WithMetadata("chunk_file", chunkFile)
-		}
-
-		// Check size limit
-		if totalSize += written; totalSize > maxSize {
-			// Clean up on error
-			errRemove := removeFile(finalPath)
-			if errRemove != nil {
-				return apperror.NewAppError(fmt.Errorf("%w: %w", errRemove, err), "storage.LocalStorage.FinalizeChunkedUpload:SizeExceeded:removeFile").WithMetadata("final_path", finalPath).WithMetadata("chunk_file", chunkFile)
-			}
-
-			return apperror.NewAppError(apperror.ErrCommonInvalidValue, "storage.LocalStorage.FinalizeChunkedUpload:SizeExceeded").WithMetadata("total_size_mb", totalSize/common.BytesPerMB).WithMetadata("max_size_mb", maxSize/common.BytesPerMB)
 		}
 	}
 

@@ -16,7 +16,6 @@ func TestNewFileInfo(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
 		name         string
-		config       FileConfig
 		ownerID      string
 		parentFolder *FolderInfo
 		fileName     string
@@ -26,7 +25,6 @@ func TestNewFileInfo(t *testing.T) {
 	}{
 		{
 			name:         "valid file info without parent",
-			config:       FileConfig{MaxSizeMB: 10},
 			ownerID:      "100",
 			parentFolder: nil,
 			fileName:     "test.txt",
@@ -36,7 +34,6 @@ func TestNewFileInfo(t *testing.T) {
 		},
 		{
 			name:    "valid file info with parent",
-			config:  FileConfig{MaxSizeMB: 10},
 			ownerID: "100",
 			parentFolder: &FolderInfo{
 				ID:      "1",
@@ -48,18 +45,16 @@ func TestNewFileInfo(t *testing.T) {
 			expectError: false,
 		},
 		{
-			name:         "exceeds max size",
-			config:       FileConfig{MaxSizeMB: 1},
+			name:         "exceeds max direct upload size",
 			ownerID:      "100",
 			parentFolder: nil,
 			fileName:     "test.txt",
-			size:         2 * common.BytesPerMB,
+			size:         (MaxDirectUploadSizeMB + 1) * common.BytesPerMB,
 			mimeType:     "text/plain",
 			expectError:  true,
 		},
 		{
 			name:    "parent folder different owner",
-			config:  FileConfig{MaxSizeMB: 10},
 			ownerID: "100",
 			parentFolder: &FolderInfo{
 				ID:      "1",
@@ -75,7 +70,7 @@ func TestNewFileInfo(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			fileInfo, err := NewFileInfo(tt.config, tt.ownerID, tt.parentFolder, tt.fileName, tt.size, tt.mimeType)
+			fileInfo, err := NewFileInfo(tt.ownerID, tt.parentFolder, tt.fileName, tt.size, tt.mimeType)
 			if tt.expectError {
 				assert.Error(t, err)
 				assert.Nil(t, fileInfo)

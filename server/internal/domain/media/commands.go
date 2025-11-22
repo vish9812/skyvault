@@ -20,6 +20,7 @@ type Commands interface {
 	//--------------------------------
 
 	// App Errors:
+	// - ErrStorageQuotaExceeded
 	// - ErrCommonNoData
 	// - ErrCommonNoAccess
 	// - ErrCommonDuplicateData

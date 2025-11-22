@@ -28,6 +28,14 @@ type Repository interface {
 	// - ErrCommonNoData
 	Delete(ctx context.Context, id string) error
 
+	// AtomicAllocateStorage atomically allocates storage quota only if the allocation
+	// would not exceed the user's quota. This prevents race conditions in concurrent uploads.
+	// Returns ErrStorageQuotaExceeded if allocation would exceed quota.
+	// App Errors:
+	// - ErrCommonNoData
+	// - ErrStorageQuotaExceeded
+	AtomicAllocateStorage(ctx context.Context, profileID string, bytes int64) error
+
 	// IncrementStorageUsage atomically increments the storage used by the specified bytes.
 	// App Errors:
 	// - ErrCommonNoData

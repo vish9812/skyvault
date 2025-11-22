@@ -19,9 +19,12 @@ const (
 	CategoryOther = "other"
 )
 
-type FileConfig struct {
-	MaxSizeMB int64
-}
+const (
+	// MaxDirectUploadSizeMB is the maximum file size for direct (non-chunked) uploads
+	MaxDirectUploadSizeMB = 50 // 50MB
+	// MaxChunkSizeMB is the size of each chunk for chunked uploads
+	MaxChunkSizeMB = 10 // 10MB
+)
 
 // TODO: Generate preview asynchronously via worker
 type FileInfo struct {
@@ -42,7 +45,7 @@ type FileInfo struct {
 // App Errors:
 // - ErrCommonNoAccess
 // - ErrCommonInvalidValue
-func NewFileInfo(config FileConfig, ownerID string, parentFolder *FolderInfo, name string, size int64, mimeType string) (*FileInfo, error) {
+func NewFileInfo(ownerID string, parentFolder *FolderInfo, name string, size int64, mimeType string) (*FileInfo, error) {
 	var folderID *string
 	if parentFolder != nil {
 		if err := parentFolder.ValidateAccess(ownerID); err != nil {
@@ -51,8 +54,8 @@ func NewFileInfo(config FileConfig, ownerID string, parentFolder *FolderInfo, na
 		folderID = &parentFolder.ID
 	}
 
-	if size > (config.MaxSizeMB * common.BytesPerMB) {
-		return nil, apperror.NewAppError(fmt.Errorf("%w: file size limit exceeded", apperror.ErrCommonInvalidValue), "media.NewFileInfo:FileSizeLimitExceeded").WithMetadata("max_size_mb", config.MaxSizeMB).WithMetadata("file_size_mb", size/common.BytesPerMB)
+	if size > (MaxDirectUploadSizeMB * common.BytesPerMB) {
+		return nil, apperror.NewAppError(fmt.Errorf("%w: file size limit exceeded", apperror.ErrCommonInvalidValue), "media.NewFileInfo:FileSizeLimitExceeded").WithMetadata("max_direct_upload_size_mb", MaxDirectUploadSizeMB).WithMetadata("file_size_mb", size/common.BytesPerMB)
 	}
 
 	if mimeType == "" {

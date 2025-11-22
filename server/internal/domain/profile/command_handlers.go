@@ -2,6 +2,7 @@ package profile
 
 import (
 	"context"
+	"skyvault/pkg/appconfig"
 	"skyvault/pkg/apperror"
 	"skyvault/pkg/common"
 )
@@ -9,19 +10,20 @@ import (
 var _ Commands = (*CommandHandlers)(nil)
 
 type CommandHandlers struct {
+	app        *appconfig.App
 	repository Repository
 }
 
-func NewCommandHandlers(repository Repository) Commands {
-	return &CommandHandlers{repository: repository}
+func NewCommandHandlers(app *appconfig.App, repository Repository) Commands {
+	return &CommandHandlers{app: app, repository: repository}
 }
 
 func (h *CommandHandlers) WithTxRepository(ctx context.Context, repository Repository) Commands {
-	return &CommandHandlers{repository: repository}
+	return &CommandHandlers{app: h.app, repository: repository}
 }
 
 func (h *CommandHandlers) Create(ctx context.Context, cmd *CreateCommand) (*Profile, error) {
-	pro, err := NewProfile(cmd.Email, cmd.FullName)
+	pro, err := NewProfile(cmd.Email, cmd.FullName, h.app.Config.Storage.DefaultQuotaMB*common.BytesPerMB)
 	if err != nil {
 		return nil, apperror.NewAppError(err, "profile.CommandHandlers.Create:NewProfile")
 	}

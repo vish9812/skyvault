@@ -23,11 +23,6 @@ func setupTestApp() *appconfig.App {
 			Server: appconfig.ServerConfig{
 				DataDir: testBasePath,
 			},
-			Media: appconfig.MediaConfig{
-				MaxUploadSizeMB:       1,
-				MaxDirectUploadSizeMB: 1,
-				MaxChunkSizeMB:        1,
-			},
 		},
 	}
 }
