@@ -183,6 +183,60 @@ func (r *MediaRepository) TrashFileInfos(ctx context.Context, ownerID string, fi
 }
 
 //--------------------------------
+// Upload Session
+//--------------------------------
+
+func (r *MediaRepository) CreateUploadSession(ctx context.Context, session *media.UploadSession) (*media.UploadSession, error) {
+	dbModel := new(model.UploadSession)
+	err := copier.Copy(dbModel, session)
+	if err != nil {
+		return nil, apperror.NewAppError(err, "repository.CreateUploadSession:copier.Copy")
+	}
+
+	stmt := UploadSession.INSERT(
+		UploadSession.AllColumns,
+	).MODEL(dbModel).RETURNING(UploadSession.AllColumns)
+
+	return runInsert[model.UploadSession, media.UploadSession](ctx, stmt, r.repository.dbTx)
+}
+
+func (r *MediaRepository) GetUploadSession(ctx context.Context, sessionID string) (*media.UploadSession, error) {
+	stmt := SELECT(UploadSession.AllColumns).
+		FROM(UploadSession).
+		WHERE(UploadSession.ID.EQ(UUID(UUIDStr(sessionID))))
+
+	return runSelect[model.UploadSession, media.UploadSession](ctx, stmt, r.repository.dbTx)
+}
+
+func (r *MediaRepository) GetUploadSessionForOwner(ctx context.Context, ownerID, sessionID string) (*media.UploadSession, error) {
+	stmt := SELECT(UploadSession.AllColumns).
+		FROM(UploadSession).
+		WHERE(
+			UploadSession.ID.EQ(UUID(UUIDStr(sessionID))).
+				AND(UploadSession.OwnerID.EQ(UUID(UUIDStr(ownerID)))),
+		)
+
+	session, err := runSelect[model.UploadSession, media.UploadSession](ctx, stmt, r.repository.dbTx)
+	if err != nil {
+		return nil, apperror.NewAppError(err, "repository.GetUploadSessionForOwner:runSelect")
+	}
+
+	// Validate access
+	if err := session.ValidateAccess(ownerID); err != nil {
+		return nil, apperror.NewAppError(err, "repository.GetUploadSessionForOwner:ValidateAccess")
+	}
+
+	return session, nil
+}
+
+func (r *MediaRepository) DeleteUploadSession(ctx context.Context, sessionID string) error {
+	stmt := UploadSession.DELETE().
+		WHERE(UploadSession.ID.EQ(UUID(UUIDStr(sessionID))))
+
+	return runUpdateOrDelete(ctx, stmt, r.repository.dbTx)
+}
+
+//--------------------------------
 // Folder
 //--------------------------------
 

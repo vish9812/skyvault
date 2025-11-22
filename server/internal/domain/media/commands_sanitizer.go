@@ -34,6 +34,26 @@ func (s *CommandsSanitizer) UploadFile(ctx context.Context, cmd *UploadFileComma
 	return s.Commands.UploadFile(ctx, cmd)
 }
 
+func (s *CommandsSanitizer) CreateUploadSession(ctx context.Context, cmd *CreateUploadSessionCommand) (*UploadSession, error) {
+	if n, err := validate.FileName(cmd.FileName); err != nil {
+		return nil, apperror.NewAppError(err, "media.CommandsSanitizer.CreateUploadSession:FileName")
+	} else {
+		cmd.FileName = n
+	}
+
+	if cmd.FileSize <= 0 {
+		return nil, apperror.NewAppError(apperror.ErrCommonInvalidValue, "media.CommandsSanitizer.CreateUploadSession:FileSize").
+			WithMetadata("file_size", cmd.FileSize)
+	}
+
+	if cmd.TotalChunks <= 0 {
+		return nil, apperror.NewAppError(apperror.ErrCommonInvalidValue, "media.CommandsSanitizer.CreateUploadSession:TotalChunks").
+			WithMetadata("total_chunks", cmd.TotalChunks)
+	}
+
+	return s.Commands.CreateUploadSession(ctx, cmd)
+}
+
 func (s *CommandsSanitizer) UploadChunk(ctx context.Context, cmd *UploadChunkCommand) error {
 	if cmd.Chunk == nil {
 		return apperror.NewAppError(apperror.ErrCommonInvalidValue, "media.CommandsSanitizer.UploadChunk:Chunk")

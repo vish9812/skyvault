@@ -28,10 +28,24 @@ type Commands interface {
 	// - ErrCommonInvalidValue
 	UploadFile(ctx context.Context, cmd *UploadFileCommand) (*FileInfo, error)
 
+	// CreateUploadSession creates a new upload session for chunked uploads
+	// Allocates storage quota upfront to prevent quota bypass attacks
+	// Returns the upload session with uploadID that must be used for subsequent chunk uploads
+	// App Errors:
+	// - ErrStorageQuotaExceeded
+	// - ErrCommonNoData
+	// - ErrCommonNoAccess
+	// - ErrCommonInvalidValue
+	// - ErrCommonDuplicateData
+	CreateUploadSession(ctx context.Context, cmd *CreateUploadSessionCommand) (*UploadSession, error)
+
 	// UploadChunk uploads a single chunk of a file for chunked uploads
+	// Requires a valid upload session created via CreateUploadSession
 	// Does not finalize the upload - use FinalizeChunkedUpload for that
 	// App Errors:
 	// - ErrCommonInvalidValue
+	// - ErrCommonNoData
+	// - ErrCommonNoAccess
 	UploadChunk(ctx context.Context, cmd *UploadChunkCommand) error
 
 	// FinalizeChunkedUpload combines all chunks into final file after all chunks are uploaded
@@ -113,6 +127,15 @@ type UploadFileCommand struct {
 	Size     int64
 	MimeType string
 	File     io.ReadSeeker
+}
+
+type CreateUploadSessionCommand struct {
+	OwnerID     string
+	FolderID    *string
+	FileName    string
+	FileSize    int64
+	MimeType    string
+	TotalChunks int64
 }
 
 type UploadChunkCommand struct {

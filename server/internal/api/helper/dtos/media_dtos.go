@@ -41,3 +41,19 @@ type GetFolderInfo struct {
 	UpdatedAt      time.Time  `json:"updatedAt" copier:"must,nopanic"`
 	Ancestors      []BaseInfo `json:"ancestors" copier:"nopanic"`
 }
+
+type CreateUploadSessionRequest struct {
+	FolderID    *string `json:"folderId,omitempty"`
+	FileName    string  `json:"fileName"`
+	FileSize    int64   `json:"fileSize"`
+	MimeType    string  `json:"mimeType"`
+	TotalChunks int64   `json:"totalChunks"`
+}
+
+type CreateUploadSessionResponse struct {
+	UploadID    string    `json:"uploadId" copier:"must,nopanic"`
+	FileName    string    `json:"fileName" copier:"must,nopanic"`
+	FileSize    int64     `json:"fileSize" copier:"must,nopanic"`
+	TotalChunks int64     `json:"totalChunks" copier:"must,nopanic"`
+	ExpiresAt   time.Time `json:"expiresAt" copier:"must,nopanic"`
+}
