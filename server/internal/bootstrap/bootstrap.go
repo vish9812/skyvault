@@ -18,7 +18,7 @@ func InitInfrastructure(app *appconfig.App) *infrastructure.Infrastructure {
 // InitAPI initializes all APIs and returns the main API server
 func InitAPI(app *appconfig.App, infra *infrastructure.Infrastructure) *api.API {
 	// Init workFlows, commands and queries
-	proCmd := profile.NewCommandHandlers(app, infra.Repository.Profile)
+	proCmd := profile.NewCommandHandlers(profile.Config{Quota: app.Config.Storage.DefaultQuotaMB}, infra.Repository.Profile)
 	proCmdRoot := profile.NewCommandsSanitizer(proCmd)
 	proQrs := profile.NewQueryHandlers(infra.Repository.Profile)
 	proQrsRoot := profile.NewQueriesSanitizer(proQrs)
@@ -47,7 +47,7 @@ func InitAPI(app *appconfig.App, infra *infrastructure.Infrastructure) *api.API 
 func InitSignUpFlow(app *appconfig.App, infra *infrastructure.Infrastructure) *workflows.SignUpFlow {
 	authCmd := auth.NewCommandHandlers(infra.Repository.Auth, infra.Auth)
 	authCmdRoot := auth.NewCommandsSanitizer(authCmd)
-	proCmd := profile.NewCommandHandlers(app, infra.Repository.Profile)
+	proCmd := profile.NewCommandHandlers(profile.Config{Quota: app.Config.Storage.DefaultQuotaMB}, infra.Repository.Profile)
 	proCmdRoot := profile.NewCommandsSanitizer(proCmd)
 	return workflows.NewSignUpFlow(app, authCmdRoot, infra.Repository.Auth, proCmdRoot, infra.Repository.Profile)
 }

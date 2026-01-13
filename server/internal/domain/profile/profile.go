@@ -44,8 +44,3 @@ func (p *Profile) ValidateAccess(accessedByID string) error {
 	}
 	return nil
 }
-
-// CanAllocate checks if the profile has enough storage quota to allocate the requested bytes
-func (p *Profile) CanAllocate(bytes int64) bool {
-	return (p.StorageQuota - p.StorageUsed) >= bytes
-}

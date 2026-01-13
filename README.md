@@ -24,7 +24,6 @@ SkyVault is a self-hosted cloud storage solution designed to help you securely s
 - 📤 **File Upload**: Upload files with support for resumable chunked uploads for large files
 - 📥 **File Download**: Download your files anytime
 - 💾 **Storage Quotas**: Per-user storage limits with real-time usage tracking
-- 📊 **Storage Monitoring**: Visual storage quota display with usage indicators
 - 📱 **Mobile-First UI**: Responsive design optimized for mobile devices
 - 🎨 **Modern Interface**: Built with SolidJS and Tailwind CSS
 - 🚀 **High Performance**: Go backend with clean architecture
@@ -77,7 +76,7 @@ SkyVault is a self-hosted cloud storage solution designed to help you securely s
 
    Open your browser and navigate to:
 
-   ```
+   ```text
    http://localhost:8090
    ```
 
@@ -115,11 +114,12 @@ STORAGE__DEFAULT_QUOTA_MB=51200
 # Set to 100GB for generous storage
 STORAGE__DEFAULT_QUOTA_MB=102400
 
-# Set to 1TB for unlimited storage feel
-STORAGE__DEFAULT_QUOTA_MB=1048576
+# Set to 100TB for unlimited storage feel
+STORAGE__DEFAULT_QUOTA_MB=104857600
 ```
 
 **Features:**
+
 - Each user has their own storage quota
 - Real-time storage usage tracking displayed in the UI
 - Visual indicators when approaching storage limits (80% = warning, 95% = critical)
@@ -254,7 +254,7 @@ task nuke
 
 ### Project Structure
 
-```
+```text
 skyvault/
 ├── server/                 # Go backend
 │   ├── cmd/               # Application entrypoint

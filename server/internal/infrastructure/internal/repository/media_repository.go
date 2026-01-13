@@ -4,16 +4,15 @@ package repository
 import (
 	"context"
 	"database/sql"
-	"errors"
-	"slices"
-	"time"
-
 	"skyvault/internal/domain/media"
 	"skyvault/internal/infrastructure/internal/repository/internal/gen_jet/skyvault/public/model"
-	. "skyvault/internal/infrastructure/internal/repository/internal/gen_jet/skyvault/public/table"
 	"skyvault/pkg/apperror"
 	"skyvault/pkg/common"
 	"skyvault/pkg/paging"
+	"slices"
+	"time"
+
+	. "skyvault/internal/infrastructure/internal/repository/internal/gen_jet/skyvault/public/table"
 
 	. "github.com/go-jet/jet/v2/postgres"
 	"github.com/jinzhu/copier"
@@ -217,50 +216,16 @@ func (r *MediaRepository) GetUploadSessionForOwner(ctx context.Context, ownerID,
 				AND(UploadSession.OwnerID.EQ(UUID(UUIDStr(ownerID)))),
 		)
 
-	session, err := runSelect[model.UploadSession, media.UploadSession](ctx, stmt, r.repository.dbTx)
-	if err != nil {
-		return nil, apperror.NewAppError(err, "repository.GetUploadSessionForOwner:runSelect")
-	}
-
-	// Validate access
-	if err := session.ValidateAccess(ownerID); err != nil {
-		return nil, apperror.NewAppError(err, "repository.GetUploadSessionForOwner:ValidateAccess")
-	}
-
-	return session, nil
+	return runSelect[model.UploadSession, media.UploadSession](ctx, stmt, r.repository.dbTx)
 }
 
-func (r *MediaRepository) IncrementUploadedBytes(ctx context.Context, sessionID string, bytesToAdd int64) (*media.UploadSession, error) {
-	// Atomically increment uploaded_bytes and return the updated session
-	// This prevents race conditions where multiple chunks could be uploaded concurrently
+func (r *MediaRepository) IncrementUploadedBytes(ctx context.Context, sessionID string, bytesToAdd int64) error {
 	stmt := UploadSession.UPDATE(UploadSession.UploadedBytes).
 		SET(UploadSession.UploadedBytes.ADD(Int(bytesToAdd))).
-		WHERE(
-			UploadSession.ID.EQ(UUID(UUIDStr(sessionID))).
-				// Ensure we don't exceed the allocated file size (prevent quota bypass)
-				AND(UploadSession.UploadedBytes.ADD(Int(bytesToAdd)).LT_EQ(UploadSession.FileSize)),
-		).
+		WHERE(UploadSession.ID.EQ(UUID(UUIDStr(sessionID)))).
 		RETURNING(UploadSession.AllColumns)
 
-	session, err := runUpdate[model.UploadSession, media.UploadSession](ctx, stmt, r.repository.dbTx)
-	if err != nil {
-		// Check if it was a conditional update failure (would exceed file size)
-		if errors.Is(err, apperror.ErrCommonNoData) {
-			// Fetch the current session to provide better error context
-			currentSession, fetchErr := r.GetUploadSession(ctx, sessionID)
-			if fetchErr != nil {
-				return nil, apperror.NewAppError(err, "repository.IncrementUploadedBytes:ExceededQuota")
-			}
-			return nil, apperror.NewAppError(apperror.ErrCommonInvalidValue, "repository.IncrementUploadedBytes:ExceededQuota").
-				WithMetadata("session_id", sessionID).
-				WithMetadata("bytes_to_add", bytesToAdd).
-				WithMetadata("current_uploaded", currentSession.UploadedBytes).
-				WithMetadata("file_size", currentSession.FileSize)
-		}
-		return nil, apperror.NewAppError(err, "repository.IncrementUploadedBytes:runUpdate")
-	}
-
-	return session, nil
+	return runUpdateOrDelete(ctx, stmt, r.repository.dbTx)
 }
 
 func (r *MediaRepository) DeleteUploadSession(ctx context.Context, sessionID string) error {

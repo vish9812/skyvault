@@ -43,9 +43,9 @@ func (h *CommandHandlers) CreateUploadSession(ctx context.Context, cmd *CreateUp
 
 	// Step 2: Atomically allocate storage quota BEFORE creating session
 	// This prevents race conditions where multiple concurrent uploads could exceed quota
-	err := h.profileRepository.AtomicAllocateStorage(ctx, cmd.OwnerID, cmd.FileSize)
+	err := h.profileRepository.IncrementStorageUsage(ctx, cmd.OwnerID, cmd.FileSize)
 	if err != nil {
-		return nil, apperror.NewAppError(err, "media.CommandHandlers.CreateUploadSession:AtomicAllocateStorage").
+		return nil, apperror.NewAppError(err, "media.CommandHandlers.CreateUploadSession:IncrementStorageUsage").
 			WithMetadata("file_size", cmd.FileSize)
 	}
 
@@ -81,9 +81,9 @@ func (h *CommandHandlers) UploadFile(ctx context.Context, cmd *UploadFileCommand
 
 	// Step 2: Atomically allocate storage quota BEFORE doing any file operations
 	// This prevents race conditions where multiple concurrent uploads could exceed quota
-	err := h.profileRepository.AtomicAllocateStorage(ctx, cmd.OwnerID, cmd.Size)
+	err := h.profileRepository.IncrementStorageUsage(ctx, cmd.OwnerID, cmd.Size)
 	if err != nil {
-		return nil, apperror.NewAppError(err, "media.CommandHandlers.UploadFile:AtomicAllocateStorage").
+		return nil, apperror.NewAppError(err, "media.CommandHandlers.UploadFile:IncrementStorageUsage").
 			WithMetadata("file_size", cmd.Size)
 	}
 
@@ -124,7 +124,7 @@ func (h *CommandHandlers) UploadFile(ctx context.Context, cmd *UploadFileCommand
 	if actualBytes != cmd.Size {
 		if actualBytes > cmd.Size {
 			// Allocate additional bytes
-			err = h.profileRepository.AtomicAllocateStorage(ctx, cmd.OwnerID, actualBytes-cmd.Size)
+			err = h.profileRepository.IncrementStorageUsage(ctx, cmd.OwnerID, actualBytes-cmd.Size)
 			if err != nil {
 				// Rollback: delete file and deallocate initial quota
 				h.storage.DeleteFile(ctx, info.ID, cmd.OwnerID)
@@ -197,7 +197,7 @@ func (h *CommandHandlers) UploadChunk(ctx context.Context, cmd *UploadChunkComma
 
 	// Step 6: Atomically increment session's uploaded bytes and validate against quota
 	// This prevents quota bypass by tracking cumulative actual bytes across all chunks
-	_, err = h.repository.IncrementUploadedBytes(ctx, session.ID, actualBytes)
+	err = h.repository.IncrementUploadedBytes(ctx, session.ID, actualBytes)
 	if err != nil {
 		// Rollback: delete the chunk we just saved
 		h.storage.DeleteChunk(ctx, cmd.UploadID, cmd.ChunkIndex, cmd.OwnerID)
@@ -244,7 +244,7 @@ func (h *CommandHandlers) FinalizeChunkedUpload(ctx context.Context, cmd *Finali
 	if actualBytes != claimedSize {
 		if actualBytes > claimedSize {
 			// Allocate additional bytes
-			err = h.profileRepository.AtomicAllocateStorage(ctx, cmd.OwnerID, actualBytes-claimedSize)
+			err = h.profileRepository.IncrementStorageUsage(ctx, cmd.OwnerID, actualBytes-claimedSize)
 			if err != nil {
 				return nil, apperror.NewAppError(err, "media.CommandHandlers.FinalizeChunkedUpload:AllocateAdditionalStorage").
 					WithMetadata("additional_bytes", actualBytes-claimedSize).

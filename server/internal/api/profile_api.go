@@ -6,6 +6,7 @@ import (
 	"skyvault/internal/api/helper/dtos"
 	"skyvault/internal/domain/profile"
 	"skyvault/pkg/apperror"
+	"skyvault/pkg/common"
 
 	"github.com/go-chi/chi/v5"
 )
@@ -27,24 +28,15 @@ func NewProfileAPI(a *API, commands profile.Commands, queries profile.Queries) *
 func (a *ProfileAPI) InitRoutes() *ProfileAPI {
 	pvtRouter := a.api.v1Pvt
 	pvtRouter.Route("/profile", func(r chi.Router) {
-		r.Route("/{id}", func(r chi.Router) {
-			r.Get("/storage", a.GetStorageUsage)
-			r.Delete("/", a.DeleteProfile)
-		})
+		r.Get("/storage", a.GetStorageUsage)
 	})
 
 	return a
 }
 
 func (a *ProfileAPI) GetStorageUsage(w http.ResponseWriter, r *http.Request) {
-	profileID := chi.URLParam(r, "id")
-	if profileID == "" {
-		helper.RespondError(w, r, apperror.NewAppError(apperror.ErrCommonInvalidValue, "profileAPI.GetStorageUsage:profileID"))
-		return
-	}
-
 	query := &profile.GetQuery{
-		ID: profileID,
+		ID: common.GetProfileIDFromContext(r.Context()),
 	}
 
 	pro, err := a.queries.Get(r.Context(), query)
@@ -59,24 +51,4 @@ func (a *ProfileAPI) GetStorageUsage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	helper.RespondJSON(w, http.StatusOK, res)
-}
-
-func (a *ProfileAPI) DeleteProfile(w http.ResponseWriter, r *http.Request) {
-	profileID := chi.URLParam(r, "id")
-	if profileID == "" {
-		helper.RespondError(w, r, apperror.NewAppError(apperror.ErrCommonInvalidValue, "profileAPI.DeleteProfile:profileID"))
-		return
-	}
-
-	cmd := &profile.DeleteCommand{
-		ID: profileID,
-	}
-
-	err := a.commands.Delete(r.Context(), cmd)
-	if err != nil {
-		helper.RespondError(w, r, apperror.NewAppError(err, "profileAPI.DeleteProfile:Delete"))
-		return
-	}
-
-	helper.RespondEmpty(w, http.StatusNoContent)
 }

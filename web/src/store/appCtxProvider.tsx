@@ -30,10 +30,10 @@ export function AppCtxProvider(props: ParentProps) {
 
   // Storage usage
   const [storageUsage, { refetch: refetchStorageUsage }] = createResource(
-    () => fetchStorageUsage(profile.id),
+    () => fetchStorageUsage(),
     {
       initialValue: DefaultStorageUsage,
-    }
+    },
   );
 
   // Current folder id
@@ -41,7 +41,7 @@ export function AppCtxProvider(props: ParentProps) {
 
   const isNavigatable = useMatch(
     () => location.pathname,
-    [CLIENT_URLS.DRIVE, CLIENT_URLS.SHARED]
+    [CLIENT_URLS.DRIVE, CLIENT_URLS.SHARED],
   );
 
   const params = useParams();
