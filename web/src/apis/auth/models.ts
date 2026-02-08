@@ -1,14 +1,4 @@
-export interface Profile {
-  id: string;
-  email: string;
-  fullName: string;
-  avatarBase64?: string;
-  preferences: Preferences; //TODO: Make preferences json column in DB
-}
-
-export interface Preferences {
-  contentView: "list" | "grid";
-}
+import type { Profile } from "@sv/apis/profile/models";
 
 export interface SignInReq {
   email: string;

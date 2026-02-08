@@ -1,13 +1,14 @@
 import { DropdownMenu } from "@kobalte/core/dropdown-menu";
 import { useNavigate } from "@solidjs/router";
-import { getProfile, signOut } from "@sv/apis/auth";
+import { signOut } from "@sv/apis/auth";
+import { getProfile } from "@sv/apis/profile";
 import useAppCtx from "@sv/store/appCtxProvider";
 import { CLIENT_URLS } from "@sv/utils/consts";
 import Format from "@sv/utils/format";
 
 function ProfileDropdown() {
   const navigate = useNavigate();
-  const profile = getProfile()!;
+  const profile = getProfile();
   const appCtx = useAppCtx();
 
   const handleLogout = () => {
@@ -52,6 +53,7 @@ function ProfileDropdown() {
                 stroke="currentColor"
                 class="size-5 text-neutral-light"
               >
+                <title>Logout Icon</title>
                 <path
                   stroke-linecap="round"
                   stroke-linejoin="round"

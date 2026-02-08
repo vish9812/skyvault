@@ -5,14 +5,14 @@ import { Show } from "solid-js";
 export default function StorageQuotaBar() {
   const appCtx = useAppCtx();
 
-  const storageUsage = () => appCtx.storageUsage();
   const usagePercentage = () => {
-    const usage = storageUsage();
+    const usage = appCtx.storageUsage();
     if (usage.quota === 0) return 0;
     return Math.min((usage.used / usage.quota) * 100, 100);
   };
 
-  const isNearLimit = () => usagePercentage() >= 80;
+  const hasEnoughLimit = () => usagePercentage() < 80;
+  const isNearLimit = () => usagePercentage() >= 80 && usagePercentage() < 95;
   const isAtLimit = () => usagePercentage() >= 95;
 
   return (
@@ -20,8 +20,8 @@ export default function StorageQuotaBar() {
       <div class="text-xs text-neutral-light mb-1 flex justify-between items-center">
         <span>Storage</span>
         <span>
-          {Format.size(storageUsage().used)} /{" "}
-          {Format.size(storageUsage().quota)}
+          {Format.size(appCtx.storageUsage().used)} /{" "}
+          {Format.size(appCtx.storageUsage().quota)}
         </span>
       </div>
 
@@ -30,8 +30,8 @@ export default function StorageQuotaBar() {
         <div
           classList={{
             "h-2 rounded-full transition-all duration-300": true,
-            "bg-primary": !isNearLimit(),
-            "bg-warning": isNearLimit() && !isAtLimit(),
+            "bg-primary": hasEnoughLimit(),
+            "bg-warning": isNearLimit(),
             "bg-error": isAtLimit(),
           }}
           style={{ width: `${usagePercentage()}%` }}
@@ -39,7 +39,7 @@ export default function StorageQuotaBar() {
       </div>
 
       {/* Warning message */}
-      <Show when={isNearLimit()}>
+      <Show when={!hasEnoughLimit()}>
         <div class="text-xs text-warning mt-1">
           <Show when={isAtLimit()} fallback="Storage space running low">
             Storage quota almost full

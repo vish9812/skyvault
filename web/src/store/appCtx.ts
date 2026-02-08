@@ -1,6 +1,6 @@
-import { StorageUsage } from "@sv/apis/profile";
-import { SystemConfig } from "@sv/apis/system";
-import { Accessor, createContext } from "solid-js";
+import type { StorageUsage } from "@sv/apis/profile";
+import type { SystemConfig } from "@sv/apis/system";
+import { createContext } from "solid-js";
 
 export const DefaultSystemConfig: SystemConfig = {
   maxDirectUploadSizeMB: 50,
@@ -13,9 +13,9 @@ export const DefaultStorageUsage: StorageUsage = {
 } as const;
 
 export interface AppCtxType {
-  currentFolderId: Accessor<string>;
-  systemConfig: SystemConfig;
-  storageUsage: Accessor<StorageUsage>;
+  currentFolderId: () => string;
+  systemConfig: () => SystemConfig;
+  storageUsage: () => StorageUsage;
   refreshStorageUsage: () => void;
 }
 

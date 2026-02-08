@@ -1,5 +1,5 @@
 import { useLocation, useMatch, useNavigate, useParams } from "@solidjs/router";
-import { getProfile } from "@sv/apis/auth";
+import { isLoggedIn } from "@sv/apis/auth";
 import { fetchStorageUsage } from "@sv/apis/profile";
 import { getSystemConfig } from "@sv/apis/system";
 import LoadingBackdrop from "@sv/components/ui/loadingBackdrop";
@@ -8,7 +8,7 @@ import {
   createRenderEffect,
   createResource,
   createSignal,
-  ParentProps,
+  type ParentProps,
   Show,
   useContext,
 } from "solid-js";
@@ -16,9 +16,8 @@ import AppCtx, { DefaultStorageUsage, DefaultSystemConfig } from "./appCtx";
 
 export function AppCtxProvider(props: ParentProps) {
   const navigate = useNavigate();
-  const profile = getProfile();
 
-  if (!profile) {
+  if (!isLoggedIn()) {
     navigate(CLIENT_URLS.SIGN_IN, { replace: true });
     return;
   }
@@ -29,7 +28,7 @@ export function AppCtxProvider(props: ParentProps) {
   });
 
   // Storage usage
-  const [storageUsage, { refetch: refetchStorageUsage }] = createResource(
+  const [storageUsage, { refetch: refreshStorageUsage }] = createResource(
     () => fetchStorageUsage(),
     {
       initialValue: DefaultStorageUsage,
@@ -64,9 +63,9 @@ export function AppCtxProvider(props: ParentProps) {
         <AppCtx.Provider
           value={{
             currentFolderId,
-            systemConfig: systemConfig()!,
+            systemConfig,
             storageUsage,
-            refreshStorageUsage: refetchStorageUsage,
+            refreshStorageUsage,
           }}
         >
           {props.children}

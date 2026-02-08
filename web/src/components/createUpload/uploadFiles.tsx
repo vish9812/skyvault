@@ -42,7 +42,7 @@ export default function UploadFiles(props: Props) {
   const selectedFilesSize = () => {
     return Object.values(selectedFiles).reduce(
       (sum, f) => sum + f.file.size,
-      0
+      0,
     );
   };
 
@@ -90,7 +90,7 @@ export default function UploadFiles(props: Props) {
       // Check available storage quota
       if (totalSize > availableStorage()) {
         return `Not enough storage space. You need ${Format.size(
-          totalSize
+          totalSize,
         )} but only have ${Format.size(availableStorage())} available.`;
       }
     }
@@ -193,8 +193,8 @@ export default function UploadFiles(props: Props) {
 
     const uploadedFiles = uploadFiles(
       {
-        maxDirectUploadSizeMB: appCtx.systemConfig.maxDirectUploadSizeMB,
-        maxChunkSizeMB: appCtx.systemConfig.maxChunkSizeMB,
+        maxDirectUploadSizeMB: appCtx.systemConfig().maxDirectUploadSizeMB,
+        maxChunkSizeMB: appCtx.systemConfig().maxChunkSizeMB,
       },
       files,
       appCtx.currentFolderId(),
@@ -207,9 +207,9 @@ export default function UploadFiles(props: Props) {
             }
             fileMap[id].progress = progress;
             fileMap[id].status = status;
-          })
+          }),
         );
-      }
+      },
     );
 
     const promises: Promise<FileInfo | null>[] = uploadedFiles.map(
@@ -219,7 +219,7 @@ export default function UploadFiles(props: Props) {
           setSelectedFiles(
             produce((fileMap) => {
               fileMap[fileResult.clientId].status = "success";
-            })
+            }),
           );
           return file;
         } catch (err) {
@@ -235,11 +235,11 @@ export default function UploadFiles(props: Props) {
               fileMap[fileResult.clientId].status = "error";
               fileMap[fileResult.clientId].error =
                 err instanceof Error ? err.message : "Upload failed";
-            })
+            }),
           );
           return null;
         }
-      }
+      },
     );
 
     await Promise.all(promises);
@@ -314,8 +314,7 @@ export default function UploadFiles(props: Props) {
         {/* Drag and drop zone */}
         <div
           classList={{
-            "border-2 border-dashed rounded-lg p-6 text-center transition-all":
-              true,
+            "border-2 border-dashed rounded-lg p-6 text-center transition-all": true,
             "border-primary bg-primary-lighter": isDragOver() && !isLoading(),
             "border-border hover:border-primary hover:bg-primary-lighter":
               !isDragOver() && !isLoading(),
@@ -388,7 +387,7 @@ export default function UploadFiles(props: Props) {
                         fallback={
                           <FileIcon
                             fileCategory={FileUtils.mimeToCategory(
-                              file.file.type
+                              file.file.type,
                             )}
                             isFolder={false}
                             size={6}
@@ -399,15 +398,15 @@ export default function UploadFiles(props: Props) {
                           src={URL.createObjectURL(file.file)}
                           alt={file.file.name}
                           class="w-full h-full object-cover rounded"
-                          // TODO: Buggy, need to fix. e.target is showing as null.
-                          // onLoad={(e) => {
-                          //   // Clean up object URL after image loads
-                          //   setTimeout(() => {
-                          //     URL.revokeObjectURL(
-                          //       (e.target as HTMLImageElement).src
-                          //     );
-                          //   }, 1000);
-                          // }}
+                        // TODO: Buggy, need to fix. e.target is showing as null.
+                        // onLoad={(e) => {
+                        //   // Clean up object URL after image loads
+                        //   setTimeout(() => {
+                        //     URL.revokeObjectURL(
+                        //       (e.target as HTMLImageElement).src
+                        //     );
+                        //   }, 1000);
+                        // }}
                         />
                       </Show>
                     </div>
