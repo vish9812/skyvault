@@ -1,6 +1,6 @@
 import { Button } from "@kobalte/core/button";
 import { uploadFiles } from "@sv/apis/media";
-import { FileInfo, UploadFileInfo } from "@sv/apis/media/models";
+import type { FileInfo, UploadFileInfo } from "@sv/apis/media/models";
 import { FileIcon } from "@sv/components/icons";
 import Dialog from "@sv/components/ui/dialog";
 import useAppCtx from "@sv/store/appCtxProvider";
