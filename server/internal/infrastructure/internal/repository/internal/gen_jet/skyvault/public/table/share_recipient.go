@@ -28,6 +28,7 @@ type shareRecipientTable struct {
 
 	AllColumns     postgres.ColumnList
 	MutableColumns postgres.ColumnList
+	DefaultColumns postgres.ColumnList
 }
 
 type ShareRecipientTable struct {
@@ -75,6 +76,7 @@ func newShareRecipientTableImpl(schemaName, tableName, alias string) shareRecipi
 		UpdatedAtColumn      = postgres.TimestampColumn("updated_at")
 		allColumns           = postgres.ColumnList{IDColumn, ShareConfigIDColumn, ContactIDColumn, GroupIDColumn, EmailColumn, DownloadsCountColumn, CreatedAtColumn, UpdatedAtColumn}
 		mutableColumns       = postgres.ColumnList{ShareConfigIDColumn, ContactIDColumn, GroupIDColumn, EmailColumn, DownloadsCountColumn, CreatedAtColumn, UpdatedAtColumn}
+		defaultColumns       = postgres.ColumnList{DownloadsCountColumn, CreatedAtColumn, UpdatedAtColumn}
 	)
 
 	return shareRecipientTable{
@@ -92,5 +94,6 @@ func newShareRecipientTableImpl(schemaName, tableName, alias string) shareRecipi
 
 		AllColumns:     allColumns,
 		MutableColumns: mutableColumns,
+		DefaultColumns: defaultColumns,
 	}
 }

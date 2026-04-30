@@ -5,6 +5,7 @@ import Breadcrumbs from "@sv/components/breadcrumbs";
 import FolderContent from "@sv/components/folderContent";
 import Icon from "@sv/components/icons";
 import useAppCtx from "@sv/store/appCtxProvider";
+import { CONTENT_VIEWS } from "@sv/utils/consts";
 import { Show, createResource, createSignal } from "solid-js";
 
 function Drive() {
@@ -22,7 +23,7 @@ function Drive() {
   );
 
   const [isListView, setIsListView] = createSignal(
-    getProfile()!.preferences.contentView === "list"
+    getProfile()!.preferences.contentView === CONTENT_VIEWS.LIST
   );
 
   const handleContentViewChange = () => {

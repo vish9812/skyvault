@@ -24,6 +24,7 @@ type contactGroupMemberTable struct {
 
 	AllColumns     postgres.ColumnList
 	MutableColumns postgres.ColumnList
+	DefaultColumns postgres.ColumnList
 }
 
 type ContactGroupMemberTable struct {
@@ -67,6 +68,7 @@ func newContactGroupMemberTableImpl(schemaName, tableName, alias string) contact
 		CreatedAtColumn = postgres.TimestampColumn("created_at")
 		allColumns      = postgres.ColumnList{IDColumn, GroupIDColumn, ContactIDColumn, CreatedAtColumn}
 		mutableColumns  = postgres.ColumnList{GroupIDColumn, ContactIDColumn, CreatedAtColumn}
+		defaultColumns  = postgres.ColumnList{CreatedAtColumn}
 	)
 
 	return contactGroupMemberTable{
@@ -80,5 +82,6 @@ func newContactGroupMemberTableImpl(schemaName, tableName, alias string) contact
 
 		AllColumns:     allColumns,
 		MutableColumns: mutableColumns,
+		DefaultColumns: defaultColumns,
 	}
 }

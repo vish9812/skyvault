@@ -1,6 +1,7 @@
 package profile
 
 import (
+	"fmt"
 	"skyvault/pkg/apperror"
 	"skyvault/pkg/utils"
 	"time"
@@ -17,7 +18,14 @@ type Profile struct {
 	UpdatedAt    time.Time
 }
 
+// App Errors:
+// - ErrCommonInvalidValue (when quota < 0)
 func NewProfile(email, fullName string, quota int64) (*Profile, error) {
+	if quota < 0 {
+		return nil, apperror.NewAppError(fmt.Errorf("%w: quota must be non-negative", apperror.ErrCommonInvalidValue), "profile.NewProfile:Quota").
+			WithMetadata("quota", quota)
+	}
+
 	id, err := utils.ID()
 	if err != nil {
 		return nil, apperror.NewAppError(err, "profile.NewProfile:ID")

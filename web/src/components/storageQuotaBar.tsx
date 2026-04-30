@@ -26,7 +26,15 @@ export default function StorageQuotaBar() {
       </div>
 
       {/* Progress bar */}
-      <div class="w-full bg-bg-muted rounded-full h-2">
+      <div
+        class="w-full bg-bg-muted rounded-full h-2"
+        role="progressbar"
+        aria-label="Storage usage"
+        aria-valuemin={0}
+        aria-valuemax={100}
+        aria-valuenow={Math.round(usagePercentage())}
+        aria-valuetext={`${Math.round(usagePercentage())}% used`}
+      >
         <div
           classList={{
             "h-2 rounded-full transition-all duration-300": true,

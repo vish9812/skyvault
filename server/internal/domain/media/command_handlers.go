@@ -7,7 +7,23 @@ import (
 	"skyvault/internal/domain/profile"
 	"skyvault/pkg/appconfig"
 	"skyvault/pkg/apperror"
+	"skyvault/pkg/applog"
 )
+
+// logRollbackQuotaErr logs failures from compensating storage-quota writes during a rollback path.
+// These can't fail the outer request (it's already failing for another reason), but losing them
+// silently makes quota drift undebuggable.
+func logRollbackQuotaErr(ctx context.Context, err error, op, ownerID string, bytes int64) {
+	if err == nil {
+		return
+	}
+	applog.GetLoggerFromContext(ctx).Error().
+		Err(err).
+		Str("op", op).
+		Str("owner_id", ownerID).
+		Int64("bytes", bytes).
+		Msg("failed to roll back storage usage")
+}
 
 var _ Commands = (*CommandHandlers)(nil)
 
@@ -22,8 +38,8 @@ func NewCommandHandlers(app *appconfig.App, profileRepository profile.Repository
 	return &CommandHandlers{app: app, profileRepository: profileRepository, repository: repository, storage: storage}
 }
 
-func (h *CommandHandlers) WithTxRepository(ctx context.Context, repository Repository) Commands {
-	return &CommandHandlers{app: h.app, profileRepository: h.profileRepository, repository: repository, storage: h.storage}
+func (h *CommandHandlers) WithTxRepository(ctx context.Context, repository Repository, profileRepository profile.Repository) Commands {
+	return &CommandHandlers{app: h.app, profileRepository: profileRepository, repository: repository, storage: h.storage}
 }
 
 //--------------------------------
@@ -53,7 +69,8 @@ func (h *CommandHandlers) CreateUploadSession(ctx context.Context, cmd *CreateUp
 	session, err := NewUploadSession(cmd.OwnerID, parentFolderInfo, cmd.FileName, cmd.FileSize, cmd.MimeType, cmd.TotalChunks)
 	if err != nil {
 		// Rollback: deallocate the storage we just allocated
-		h.profileRepository.DecrementStorageUsage(ctx, cmd.OwnerID, cmd.FileSize)
+		logRollbackQuotaErr(ctx, h.profileRepository.DecrementStorageUsage(ctx, cmd.OwnerID, cmd.FileSize),
+			"CreateUploadSession:NewUploadSession", cmd.OwnerID, cmd.FileSize)
 		return nil, apperror.NewAppError(err, "media.CommandHandlers.CreateUploadSession:NewUploadSession")
 	}
 
@@ -61,7 +78,8 @@ func (h *CommandHandlers) CreateUploadSession(ctx context.Context, cmd *CreateUp
 	session, err = h.repository.CreateUploadSession(ctx, session)
 	if err != nil {
 		// Rollback: deallocate the storage we just allocated
-		h.profileRepository.DecrementStorageUsage(ctx, cmd.OwnerID, cmd.FileSize)
+		logRollbackQuotaErr(ctx, h.profileRepository.DecrementStorageUsage(ctx, cmd.OwnerID, cmd.FileSize),
+			"CreateUploadSession:CreateUploadSession", cmd.OwnerID, cmd.FileSize)
 		return nil, apperror.NewAppError(err, "media.CommandHandlers.CreateUploadSession:CreateUploadSession")
 	}
 
@@ -91,7 +109,8 @@ func (h *CommandHandlers) UploadFile(ctx context.Context, cmd *UploadFileCommand
 	info, err := NewFileInfo(cmd.OwnerID, parentFolderInfo, cmd.Name, cmd.Size, cmd.MimeType)
 	if err != nil {
 		// Rollback: deallocate the storage we just allocated
-		h.profileRepository.DecrementStorageUsage(ctx, cmd.OwnerID, cmd.Size)
+		logRollbackQuotaErr(ctx, h.profileRepository.DecrementStorageUsage(ctx, cmd.OwnerID, cmd.Size),
+			"UploadFile:NewFileInfo", cmd.OwnerID, cmd.Size)
 		return nil, apperror.NewAppError(err, "media.CommandHandlers.UploadFile:NewFileInfo")
 	}
 
@@ -99,7 +118,8 @@ func (h *CommandHandlers) UploadFile(ctx context.Context, cmd *UploadFileCommand
 	actualBytes, err := h.storage.SaveFile(ctx, cmd.File, info.ID, cmd.OwnerID)
 	if err != nil {
 		// Rollback: deallocate the storage we just allocated
-		h.profileRepository.DecrementStorageUsage(ctx, cmd.OwnerID, cmd.Size)
+		logRollbackQuotaErr(ctx, h.profileRepository.DecrementStorageUsage(ctx, cmd.OwnerID, cmd.Size),
+			"UploadFile:SaveFile", cmd.OwnerID, cmd.Size)
 		return nil, apperror.NewAppError(err, "media.CommandHandlers.UploadFile:SaveFile").
 			WithMetadata("file_id", info.ID)
 	}
@@ -113,7 +133,8 @@ func (h *CommandHandlers) UploadFile(ctx context.Context, cmd *UploadFileCommand
 	if sizeDifference > SizeToleranceBytes {
 		// Client lied about file size - rollback everything
 		h.storage.DeleteFile(ctx, info.ID, cmd.OwnerID)
-		h.profileRepository.DecrementStorageUsage(ctx, cmd.OwnerID, cmd.Size)
+		logRollbackQuotaErr(ctx, h.profileRepository.DecrementStorageUsage(ctx, cmd.OwnerID, cmd.Size),
+			"UploadFile:SizeMismatch", cmd.OwnerID, cmd.Size)
 		return nil, apperror.NewAppError(apperror.ErrCommonInvalidValue, "media.CommandHandlers.UploadFile:SizeMismatch").
 			WithMetadata("claimed_size", cmd.Size).
 			WithMetadata("actual_size", actualBytes).
@@ -128,13 +149,15 @@ func (h *CommandHandlers) UploadFile(ctx context.Context, cmd *UploadFileCommand
 			if err != nil {
 				// Rollback: delete file and deallocate initial quota
 				h.storage.DeleteFile(ctx, info.ID, cmd.OwnerID)
-				h.profileRepository.DecrementStorageUsage(ctx, cmd.OwnerID, cmd.Size)
+				logRollbackQuotaErr(ctx, h.profileRepository.DecrementStorageUsage(ctx, cmd.OwnerID, cmd.Size),
+					"UploadFile:AllocateAdditionalStorage", cmd.OwnerID, cmd.Size)
 				return nil, apperror.NewAppError(err, "media.CommandHandlers.UploadFile:AllocateAdditionalStorage").
 					WithMetadata("additional_bytes", actualBytes-cmd.Size)
 			}
 		} else {
 			// Deallocate unused bytes
-			h.profileRepository.DecrementStorageUsage(ctx, cmd.OwnerID, cmd.Size-actualBytes)
+			logRollbackQuotaErr(ctx, h.profileRepository.DecrementStorageUsage(ctx, cmd.OwnerID, cmd.Size-actualBytes),
+				"UploadFile:DeallocateUnusedBytes", cmd.OwnerID, cmd.Size-actualBytes)
 		}
 		// Update file info with actual size
 		info.Size = actualBytes
@@ -145,7 +168,8 @@ func (h *CommandHandlers) UploadFile(ctx context.Context, cmd *UploadFileCommand
 	if err != nil {
 		// Rollback: deallocate storage (actual bytes) and delete physical file
 		h.storage.DeleteFile(ctx, info.ID, cmd.OwnerID)
-		h.profileRepository.DecrementStorageUsage(ctx, cmd.OwnerID, actualBytes)
+		logRollbackQuotaErr(ctx, h.profileRepository.DecrementStorageUsage(ctx, cmd.OwnerID, actualBytes),
+			"UploadFile:WithPreview", cmd.OwnerID, actualBytes)
 		return nil, apperror.NewAppError(err, "media.CommandHandlers.UploadFile:WithPreview")
 	}
 
@@ -154,7 +178,8 @@ func (h *CommandHandlers) UploadFile(ctx context.Context, cmd *UploadFileCommand
 	if err != nil {
 		// Rollback: deallocate storage (actual bytes) and delete physical file
 		h.storage.DeleteFile(ctx, info.ID, cmd.OwnerID)
-		h.profileRepository.DecrementStorageUsage(ctx, cmd.OwnerID, actualBytes)
+		logRollbackQuotaErr(ctx, h.profileRepository.DecrementStorageUsage(ctx, cmd.OwnerID, actualBytes),
+			"UploadFile:CreateFileInfo", cmd.OwnerID, actualBytes)
 		return nil, apperror.NewAppError(err, "media.CommandHandlers.UploadFile:CreateFileInfo")
 	}
 
@@ -189,9 +214,15 @@ func (h *CommandHandlers) UploadChunk(ctx context.Context, cmd *UploadChunkComma
 			WithMetadata("provided_total_chunks", cmd.TotalChunks)
 	}
 
-	// Step 5: Save the chunk to disk and get actual bytes written
+	// Step 5: Save the chunk to disk and get actual bytes written.
+	// SaveChunk returns ErrCommonDuplicateData if the chunk file already exists, which means
+	// the client is retrying an already-processed chunk. Treat as a no-op so we don't
+	// double-count uploaded bytes against the session.
 	actualBytes, err := h.storage.SaveChunk(ctx, cmd.Chunk, cmd.UploadID, cmd.ChunkIndex, cmd.OwnerID)
 	if err != nil {
+		if errors.Is(err, apperror.ErrCommonDuplicateData) {
+			return nil
+		}
 		return apperror.NewAppError(err, "media.CommandHandlers.UploadChunk:SaveChunk")
 	}
 
@@ -252,7 +283,8 @@ func (h *CommandHandlers) FinalizeChunkedUpload(ctx context.Context, cmd *Finali
 			}
 		} else {
 			// Deallocate unused bytes
-			h.profileRepository.DecrementStorageUsage(ctx, cmd.OwnerID, claimedSize-actualBytes)
+			logRollbackQuotaErr(ctx, h.profileRepository.DecrementStorageUsage(ctx, cmd.OwnerID, claimedSize-actualBytes),
+				"FinalizeChunkedUpload:DeallocateUnusedBytes", cmd.OwnerID, claimedSize-actualBytes)
 		}
 	}
 

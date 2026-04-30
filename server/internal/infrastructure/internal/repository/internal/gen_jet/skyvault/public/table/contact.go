@@ -26,6 +26,7 @@ type contactTable struct {
 
 	AllColumns     postgres.ColumnList
 	MutableColumns postgres.ColumnList
+	DefaultColumns postgres.ColumnList
 }
 
 type ContactTable struct {
@@ -71,6 +72,7 @@ func newContactTableImpl(schemaName, tableName, alias string) contactTable {
 		UpdatedAtColumn = postgres.TimestampColumn("updated_at")
 		allColumns      = postgres.ColumnList{IDColumn, OwnerIDColumn, EmailColumn, NameColumn, CreatedAtColumn, UpdatedAtColumn}
 		mutableColumns  = postgres.ColumnList{OwnerIDColumn, EmailColumn, NameColumn, CreatedAtColumn, UpdatedAtColumn}
+		defaultColumns  = postgres.ColumnList{CreatedAtColumn, UpdatedAtColumn}
 	)
 
 	return contactTable{
@@ -86,5 +88,6 @@ func newContactTableImpl(schemaName, tableName, alias string) contactTable {
 
 		AllColumns:     allColumns,
 		MutableColumns: mutableColumns,
+		DefaultColumns: defaultColumns,
 	}
 }

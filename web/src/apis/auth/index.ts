@@ -1,5 +1,5 @@
 import { handleJSONResponse, postPub } from "@sv/apis/common";
-import { LOCAL_STORAGE_KEYS } from "@sv/utils/consts";
+import { CONTENT_VIEWS, LOCAL_STORAGE_KEYS } from "@sv/utils/consts";
 import type { SignInReq, SignInRes, SignUpReq, SignUpRes } from "./models";
 
 const urlAuth = "auth";
@@ -20,7 +20,7 @@ async function handleAuthResponse<T extends SignInRes | SignUpRes>(
 
   // TODO: Temporary: Implement profile preferences on server side
   data.profile.preferences = {
-    contentView: "list",
+    contentView: CONTENT_VIEWS.LIST,
   };
 
   localStorage.setItem(LOCAL_STORAGE_KEYS.TOKEN, data.token);

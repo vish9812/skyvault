@@ -2,8 +2,17 @@ package dtos
 
 import (
 	"encoding/base64"
+	"fmt"
+	"skyvault/pkg/apperror"
 	"skyvault/pkg/paging"
 	"time"
+)
+
+// Boundary sanity caps for upload-session inputs. The domain sanitizer enforces business rules;
+// these guard the API edge so an obviously malformed payload is rejected before any downstream work.
+const (
+	maxUploadSessionChunks  = 100_000 // ~1TB at 10MB/chunk; well past any realistic upload
+	maxUploadSessionMimeLen = 255     // RFC 6838 caps type/subtype at 127 each, 255 is generous
 )
 
 type GetFileInfo struct {
@@ -48,6 +57,25 @@ type CreateUploadSessionRequest struct {
 	FileSize    int64   `json:"fileSize"`
 	MimeType    string  `json:"mimeType"`
 	TotalChunks int64   `json:"totalChunks"`
+}
+
+// Validate performs boundary-level sanity checks on the request. The domain sanitizer
+// re-checks file name (path-traversal stripping) and the positive-size invariants, so
+// this only adds API-edge bounds (chunk count sanity, mime length).
+func (r *CreateUploadSessionRequest) Validate() error {
+	if r.FileSize <= 0 {
+		return fmt.Errorf("%w: fileSize must be positive", apperror.ErrCommonInvalidValue)
+	}
+	if r.TotalChunks <= 0 || r.TotalChunks > maxUploadSessionChunks {
+		return fmt.Errorf("%w: totalChunks out of range", apperror.ErrCommonInvalidValue)
+	}
+	if r.FileName == "" {
+		return fmt.Errorf("%w: fileName is required", apperror.ErrCommonInvalidValue)
+	}
+	if len(r.MimeType) > maxUploadSessionMimeLen {
+		return fmt.Errorf("%w: mimeType too long", apperror.ErrCommonInvalidValue)
+	}
+	return nil
 }
 
 type CreateUploadSessionResponse struct {

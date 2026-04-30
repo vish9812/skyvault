@@ -92,8 +92,10 @@ func (r *ProfileRepository) IncrementStorageUsage(ctx context.Context, profileID
 }
 
 func (r *ProfileRepository) DecrementStorageUsage(ctx context.Context, profileID string, bytes int64) error {
+	// Floor at 0 so a logic bug elsewhere can't drive storage_used negative
+	// and trip the check (storage_used >= 0) constraint mid-flow.
 	stmt := Profile.UPDATE(Profile.StorageUsed).
-		SET(Profile.StorageUsed.SET(Profile.StorageUsed.SUB(Int64(bytes)))).
+		SET(Profile.StorageUsed.SET(IntExp(GREATEST(Profile.StorageUsed.SUB(Int64(bytes)), Int64(0))))).
 		WHERE(Profile.ID.EQ(UUID(UUIDStr(profileID))))
 
 	return runUpdateOrDelete(ctx, stmt, r.repository.dbTx)

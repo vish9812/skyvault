@@ -3,6 +3,7 @@ package media
 import (
 	"context"
 	"io"
+	"skyvault/internal/domain/profile"
 )
 
 // TODO: Allow bulk Move for both files and folders.
@@ -13,7 +14,9 @@ type Commands interface {
 	// WithTxRepository creates a new instance of Commands with the given Repository.
 	//
 	// WithTxRepository is to be used when the commands across domains(workflows) need to be executed in a transaction.
-	WithTxRepository(ctx context.Context, repository Repository) Commands
+	// Both the media and profile repositories must be bound to the same transaction so quota updates
+	// participate in the same atomic unit as the media writes.
+	WithTxRepository(ctx context.Context, repository Repository, profileRepository profile.Repository) Commands
 
 	//--------------------------------
 	// Files

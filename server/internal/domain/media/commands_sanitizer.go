@@ -2,6 +2,7 @@ package media
 
 import (
 	"context"
+	"skyvault/internal/domain/profile"
 	"skyvault/pkg/apperror"
 	"skyvault/pkg/validate"
 )
@@ -14,6 +15,10 @@ type CommandsSanitizer struct {
 
 func NewCommandsSanitizer(commands Commands) Commands {
 	return &CommandsSanitizer{Commands: commands}
+}
+
+func (s *CommandsSanitizer) WithTxRepository(ctx context.Context, repository Repository, profileRepository profile.Repository) Commands {
+	return &CommandsSanitizer{Commands: s.Commands.WithTxRepository(ctx, repository, profileRepository)}
 }
 
 func (s *CommandsSanitizer) UploadFile(ctx context.Context, cmd *UploadFileCommand) (*FileInfo, error) {

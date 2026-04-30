@@ -1,3 +1,5 @@
+import type { CONTENT_VIEWS } from "@sv/utils/consts";
+
 export interface Profile {
   id: string;
   email: string;
@@ -6,8 +8,10 @@ export interface Profile {
   preferences: Preferences; //TODO: Make preferences json column in DB
 }
 
+export type ContentView = (typeof CONTENT_VIEWS)[keyof typeof CONTENT_VIEWS];
+
 export interface Preferences {
-  contentView: "list" | "grid";
+  contentView: ContentView;
 }
 
 export interface StorageUsage {

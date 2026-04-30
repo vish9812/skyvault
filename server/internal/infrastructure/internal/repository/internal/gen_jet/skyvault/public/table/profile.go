@@ -20,7 +20,7 @@ type profileTable struct {
 	ID           postgres.ColumnString
 	Email        postgres.ColumnString
 	FullName     postgres.ColumnString
-	Avatar       postgres.ColumnString
+	Avatar       postgres.ColumnBytea
 	CreatedAt    postgres.ColumnTimestamp
 	UpdatedAt    postgres.ColumnTimestamp
 	StorageQuota postgres.ColumnInteger
@@ -28,6 +28,7 @@ type profileTable struct {
 
 	AllColumns     postgres.ColumnList
 	MutableColumns postgres.ColumnList
+	DefaultColumns postgres.ColumnList
 }
 
 type ProfileTable struct {
@@ -68,13 +69,14 @@ func newProfileTableImpl(schemaName, tableName, alias string) profileTable {
 		IDColumn           = postgres.StringColumn("id")
 		EmailColumn        = postgres.StringColumn("email")
 		FullNameColumn     = postgres.StringColumn("full_name")
-		AvatarColumn       = postgres.StringColumn("avatar")
+		AvatarColumn       = postgres.ByteaColumn("avatar")
 		CreatedAtColumn    = postgres.TimestampColumn("created_at")
 		UpdatedAtColumn    = postgres.TimestampColumn("updated_at")
 		StorageQuotaColumn = postgres.IntegerColumn("storage_quota")
 		StorageUsedColumn  = postgres.IntegerColumn("storage_used")
 		allColumns         = postgres.ColumnList{IDColumn, EmailColumn, FullNameColumn, AvatarColumn, CreatedAtColumn, UpdatedAtColumn, StorageQuotaColumn, StorageUsedColumn}
 		mutableColumns     = postgres.ColumnList{EmailColumn, FullNameColumn, AvatarColumn, CreatedAtColumn, UpdatedAtColumn, StorageQuotaColumn, StorageUsedColumn}
+		defaultColumns     = postgres.ColumnList{CreatedAtColumn, UpdatedAtColumn, StorageQuotaColumn, StorageUsedColumn}
 	)
 
 	return profileTable{
@@ -92,5 +94,6 @@ func newProfileTableImpl(schemaName, tableName, alias string) profileTable {
 
 		AllColumns:     allColumns,
 		MutableColumns: mutableColumns,
+		DefaultColumns: defaultColumns,
 	}
 }

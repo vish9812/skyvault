@@ -145,7 +145,12 @@ func (a *MediaAPI) CreateUploadSession(w http.ResponseWriter, r *http.Request) {
 	// Parse JSON request body
 	var req dtos.CreateUploadSessionRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		helper.RespondError(w, r, apperror.NewAppError(apperror.ErrCommonInvalidValue, "mediaAPI.CreateUploadSession:DecodeJSON"))
+		helper.RespondError(w, r, apperror.NewAppError(fmt.Errorf("%w: %w", apperror.ErrCommonInvalidValue, err), "mediaAPI.CreateUploadSession:DecodeJSON"))
+		return
+	}
+
+	if err := req.Validate(); err != nil {
+		helper.RespondError(w, r, apperror.NewAppError(err, "mediaAPI.CreateUploadSession:Validate"))
 		return
 	}
 
