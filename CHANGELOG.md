@@ -5,6 +5,34 @@ All notable changes to SkyVault will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.0.0] - 2026-04-30
+
+### Added
+
+- Per-user storage quotas with default quota configurable via `STORAGE__DEFAULT_QUOTA_MB`
+- Real-time storage usage tracking with visual indicators in the UI (warning at 80%, critical at 95%)
+- Server-side upload sessions tracking chunked uploads with upfront quota reservation (concurrent-upload protection); per-chunk idempotency on retry. Foundation for future resumable uploads — end-to-end resume across client interruptions is not yet wired up.
+- Profile domain split out from the auth domain, with a dedicated profile API for the logged-in user
+
+### Changed
+
+- Replaced Taskfile (`task`) with `just` as the build/task runner; recipes use hyphenated names (e.g. `just server-run`, `just web-dev`)
+- Atomic storage-quota checks moved from the repository layer into SQL migrations for stronger consistency guarantees
+- Bumped Go toolchain to 1.26 and refreshed Go dependencies (chi, jet, jwt, migrate, etc.); local dev now requires Go 1.26+
+
+### Removed
+
+- **Breaking:** `MEDIA__MAX_UPLOAD_SIZE_MB`, `MEDIA__MAX_DIRECT_UPLOAD_SIZE_MB`, and `MEDIA__MAX_CHUNK_SIZE_MB` config variables — replaced by per-user quotas
+
+### Fixed
+
+- Available-storage check during concurrent uploads (race condition could allow exceeding quota)
+- Unlimited-storage vulnerability in chunked upload path
+- Upload size now derived from actual bytes written rather than trusting the client-provided size
+- Incorrect usage of `MaxDirectUploadSizeMB` that was restricting valid uploads
+- Created folders and uploaded files now appear immediately in the drive view (previously required a manual refresh to show)
+- `server/dev.env.example` now uses `SERVER__PORT=8090` to match Vite's `/api` proxy target (was 8080, which caused dev-mode `ECONNREFUSED` for any fresh checkout)
+
 ## [1.0.0] - 2025-10-02
 
 ### 🎉 Initial Release
@@ -171,4 +199,5 @@ See [TODO.md](TODO.md) for planned features:
 
 ---
 
+[2.0.0]: https://github.com/vish9812/skyvault/releases/tag/v2.0.0
 [1.0.0]: https://github.com/vish9812/skyvault/releases/tag/v1.0.0

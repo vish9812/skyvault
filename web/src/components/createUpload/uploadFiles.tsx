@@ -247,9 +247,10 @@ export default function UploadFiles(props: Props) {
     setIsLoading(false);
     setError(errMsg);
 
-    // If no errors, refresh storage usage and close modal after brief delay
+    // If no errors, refresh storage usage + folder content and close modal after brief delay
     if (!errMsg) {
       appCtx.refreshStorageUsage();
+      appCtx.refreshFolderContent();
       setTimeout(() => {
         props.closeModal();
       }, 1500);

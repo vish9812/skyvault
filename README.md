@@ -7,8 +7,8 @@
 **A self-hosted cloud storage solution for your files**
 
 [![License: AGPLv3](https://img.shields.io/badge/License-AGPLv3-blue.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/version-1.0.0-green.svg)](https://github.com/vish9812/skyvault/releases)
-[![Go Version](https://img.shields.io/badge/go-1.23-blue.svg)](https://golang.org)
+[![Version](https://img.shields.io/badge/version-2.0.0-green.svg)](https://github.com/vish9812/skyvault/releases)
+[![Go Version](https://img.shields.io/badge/go-1.26-blue.svg)](https://golang.org)
 [![SolidJS](https://img.shields.io/badge/SolidJS-1.9-blue.svg)](https://solidjs.com)
 
 </div>
@@ -21,7 +21,7 @@ SkyVault is a self-hosted cloud storage solution designed to help you securely s
 
 - 🔐 **Secure Authentication**: JWT-based authentication system
 - 📁 **Folder Management**: Create and navigate through folder structures
-- 📤 **File Upload**: Upload files with support for resumable chunked uploads for large files
+- 📤 **File Upload**: Upload files with chunked upload support for large files
 - 📥 **File Download**: Download your files anytime
 - 💾 **Storage Quotas**: Per-user storage limits with real-time usage tracking
 - 📱 **Mobile-First UI**: Responsive design optimized for mobile devices
@@ -124,7 +124,7 @@ STORAGE__DEFAULT_QUOTA_MB=104857600
 - Real-time storage usage tracking displayed in the UI
 - Visual indicators when approaching storage limits (80% = warning, 95% = critical)
 - Automatic validation prevents uploads exceeding available storage
-- Resumable chunked uploads for large files with concurrent upload protection
+- Chunked uploads for large files with upfront quota reservation (concurrent-upload protection)
 
 ## 🛠️ Management
 
@@ -187,11 +187,11 @@ docker compose down -v
 
 ### Prerequisites
 
-- Go 1.23 or higher
+- Go 1.26 or higher
 - Node.js 20 or higher
 - pnpm
 - PostgreSQL 16
-- Task (taskfile.dev)
+- [just](https://just.systems) command runner
 
 ### Setup
 
@@ -212,17 +212,17 @@ docker compose down -v
 3. **Start the database**
 
    ```bash
-   task postgres-up
+   just postgres-up
    ```
 
 4. **Start development servers**
 
    ```bash
    # Terminal 1: Start backend
-   task server:run
+   just server-run
 
    # Terminal 2: Start frontend
-   task web:dev
+   just web-dev
    ```
 
    Access the app at `http://localhost:5173` (Vite dev server)
@@ -231,25 +231,25 @@ docker compose down -v
 
 ```bash
 # Build everything
-task build
+just build
 
 # Run all tests
-task test
+just test
 
 # Run server tests
-task server:test
+just server-test
 
 # Lint web code
-task web:lint
+just web-lint
 
 # Generate DB models after schema changes
-task gen-db-models
+just gen-db-models
 
 # Create a new migration
-MIGRATION_FILE_NAME=add_something task migrate-create
+just migrate-create NAME=add_something
 
 # Clean everything
-task nuke
+just nuke
 ```
 
 ### Project Structure
@@ -270,14 +270,14 @@ skyvault/
 │       ├── pages/        # Page components
 │       ├── store/        # State management
 │       └── apis/         # API client
-└── Taskfile.yml          # Task automation
+└── justfile              # Task automation
 ```
 
 ## 🏗️ Architecture
 
 ### Backend
 
-- **Language**: Go 1.23
+- **Language**: Go 1.26
 - **Architecture**: Clean Architecture with CQRS pattern
 - **Database**: PostgreSQL 16
 - **Authentication**: JWT tokens
@@ -297,7 +297,7 @@ skyvault/
 - **Features**:
   - Per-user storage quotas
   - Real-time usage tracking
-  - Resumable chunked uploads for large files
+  - Chunked uploads for large files
   - Streaming downloads
   - Concurrent upload protection
 - **Configuration**: Default quota configurable via `STORAGE__DEFAULT_QUOTA_MB`
@@ -308,7 +308,7 @@ skyvault/
 
 - JWT-based authentication
 - Folder creation and navigation
-- File upload with resumable chunked uploads
+- File upload with chunked upload support
 - File download
 - Per-user storage quotas with real-time tracking
 - Storage usage visualization in UI

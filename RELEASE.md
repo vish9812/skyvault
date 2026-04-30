@@ -27,13 +27,13 @@ This guide describes the process for creating a new release of SkyVault.
 
    ```bash
    # Clean build
-   task nuke
+   just nuke
 
    # Build everything
-   task build
+   just build
 
    # Run tests
-   task test
+   just test
 
    # Test Docker build
    docker build -t skyvault:test .

@@ -17,6 +17,8 @@ export interface AppCtxType {
   systemConfig: () => SystemConfig;
   storageUsage: () => StorageUsage;
   refreshStorageUsage: () => void;
+  folderContentVersion: () => number;
+  refreshFolderContent: () => void;
 }
 
 const AppCtx = createContext<AppCtxType>();

@@ -54,6 +54,9 @@ export function AppCtxProvider(props: ParentProps) {
     }
   });
 
+  const [folderContentVersion, setFolderContentVersion] = createSignal(0);
+  const refreshFolderContent = () => setFolderContentVersion((v) => v + 1);
+
   return (
     <div>
       <Show
@@ -66,6 +69,8 @@ export function AppCtxProvider(props: ParentProps) {
             systemConfig,
             storageUsage,
             refreshStorageUsage,
+            folderContentVersion,
+            refreshFolderContent,
           }}
         >
           {props.children}

@@ -19,7 +19,7 @@ COPY web/ ./
 RUN pnpm run build
 
 # Stage 2: Build the Go backend
-FROM golang:1.23-alpine AS server-builder
+FROM golang:1.26-alpine AS server-builder
 
 WORKDIR /build/server
 

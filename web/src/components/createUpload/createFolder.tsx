@@ -60,6 +60,7 @@ function CreateFolder(props: Props) {
 
     try {
       await createFolder(appCtx.currentFolderId(), name().trim());
+      appCtx.refreshFolderContent();
       props.closeModal();
     } catch (err) {
       if (err instanceof Error && err.message === COMMON_ERR_KEYS.DUPLICATE) {

@@ -13,8 +13,11 @@ function Drive() {
 
   // TODO: Replace with tanstack query
   const [folderContent] = createResource(
-    () => appCtx.currentFolderId(),
-    fetchFolderContent
+    () => ({
+      id: appCtx.currentFolderId(),
+      version: appCtx.folderContentVersion(),
+    }),
+    ({ id }) => fetchFolderContent(id)
   );
 
   const [folderInfo] = createResource(
