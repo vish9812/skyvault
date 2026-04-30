@@ -28,6 +28,9 @@ const MOCK_FOLDERS = [
 // Combined data
 const ALL_ITEMS = [...MOCK_FILES, ...MOCK_FOLDERS];
 
+type SearchItem = { id: string; name: string; type: string };
+type SearchSection = { name: string; children: SearchItem[] };
+
 function Search() {
   let inputRef: HTMLInputElement | undefined;
   // const [query, setQuery] = createSignal({
@@ -35,7 +38,7 @@ function Search() {
   //   name: "",
   //   type: "",
   // });
-  const [options, setOptions] = createSignal([]);
+  const [options, setOptions] = createSignal<SearchSection[]>([]);
   // const [selectedItem, setSelectedItem] = createSignal(null);
 
   const handleSearchClose = () => {
@@ -85,7 +88,9 @@ function Search() {
           : null;
 
       // Combine sections, filtering out null values
-      const result = [fileSection, folderSection].filter(Boolean);
+      const result = [fileSection, folderSection].filter(
+        (s): s is SearchSection => s !== null,
+      );
 
       // Add a single 'See more results...' option if any group exceeds its limit
       const filesExceeded = matchingFiles.length > 5;
@@ -107,7 +112,7 @@ function Search() {
     }, 300);
   };
 
-  const handleSearchInput = (value) => {
+  const handleSearchInput = (value: string) => {
     // setQuery(value);
     searchItems(value);
   };
@@ -137,15 +142,18 @@ function Search() {
       closeOnSelection={true}
       onInputChange={handleSearchInput}
       // onChange={handleSelectItem}
-      itemComponent={(props) => (
+      itemComponent={(props) => {
+        // Kobalte typing reflects the section type from `options`; rawValue is actually the child.
+        const rawValue = props.item.rawValue as unknown as SearchItem;
+        return (
         <KSearch.Item
           item={props.item}
           class="flex items-center justify-between"
         >
           {/* Icon based on item type */}
           <div class="flex items-center gap-2 dropdown-item">
-            <Show when={props.item.rawValue.type !== "see-more"}>
-              <Show when={props.item.rawValue.type === "folder"}>
+            <Show when={rawValue.type !== "see-more"}>
+              <Show when={rawValue.type === "folder"}>
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
                   fill="none"
@@ -161,7 +169,7 @@ function Search() {
                   />
                 </svg>
               </Show>
-              <Show when={props.item.rawValue.type === "file"}>
+              <Show when={rawValue.type === "file"}>
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
                   fill="none"
@@ -178,7 +186,7 @@ function Search() {
                 </svg>
               </Show>
             </Show>
-            <Show when={props.item.rawValue.type === "see-more"}>
+            <Show when={rawValue.type === "see-more"}>
               <svg
                 xmlns="http://www.w3.org/2000/svg"
                 fill="none"
@@ -198,12 +206,12 @@ function Search() {
             {/* Item label with different styling for "See more" */}
             <KSearch.ItemLabel
               class={
-                props.item.rawValue.type === "see-more"
+                rawValue.type === "see-more"
                   ? "link text-sm font-medium"
                   : ""
               }
             >
-              {props.item.rawValue.name}
+              {rawValue.name}
             </KSearch.ItemLabel>
           </div>
           {/* Download icon */}
@@ -227,7 +235,8 @@ function Search() {
             </svg>
           </button>
         </KSearch.Item>
-      )}
+        );
+      }}
       sectionComponent={(props) => (
         <KSearch.Section class="px-3 py-1 text-xs text-neutral-light font-semibold uppercase">
           {props.section.rawValue.name}

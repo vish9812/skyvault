@@ -1,5 +1,5 @@
 import { Button } from "@kobalte/core/button";
-import { getProfile } from "@sv/apis/auth";
+import { getProfile } from "@sv/apis/profile";
 import { fetchFolderContent, fetchFolderInfo } from "@sv/apis/media";
 import Breadcrumbs from "@sv/components/breadcrumbs";
 import FolderContent from "@sv/components/folderContent";
