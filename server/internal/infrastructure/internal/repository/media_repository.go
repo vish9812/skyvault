@@ -4,15 +4,15 @@ package repository
 import (
 	"context"
 	"database/sql"
-	"slices"
-	"time"
-
 	"skyvault/internal/domain/media"
 	"skyvault/internal/infrastructure/internal/repository/internal/gen_jet/skyvault/public/model"
-	. "skyvault/internal/infrastructure/internal/repository/internal/gen_jet/skyvault/public/table"
 	"skyvault/pkg/apperror"
 	"skyvault/pkg/common"
 	"skyvault/pkg/paging"
+	"slices"
+	"time"
+
+	. "skyvault/internal/infrastructure/internal/repository/internal/gen_jet/skyvault/public/table"
 
 	. "github.com/go-jet/jet/v2/postgres"
 	"github.com/jinzhu/copier"
@@ -178,6 +178,59 @@ func (r *MediaRepository) TrashFileInfos(ctx context.Context, ownerID string, fi
 				AND(FileInfo.TrashedAt.IS_NULL()).
 				AND(FileInfo.OwnerID.EQ(UUID(UUIDStr(ownerID)))),
 		)
+
+	return runUpdateOrDelete(ctx, stmt, r.repository.dbTx)
+}
+
+//--------------------------------
+// Upload Session
+//--------------------------------
+
+func (r *MediaRepository) CreateUploadSession(ctx context.Context, session *media.UploadSession) (*media.UploadSession, error) {
+	dbModel := new(model.UploadSession)
+	err := copier.Copy(dbModel, session)
+	if err != nil {
+		return nil, apperror.NewAppError(err, "repository.CreateUploadSession:copier.Copy")
+	}
+
+	stmt := UploadSession.INSERT(
+		UploadSession.AllColumns,
+	).MODEL(dbModel).RETURNING(UploadSession.AllColumns)
+
+	return runInsert[model.UploadSession, media.UploadSession](ctx, stmt, r.repository.dbTx)
+}
+
+func (r *MediaRepository) GetUploadSession(ctx context.Context, sessionID string) (*media.UploadSession, error) {
+	stmt := SELECT(UploadSession.AllColumns).
+		FROM(UploadSession).
+		WHERE(UploadSession.ID.EQ(UUID(UUIDStr(sessionID))))
+
+	return runSelect[model.UploadSession, media.UploadSession](ctx, stmt, r.repository.dbTx)
+}
+
+func (r *MediaRepository) GetUploadSessionForOwner(ctx context.Context, ownerID, sessionID string) (*media.UploadSession, error) {
+	stmt := SELECT(UploadSession.AllColumns).
+		FROM(UploadSession).
+		WHERE(
+			UploadSession.ID.EQ(UUID(UUIDStr(sessionID))).
+				AND(UploadSession.OwnerID.EQ(UUID(UUIDStr(ownerID)))),
+		)
+
+	return runSelect[model.UploadSession, media.UploadSession](ctx, stmt, r.repository.dbTx)
+}
+
+func (r *MediaRepository) IncrementUploadedBytes(ctx context.Context, sessionID string, bytesToAdd int64) error {
+	stmt := UploadSession.UPDATE(UploadSession.UploadedBytes).
+		SET(UploadSession.UploadedBytes.ADD(Int(bytesToAdd))).
+		WHERE(UploadSession.ID.EQ(UUID(UUIDStr(sessionID)))).
+		RETURNING(UploadSession.AllColumns)
+
+	return runUpdateOrDelete(ctx, stmt, r.repository.dbTx)
+}
+
+func (r *MediaRepository) DeleteUploadSession(ctx context.Context, sessionID string) error {
+	stmt := UploadSession.DELETE().
+		WHERE(UploadSession.ID.EQ(UUID(UUIDStr(sessionID))))
 
 	return runUpdateOrDelete(ctx, stmt, r.repository.dbTx)
 }

@@ -77,6 +77,7 @@ func (a *MediaAPI) InitRoutes() *MediaAPI {
 				// Files routes that need folderID
 				r.Route("/files", func(r chi.Router) {
 					r.Post("/", a.UploadFile)
+					r.Post("/upload-sessions", a.CreateUploadSession)
 					r.Post("/chunks", a.UploadChunk)
 					r.Post("/chunks/{upload-id}/finalize", a.FinalizeChunkedUpload)
 				})
@@ -134,6 +135,59 @@ func (a *MediaAPI) UploadFile(w http.ResponseWriter, r *http.Request) {
 		helper.RespondError(w, r, apperror.NewAppError(err, "mediaAPI.UploadFile:Copy"))
 		return
 	}
+
+	helper.RespondJSON(w, http.StatusCreated, &dto)
+}
+
+func (a *MediaAPI) CreateUploadSession(w http.ResponseWriter, r *http.Request) {
+	profileID := common.GetProfileIDFromContext(r.Context())
+
+	// Parse JSON request body
+	var req dtos.CreateUploadSessionRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		helper.RespondError(w, r, apperror.NewAppError(fmt.Errorf("%w: %w", apperror.ErrCommonInvalidValue, err), "mediaAPI.CreateUploadSession:DecodeJSON"))
+		return
+	}
+
+	if err := req.Validate(); err != nil {
+		helper.RespondError(w, r, apperror.NewAppError(err, "mediaAPI.CreateUploadSession:Validate"))
+		return
+	}
+
+	// Get folder ID from URL param
+	var folderID *string
+	if id := chi.URLParam(r, urlParamFolderID); validate.UUID(id) {
+		folderID = &id
+	}
+
+	// Override folderID from URL param if provided (URL takes precedence)
+	if folderID != nil {
+		req.FolderID = folderID
+	}
+
+	cmd := &media.CreateUploadSessionCommand{
+		OwnerID:     profileID,
+		FolderID:    req.FolderID,
+		FileName:    req.FileName,
+		FileSize:    req.FileSize,
+		MimeType:    req.MimeType,
+		TotalChunks: req.TotalChunks,
+	}
+
+	session, err := a.commands.CreateUploadSession(r.Context(), cmd)
+	if err != nil {
+		helper.RespondError(w, r, apperror.NewAppError(err, "mediaAPI.CreateUploadSession:CreateUploadSession").
+			WithMetadata("file_name", req.FileName).
+			WithMetadata("file_size", req.FileSize))
+		return
+	}
+
+	var dto dtos.CreateUploadSessionResponse
+	dto.UploadID = session.ID
+	dto.FileName = session.FileName
+	dto.FileSize = session.FileSize
+	dto.TotalChunks = session.TotalChunks
+	dto.ExpiresAt = session.ExpiresAt
 
 	helper.RespondJSON(w, http.StatusCreated, &dto)
 }

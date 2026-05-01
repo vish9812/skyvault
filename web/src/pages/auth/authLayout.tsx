@@ -1,12 +1,11 @@
-import { ParentProps } from "solid-js";
 import { useNavigate } from "@solidjs/router";
-import { getProfile } from "@sv/apis/auth";
+import { isLoggedIn } from "@sv/apis/auth";
 import { CLIENT_URLS } from "@sv/utils/consts";
+import type { ParentProps } from "solid-js";
 
 function AuthLayout(props: ParentProps) {
   const navigate = useNavigate();
-  const profile = getProfile();
-  if (profile) {
+  if (isLoggedIn()) {
     navigate(CLIENT_URLS.DRIVE, { replace: true });
     return;
   }

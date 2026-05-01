@@ -1,11 +1,9 @@
 package media
 
 import (
-	"fmt"
 	"io"
 	"path/filepath"
 	"skyvault/pkg/apperror"
-	"skyvault/pkg/common"
 	"skyvault/pkg/utils"
 	"strings"
 	"time"
@@ -19,9 +17,14 @@ const (
 	CategoryOther = "other"
 )
 
-type FileConfig struct {
-	MaxSizeMB int64
-}
+const (
+	// MaxDirectUploadSizeMB is the maximum file size for direct (non-chunked) uploads
+	MaxDirectUploadSizeMB = 50 // 50MB
+	// MaxChunkSizeMB is the size of each chunk for chunked uploads
+	MaxChunkSizeMB = 10 // 10MB
+	// SizeToleranceBytes is the allowed variance between claimed and actual file sizes (for headers/metadata)
+	SizeToleranceBytes = 64 * 1024 // 64KB
+)
 
 // TODO: Generate preview asynchronously via worker
 type FileInfo struct {
@@ -42,17 +45,13 @@ type FileInfo struct {
 // App Errors:
 // - ErrCommonNoAccess
 // - ErrCommonInvalidValue
-func NewFileInfo(config FileConfig, ownerID string, parentFolder *FolderInfo, name string, size int64, mimeType string) (*FileInfo, error) {
+func NewFileInfo(ownerID string, parentFolder *FolderInfo, name string, size int64, mimeType string) (*FileInfo, error) {
 	var folderID *string
 	if parentFolder != nil {
 		if err := parentFolder.ValidateAccess(ownerID); err != nil {
 			return nil, apperror.NewAppError(err, "media.NewFileInfo:ValidateParentAccess")
 		}
 		folderID = &parentFolder.ID
-	}
-
-	if size > (config.MaxSizeMB * common.BytesPerMB) {
-		return nil, apperror.NewAppError(fmt.Errorf("%w: file size limit exceeded", apperror.ErrCommonInvalidValue), "media.NewFileInfo:FileSizeLimitExceeded").WithMetadata("max_size_mb", config.MaxSizeMB).WithMetadata("file_size_mb", size/common.BytesPerMB)
 	}
 
 	if mimeType == "" {

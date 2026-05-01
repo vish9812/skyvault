@@ -47,6 +47,37 @@ type Repository interface {
 	TrashFileInfos(ctx context.Context, ownerID string, fileIDs []string) error
 
 	//--------------------------------
+	// Upload Sessions
+	//--------------------------------
+
+	// CreateUploadSession creates a new upload session record.
+	// App Errors:
+	// - ErrCommonDuplicateData
+	CreateUploadSession(ctx context.Context, session *UploadSession) (*UploadSession, error)
+
+	// GetUploadSession retrieves an upload session by ID (without owner validation).
+	// App Errors:
+	// - ErrCommonNoData
+	GetUploadSession(ctx context.Context, sessionID string) (*UploadSession, error)
+
+	// GetUploadSessionForOwner retrieves an upload session and validates it belongs to the owner.
+	// App Errors:
+	// - ErrCommonNoData
+	// - ErrCommonNoAccess
+	GetUploadSessionForOwner(ctx context.Context, ownerID, sessionID string) (*UploadSession, error)
+
+	// IncrementUploadedBytes atomically increments the uploaded_bytes field for a session.
+	// App Errors:
+	// - ErrCommonNoData
+	// - ErrCommonInvalidValue (if incrementing would exceed file_size)
+	IncrementUploadedBytes(ctx context.Context, sessionID string, bytesToAdd int64) error
+
+	// DeleteUploadSession deletes an upload session by ID.
+	// App Errors:
+	// - ErrCommonNoData
+	DeleteUploadSession(ctx context.Context, sessionID string) error
+
+	//--------------------------------
 	// Folders
 	//--------------------------------
 

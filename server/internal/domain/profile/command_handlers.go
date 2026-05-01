@@ -9,19 +9,20 @@ import (
 var _ Commands = (*CommandHandlers)(nil)
 
 type CommandHandlers struct {
+	config     Config
 	repository Repository
 }
 
-func NewCommandHandlers(repository Repository) Commands {
-	return &CommandHandlers{repository: repository}
+func NewCommandHandlers(config Config, repository Repository) Commands {
+	return &CommandHandlers{config: config, repository: repository}
 }
 
 func (h *CommandHandlers) WithTxRepository(ctx context.Context, repository Repository) Commands {
-	return &CommandHandlers{repository: repository}
+	return &CommandHandlers{config: h.config, repository: repository}
 }
 
 func (h *CommandHandlers) Create(ctx context.Context, cmd *CreateCommand) (*Profile, error) {
-	pro, err := NewProfile(cmd.Email, cmd.FullName)
+	pro, err := NewProfile(cmd.Email, cmd.FullName, h.config.Quota*common.BytesPerMB)
 	if err != nil {
 		return nil, apperror.NewAppError(err, "profile.CommandHandlers.Create:NewProfile")
 	}

@@ -65,7 +65,7 @@ function AuthForm(props: AuthFormProps) {
     const result = formSchema.safeParse(unwrap(formValues));
 
     if (!result.success) {
-      for (const err of result.error.errors) {
+      for (const err of result.error.issues) {
         if (err.path[0]) {
           setFormErrors(err.path[0] as keyof typeof formErrors, err.message);
         }

@@ -4,11 +4,11 @@ package repository
 import (
 	"context"
 	"database/sql"
-
 	"skyvault/internal/domain/profile"
 	"skyvault/internal/infrastructure/internal/repository/internal/gen_jet/skyvault/public/model"
-	. "skyvault/internal/infrastructure/internal/repository/internal/gen_jet/skyvault/public/table"
 	"skyvault/pkg/apperror"
+
+	. "skyvault/internal/infrastructure/internal/repository/internal/gen_jet/skyvault/public/table"
 
 	. "github.com/go-jet/jet/v2/postgres"
 	"github.com/jinzhu/copier"
@@ -79,6 +79,24 @@ func (r *ProfileRepository) Update(ctx context.Context, pro *profile.Profile) er
 func (r *ProfileRepository) Delete(ctx context.Context, id string) error {
 	stmt := Profile.DELETE().
 		WHERE(Profile.ID.EQ(UUID(UUIDStr(id))))
+
+	return runUpdateOrDelete(ctx, stmt, r.repository.dbTx)
+}
+
+func (r *ProfileRepository) IncrementStorageUsage(ctx context.Context, profileID string, bytes int64) error {
+	stmt := Profile.UPDATE(Profile.StorageUsed).
+		SET(Profile.StorageUsed.SET(Profile.StorageUsed.ADD(Int64(bytes)))).
+		WHERE(Profile.ID.EQ(UUID(UUIDStr(profileID))))
+
+	return runUpdateOrDelete(ctx, stmt, r.repository.dbTx)
+}
+
+func (r *ProfileRepository) DecrementStorageUsage(ctx context.Context, profileID string, bytes int64) error {
+	// Floor at 0 so a logic bug elsewhere can't drive storage_used negative
+	// and trip the check (storage_used >= 0) constraint mid-flow.
+	stmt := Profile.UPDATE(Profile.StorageUsed).
+		SET(Profile.StorageUsed.SET(IntExp(GREATEST(Profile.StorageUsed.SUB(Int64(bytes)), Int64(0))))).
+		WHERE(Profile.ID.EQ(UUID(UUIDStr(profileID))))
 
 	return runUpdateOrDelete(ctx, stmt, r.repository.dbTx)
 }

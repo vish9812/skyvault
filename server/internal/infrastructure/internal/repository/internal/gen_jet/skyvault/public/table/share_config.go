@@ -29,6 +29,7 @@ type shareConfigTable struct {
 
 	AllColumns     postgres.ColumnList
 	MutableColumns postgres.ColumnList
+	DefaultColumns postgres.ColumnList
 }
 
 type ShareConfigTable struct {
@@ -77,6 +78,7 @@ func newShareConfigTableImpl(schemaName, tableName, alias string) shareConfigTab
 		UpdatedAtColumn    = postgres.TimestampColumn("updated_at")
 		allColumns         = postgres.ColumnList{IDColumn, OwnerIDColumn, FileIDColumn, FolderIDColumn, PasswordHashColumn, MaxDownloadsColumn, ExpiresAtColumn, CreatedAtColumn, UpdatedAtColumn}
 		mutableColumns     = postgres.ColumnList{OwnerIDColumn, FileIDColumn, FolderIDColumn, PasswordHashColumn, MaxDownloadsColumn, ExpiresAtColumn, CreatedAtColumn, UpdatedAtColumn}
+		defaultColumns     = postgres.ColumnList{CreatedAtColumn, UpdatedAtColumn}
 	)
 
 	return shareConfigTable{
@@ -95,5 +97,6 @@ func newShareConfigTableImpl(schemaName, tableName, alias string) shareConfigTab
 
 		AllColumns:     allColumns,
 		MutableColumns: mutableColumns,
+		DefaultColumns: defaultColumns,
 	}
 }

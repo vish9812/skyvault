@@ -18,7 +18,7 @@ func InitInfrastructure(app *appconfig.App) *infrastructure.Infrastructure {
 // InitAPI initializes all APIs and returns the main API server
 func InitAPI(app *appconfig.App, infra *infrastructure.Infrastructure) *api.API {
 	// Init workFlows, commands and queries
-	proCmd := profile.NewCommandHandlers(infra.Repository.Profile)
+	proCmd := profile.NewCommandHandlers(profile.Config{Quota: app.Config.Storage.DefaultQuotaMB}, infra.Repository.Profile)
 	proCmdRoot := profile.NewCommandsSanitizer(proCmd)
 	proQrs := profile.NewQueryHandlers(infra.Repository.Profile)
 	proQrsRoot := profile.NewQueriesSanitizer(proQrs)
@@ -28,7 +28,7 @@ func InitAPI(app *appconfig.App, infra *infrastructure.Infrastructure) *api.API 
 	authQrsRoot := auth.NewQueriesSanitizer(authQrs)
 	signUpFlow := workflows.NewSignUpFlow(app, authCmdRoot, infra.Repository.Auth, proCmdRoot, infra.Repository.Profile)
 	signInFlow := workflows.NewSignInFlow(authCmdRoot, authQrsRoot, proCmdRoot, proQrsRoot)
-	mediaCmd := media.NewCommandHandlers(app, infra.Repository.Media, infra.Storage.LocalStorage)
+	mediaCmd := media.NewCommandHandlers(app, infra.Repository.Profile, infra.Repository.Media, infra.Storage.LocalStorage)
 	mediaCmdRoot := media.NewCommandsSanitizer(mediaCmd)
 	mediaQrs := media.NewQueryHandlers(infra.Repository.Media, infra.Storage.LocalStorage)
 	mediaQrsRoot := media.NewQueriesSanitizer(mediaQrs)
@@ -47,7 +47,7 @@ func InitAPI(app *appconfig.App, infra *infrastructure.Infrastructure) *api.API 
 func InitSignUpFlow(app *appconfig.App, infra *infrastructure.Infrastructure) *workflows.SignUpFlow {
 	authCmd := auth.NewCommandHandlers(infra.Repository.Auth, infra.Auth)
 	authCmdRoot := auth.NewCommandsSanitizer(authCmd)
-	proCmd := profile.NewCommandHandlers(infra.Repository.Profile)
+	proCmd := profile.NewCommandHandlers(profile.Config{Quota: app.Config.Storage.DefaultQuotaMB}, infra.Repository.Profile)
 	proCmdRoot := profile.NewCommandsSanitizer(proCmd)
 	return workflows.NewSignUpFlow(app, authCmdRoot, infra.Repository.Auth, proCmdRoot, infra.Repository.Profile)
 }

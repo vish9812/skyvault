@@ -46,24 +46,24 @@ func NewLocalStorage(app *appconfig.App) *LocalStorage {
 	return &LocalStorage{app: app, baseDir: baseDir}
 }
 
-func (s *LocalStorage) write(dirPath, filePath string, data io.Reader, maxSizeMB int64) error {
+func (s *LocalStorage) write(dirPath, filePath string, data io.Reader, maxSizeMB int64) (int64, error) {
 	// Create the directory
 	err := os.MkdirAll(dirPath, 0700)
 	if err != nil {
-		return apperror.NewAppError(err, "storage.LocalStorage.write:MkdirAll")
+		return 0, apperror.NewAppError(err, "storage.LocalStorage.write:MkdirAll")
 	}
 
 	// Check if the file already exists
 	if _, err := os.Stat(filePath); err == nil {
-		return apperror.NewAppError(apperror.ErrCommonDuplicateData, "storage.LocalStorage.write:Stat.Duplicate")
+		return 0, apperror.NewAppError(apperror.ErrCommonDuplicateData, "storage.LocalStorage.write:Stat.Duplicate")
 	} else if !errors.Is(err, fs.ErrNotExist) {
-		return apperror.NewAppError(err, "storage.LocalStorage.write:Stat")
+		return 0, apperror.NewAppError(err, "storage.LocalStorage.write:Stat")
 	}
 
 	// Create the file
 	f, err := os.OpenFile(filePath, os.O_CREATE|os.O_WRONLY, 0600)
 	if err != nil {
-		return apperror.NewAppError(err, "storage.LocalStorage.write:OpenFile")
+		return 0, apperror.NewAppError(err, "storage.LocalStorage.write:OpenFile")
 	}
 	defer f.Close()
 
@@ -74,11 +74,11 @@ func (s *LocalStorage) write(dirPath, filePath string, data io.Reader, maxSizeMB
 		errRemove := removeFile(filePath)
 		if errRemove != nil {
 			if !errors.Is(errRemove, apperror.ErrCommonNoData) {
-				return apperror.NewAppError(fmt.Errorf("%w: %w", errRemove, err), "storage.LocalStorage.write:CopyN:removeFile")
+				return 0, apperror.NewAppError(fmt.Errorf("%w: %w", errRemove, err), "storage.LocalStorage.write:CopyN:removeFile")
 			}
 		}
 
-		return apperror.NewAppError(err, "storage.LocalStorage.write:CopyN")
+		return 0, apperror.NewAppError(err, "storage.LocalStorage.write:CopyN")
 	}
 
 	// Check size limit
@@ -87,42 +87,42 @@ func (s *LocalStorage) write(dirPath, filePath string, data io.Reader, maxSizeMB
 		// Clean up the written file if it is greater than max size
 		errRemove := removeFile(filePath)
 		if errRemove != nil {
-			return apperror.NewAppError(fmt.Errorf("%w: %w", errRemove, sizeErr), "storage.LocalStorage.write:MaxSizeExceeded:removeFile")
+			return 0, apperror.NewAppError(fmt.Errorf("%w: %w", errRemove, sizeErr), "storage.LocalStorage.write:MaxSizeExceeded:removeFile")
 		}
 
-		return apperror.NewAppError(sizeErr, "storage.LocalStorage.write:MaxSizeExceeded").WithMetadata("written_mb", written/common.BytesPerMB).WithMetadata("max_size_mb", maxSizeMB)
+		return 0, apperror.NewAppError(sizeErr, "storage.LocalStorage.write:MaxSizeExceeded").WithMetadata("written_mb", written/common.BytesPerMB).WithMetadata("max_size_mb", maxSizeMB)
 	}
 
-	return nil
+	return written, nil
 }
 
-func (s *LocalStorage) SaveFile(ctx context.Context, file io.ReadSeeker, name, ownerID string) error {
+func (s *LocalStorage) SaveFile(ctx context.Context, file io.ReadSeeker, name, ownerID string) (int64, error) {
 	ownerDirPath := getOwnerDirPath(s.baseDir, ownerID)
 	filePath := getFilePath(ownerDirPath, name)
 
 	_, err := file.Seek(0, io.SeekStart)
 	if err != nil {
-		return apperror.NewAppError(err, "storage.LocalStorage.SaveFile:Seek").WithMetadata("file_path", filePath)
+		return 0, apperror.NewAppError(err, "storage.LocalStorage.SaveFile:Seek").WithMetadata("file_path", filePath)
 	}
 
-	err = s.write(ownerDirPath, filePath, file, s.app.Config.Media.MaxDirectUploadSizeMB)
+	written, err := s.write(ownerDirPath, filePath, file, media.MaxDirectUploadSizeMB)
 	if err != nil {
-		return apperror.NewAppError(err, "storage.LocalStorage.SaveFile:write").WithMetadata("file_path", filePath)
+		return 0, apperror.NewAppError(err, "storage.LocalStorage.SaveFile:write").WithMetadata("file_path", filePath)
 	}
 
-	return nil
+	return written, nil
 }
 
-func (s *LocalStorage) SaveChunk(ctx context.Context, chunk io.Reader, uploadID string, chunkIndex int64, ownerID string) error {
+func (s *LocalStorage) SaveChunk(ctx context.Context, chunk io.Reader, uploadID string, chunkIndex int64, ownerID string) (int64, error) {
 	chunksDirPath := getChunksDirPath(s.baseDir, ownerID, uploadID)
 	chunkPath := getChunkPath(chunksDirPath, chunkIndex)
 
-	err := s.write(chunksDirPath, chunkPath, chunk, s.app.Config.Media.MaxChunkSizeMB)
+	written, err := s.write(chunksDirPath, chunkPath, chunk, media.MaxChunkSizeMB)
 	if err != nil {
-		return apperror.NewAppError(err, "storage.LocalStorage.SaveChunk:write").WithMetadata("chunk_path", chunkPath)
+		return 0, apperror.NewAppError(err, "storage.LocalStorage.SaveChunk:write").WithMetadata("chunk_path", chunkPath)
 	}
 
-	return nil
+	return written, nil
 }
 
 func (s *LocalStorage) FinalizeChunkedUpload(ctx context.Context, uploadID string, fileName string, ownerID string) error {
@@ -164,9 +164,8 @@ func (s *LocalStorage) FinalizeChunkedUpload(ctx context.Context, uploadID strin
 	defer finalFile.Close()
 
 	// Combine all chunks
-	var totalSize int64
-	maxSize := s.app.Config.Media.MaxUploadSizeMB * common.BytesPerMB
-
+	// Note: File size is validated by quota checks before this method is called
+	// Individual chunks are already validated to be <= MaxChunkSizeMB when uploaded
 	for _, chunkFile := range chunkFiles {
 		chunk, err := os.Open(chunkFile)
 		if err != nil {
@@ -179,7 +178,7 @@ func (s *LocalStorage) FinalizeChunkedUpload(ctx context.Context, uploadID strin
 			return apperror.NewAppError(err, "storage.LocalStorage.FinalizeChunkedUpload:OpenChunk").WithMetadata("chunk_file", chunkFile)
 		}
 
-		written, err := io.Copy(finalFile, chunk)
+		_, err = io.Copy(finalFile, chunk)
 		chunk.Close()
 
 		if err != nil {
@@ -190,17 +189,6 @@ func (s *LocalStorage) FinalizeChunkedUpload(ctx context.Context, uploadID strin
 			}
 
 			return apperror.NewAppError(err, "storage.LocalStorage.FinalizeChunkedUpload:CopyChunk").WithMetadata("chunk_file", chunkFile)
-		}
-
-		// Check size limit
-		if totalSize += written; totalSize > maxSize {
-			// Clean up on error
-			errRemove := removeFile(finalPath)
-			if errRemove != nil {
-				return apperror.NewAppError(fmt.Errorf("%w: %w", errRemove, err), "storage.LocalStorage.FinalizeChunkedUpload:SizeExceeded:removeFile").WithMetadata("final_path", finalPath).WithMetadata("chunk_file", chunkFile)
-			}
-
-			return apperror.NewAppError(apperror.ErrCommonInvalidValue, "storage.LocalStorage.FinalizeChunkedUpload:SizeExceeded").WithMetadata("total_size_mb", totalSize/common.BytesPerMB).WithMetadata("max_size_mb", maxSize/common.BytesPerMB)
 		}
 	}
 

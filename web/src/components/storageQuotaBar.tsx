@@ -1,0 +1,59 @@
+import useAppCtx from "@sv/store/appCtxProvider";
+import Format from "@sv/utils/format";
+import { Show } from "solid-js";
+
+export default function StorageQuotaBar() {
+  const appCtx = useAppCtx();
+
+  const usagePercentage = () => {
+    const usage = appCtx.storageUsage();
+    if (usage.quota === 0) return 0;
+    return Math.min((usage.used / usage.quota) * 100, 100);
+  };
+
+  const hasEnoughLimit = () => usagePercentage() < 80;
+  const isNearLimit = () => usagePercentage() >= 80 && usagePercentage() < 95;
+  const isAtLimit = () => usagePercentage() >= 95;
+
+  return (
+    <div class="px-4 py-3 border-t border-border">
+      <div class="text-xs text-neutral-light mb-1 flex justify-between items-center">
+        <span>Storage</span>
+        <span>
+          {Format.size(appCtx.storageUsage().used)} /{" "}
+          {Format.size(appCtx.storageUsage().quota)}
+        </span>
+      </div>
+
+      {/* Progress bar */}
+      <div
+        class="w-full bg-bg-muted rounded-full h-2"
+        role="progressbar"
+        aria-label="Storage usage"
+        aria-valuemin={0}
+        aria-valuemax={100}
+        aria-valuenow={Math.round(usagePercentage())}
+        aria-valuetext={`${Math.round(usagePercentage())}% used`}
+      >
+        <div
+          classList={{
+            "h-2 rounded-full transition-all duration-300": true,
+            "bg-primary": hasEnoughLimit(),
+            "bg-warning": isNearLimit(),
+            "bg-error": isAtLimit(),
+          }}
+          style={{ width: `${usagePercentage()}%` }}
+        />
+      </div>
+
+      {/* Warning message */}
+      <Show when={!hasEnoughLimit()}>
+        <div class="text-xs text-warning mt-1">
+          <Show when={isAtLimit()} fallback="Storage space running low">
+            Storage quota almost full
+          </Show>
+        </div>
+      </Show>
+    </div>
+  );
+}

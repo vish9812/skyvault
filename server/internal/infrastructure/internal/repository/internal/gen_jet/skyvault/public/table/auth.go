@@ -27,6 +27,7 @@ type authTable struct {
 
 	AllColumns     postgres.ColumnList
 	MutableColumns postgres.ColumnList
+	DefaultColumns postgres.ColumnList
 }
 
 type AuthTable struct {
@@ -73,6 +74,7 @@ func newAuthTableImpl(schemaName, tableName, alias string) authTable {
 		UpdatedAtColumn      = postgres.TimestampColumn("updated_at")
 		allColumns           = postgres.ColumnList{IDColumn, ProfileIDColumn, ProviderColumn, ProviderUserIDColumn, PasswordHashColumn, CreatedAtColumn, UpdatedAtColumn}
 		mutableColumns       = postgres.ColumnList{ProfileIDColumn, ProviderColumn, ProviderUserIDColumn, PasswordHashColumn, CreatedAtColumn, UpdatedAtColumn}
+		defaultColumns       = postgres.ColumnList{CreatedAtColumn, UpdatedAtColumn}
 	)
 
 	return authTable{
@@ -89,5 +91,6 @@ func newAuthTableImpl(schemaName, tableName, alias string) authTable {
 
 		AllColumns:     allColumns,
 		MutableColumns: mutableColumns,
+		DefaultColumns: defaultColumns,
 	}
 }

@@ -1,12 +1,15 @@
 import { DropdownMenu } from "@kobalte/core/dropdown-menu";
 import { useNavigate } from "@solidjs/router";
-import { getProfile, signOut } from "@sv/apis/auth";
+import { signOut } from "@sv/apis/auth";
+import { getProfile } from "@sv/apis/profile";
+import useAppCtx from "@sv/store/appCtxProvider";
 import { CLIENT_URLS } from "@sv/utils/consts";
 import Format from "@sv/utils/format";
 
 function ProfileDropdown() {
   const navigate = useNavigate();
-  const profile = getProfile()!;
+  const profile = getProfile();
+  const appCtx = useAppCtx();
 
   const handleLogout = () => {
     signOut();
@@ -33,7 +36,13 @@ function ProfileDropdown() {
         )}
       </DropdownMenu.Trigger>
       <DropdownMenu.Portal>
-        <DropdownMenu.Content class="bg-white rounded-lg shadow-md border border-border-strong min-w-[140px] mt-2">
+        <DropdownMenu.Content class="bg-white rounded-lg shadow-md border border-border-strong min-w-[200px] mt-2">
+          {/* Storage info */}
+          <div class="px-4 py-2 border-b border-border text-xs text-neutral-light">
+            Storage: {Format.size(appCtx.storageUsage().used)} /{" "}
+            {Format.size(appCtx.storageUsage().quota)}
+          </div>
+
           <DropdownMenu.Item class="dropdown-item" onSelect={handleLogout}>
             <span class="flex items-center gap-2">
               <svg
@@ -44,6 +53,7 @@ function ProfileDropdown() {
                 stroke="currentColor"
                 class="size-5 text-neutral-light"
               >
+                <title>Logout Icon</title>
                 <path
                   stroke-linecap="round"
                   stroke-linejoin="round"

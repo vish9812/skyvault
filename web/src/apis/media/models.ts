@@ -2,7 +2,6 @@ import { CATEGORY } from "@sv/utils/fileUtils";
 
 export interface UploadConfig {
   maxDirectUploadSizeMB: number;
-  maxUploadSizeMB: number;
   maxChunkSizeMB: number;
 }
 
@@ -58,4 +57,12 @@ export interface BaseInfo {
 export interface FolderContent {
   filePage: Page<FileInfo>;
   folderPage: Page<FolderInfo>;
+}
+
+export interface CreateUploadSessionResponse {
+  uploadId: string;
+  fileName: string;
+  fileSize: number;
+  totalChunks: number;
+  expiresAt: string;
 }

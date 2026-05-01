@@ -1,5 +1,6 @@
 import { useLocation, useMatch, useNavigate, useParams } from "@solidjs/router";
-import { getProfile } from "@sv/apis/auth";
+import { isLoggedIn } from "@sv/apis/auth";
+import { fetchStorageUsage } from "@sv/apis/profile";
 import { getSystemConfig } from "@sv/apis/system";
 import LoadingBackdrop from "@sv/components/ui/loadingBackdrop";
 import { CLIENT_URLS, ROOT_FOLDER_ID } from "@sv/utils/consts";
@@ -7,17 +8,16 @@ import {
   createRenderEffect,
   createResource,
   createSignal,
-  ParentProps,
+  type ParentProps,
   Show,
   useContext,
 } from "solid-js";
-import AppCtx, { DefaultSystemConfig } from "./appCtx";
+import AppCtx, { DefaultStorageUsage, DefaultSystemConfig } from "./appCtx";
 
 export function AppCtxProvider(props: ParentProps) {
   const navigate = useNavigate();
-  const profile = getProfile();
 
-  if (!profile) {
+  if (!isLoggedIn()) {
     navigate(CLIENT_URLS.SIGN_IN, { replace: true });
     return;
   }
@@ -27,12 +27,20 @@ export function AppCtxProvider(props: ParentProps) {
     initialValue: DefaultSystemConfig,
   });
 
+  // Storage usage
+  const [storageUsage, { refetch: refreshStorageUsage }] = createResource(
+    () => fetchStorageUsage(),
+    {
+      initialValue: DefaultStorageUsage,
+    },
+  );
+
   // Current folder id
   const location = useLocation();
 
   const isNavigatable = useMatch(
     () => location.pathname,
-    [CLIENT_URLS.DRIVE, CLIENT_URLS.SHARED]
+    [CLIENT_URLS.DRIVE, CLIENT_URLS.SHARED],
   );
 
   const params = useParams();
@@ -46,13 +54,23 @@ export function AppCtxProvider(props: ParentProps) {
     }
   });
 
+  const [folderContentVersion, setFolderContentVersion] = createSignal(0);
+  const refreshFolderContent = () => setFolderContentVersion((v) => v + 1);
+
   return (
     <div>
-      <Show when={!systemConfig.loading} fallback={<LoadingBackdrop />}>
+      <Show
+        when={!systemConfig.loading && !storageUsage.loading}
+        fallback={<LoadingBackdrop />}
+      >
         <AppCtx.Provider
           value={{
             currentFolderId,
-            systemConfig: systemConfig()!,
+            systemConfig,
+            storageUsage,
+            refreshStorageUsage,
+            folderContentVersion,
+            refreshFolderContent,
           }}
         >
           {props.children}

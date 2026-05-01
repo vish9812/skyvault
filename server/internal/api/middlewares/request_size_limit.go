@@ -4,6 +4,7 @@ import (
 	"errors"
 	"net/http"
 	"skyvault/internal/api/helper"
+	"skyvault/internal/domain/media"
 	"skyvault/pkg/appconfig"
 	"skyvault/pkg/apperror"
 	"skyvault/pkg/common"
@@ -46,11 +47,11 @@ func getMaxSizeForRoute(path string, config *appconfig.Config) int64 {
 	// Add 1MB extra buffer to the upload size to account for extra fields in the request body
 	if strings.Contains(cleanPath, "/media/folders/") {
 		if strings.HasSuffix(cleanPath, "/files") {
-			return (config.Media.MaxDirectUploadSizeMB + 1) * common.BytesPerMB
+			return (media.MaxDirectUploadSizeMB + 1) * common.BytesPerMB
 		}
 
 		if strings.HasSuffix(cleanPath, "/files/chunks") {
-			return (config.Media.MaxChunkSizeMB + 1) * common.BytesPerMB
+			return (media.MaxChunkSizeMB + 1) * common.BytesPerMB
 		}
 	}
 

@@ -12,30 +12,32 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Common Development Commands
 
+Recipes are defined in `justfile`. Run `just` with no args to list them.
+
 ### Backend (Go Server)
 
-- **Start database**: `task postgres-up`
-- **Stop database**: `task postgres-down`
-- **Run migrations**: `task migrate-up`
-- **Generate DB models**: `task gen-db-models` (after schema changes)
-- **Build server**: `task server:build`
-- **Run server**: `task server:run`
-- **Run tests**: `task server:test`
+- **Start database**: `just postgres-up`
+- **Stop database**: `just postgres-down`
+- **Run migrations**: `just migrate-up`
+- **Generate DB models**: `just gen-db-models` (after schema changes)
+- **Build server**: `just server-build`
+- **Run server**: `just server-run`
+- **Run tests**: `just server-test`
 
 ### Frontend (SolidJS Web App)
 
-- **Install dependencies**: `task web:install` (uses pnpm)
-- **Development server**: `task web:dev`
-- **Build production**: `task web:build`
-- **Lint code**: `task web:lint`
+- **Install dependencies**: `just web-install` (uses pnpm)
+- **Development server**: `just web-dev`
+- **Build production**: `just web-build`
+- **Lint code**: `just web-lint`
 
 ### Full Application
 
-- **Build both**: `task build`
-- **Run complete app**: `task run` (builds both, serves web from Go server)
-- **Run complete app in development mode**: `task dev` (builds both, serves web via vite dev server)
-- **Run tests**: `task test`
-- **Clean everything**: `task nuke`
+- **Build both**: `just build`
+- **Run complete app**: `just run` (builds both, serves web from Go server)
+- **Run complete app in development mode**: `just dev` (builds both, serves web via vite dev server)
+- **Run tests**: `just test`
+- **Clean everything**: `just nuke`
 
 ## Architecture Overview
 
@@ -88,6 +90,7 @@ Each domain follows CQRS pattern with:
 - Kobalte UI components for accessibility
 - TanStack Query for server state management
 - File upload with progress tracking and chunked uploads
+- Real-time storage quota display with visual indicators
 
 ## Code Conventions
 
@@ -123,10 +126,11 @@ Each domain follows CQRS pattern with:
 
 - Local file system storage implementation
 - Configurable storage directory via environment variables
-- Chunked upload support for large files
+- Per-user storage quotas
+- Storage usage tracking and display in UI
+- Upload sessions track chunked uploads server-side with upfront quota reservation; foundation for future resumable uploads (end-to-end resume across client interruptions not yet wired)
+- Chunked upload support for large files with concurrent-upload protection
 - File categorization (image, video, audio, text, other)
-- Streaming file processing to minimize memory usage
-- Resource management handled by Go's HTTP server and OS-level limits
 
 ## Testing
 

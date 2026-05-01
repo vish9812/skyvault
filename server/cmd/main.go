@@ -63,6 +63,17 @@ func initDependencies(ctx context.Context) *api.API {
 	// Add health check endpoint
 	go monitorInfraHealth(ctx, infra)
 
+	// TODO: Implement background cleanup job for expired upload sessions
+	// - Run periodically (e.g., every 1 hour)
+	// - Query upload_session table for sessions where expires_at < NOW()
+	// - For each expired session:
+	//   1. Deallocate quota via profileRepository.DecrementStorageUsage(session.QuotaAllocated)
+	//   2. Remove chunk directories via storage.CleanupChunks(session.UploadID)
+	//   3. Delete session record from database
+	// - This prevents disk space exhaustion from abandoned chunked uploads
+	// Example implementation:
+	//   go cleanupExpiredUploadSessions(ctx, infra.Repository.Media, infra.Repository.Profile, infra.Storage)
+
 	// Register cleanup on shutdown
 	app.RegisterCleanup(infra.Cleanup)
 

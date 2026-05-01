@@ -34,6 +34,9 @@ var (
 	ErrSharingExpired             = PublicError{Code: "SHARING_EXPIRED"}
 	ErrSharingMaxDownloadsReached = PublicError{Code: "SHARING_MAX_DOWNLOADS_REACHED"}
 	ErrSharingInvalidCredentials  = PublicError{Code: "SHARING_INVALID_CREDENTIALS"}
+
+	// Storage errors
+	ErrStorageQuotaExceeded = PublicError{Code: "STORAGE_QUOTA_EXCEEDED"}
 )
 
 func (e PublicError) Error() string {
@@ -68,6 +71,8 @@ func (e PublicError) HTTPStatus() int {
 		return http.StatusUnauthorized
 	case ErrSharingExpired, ErrSharingMaxDownloadsReached, ErrSharingInvalidCredentials:
 		return http.StatusForbidden
+	case ErrStorageQuotaExceeded:
+		return http.StatusInsufficientStorage // 507
 	default:
 		return http.StatusInternalServerError
 	}

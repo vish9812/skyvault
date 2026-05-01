@@ -20,4 +20,5 @@ func UseSchema(schema string) {
 	SchemaMigrations = SchemaMigrations.FromSchema(schema)
 	ShareConfig = ShareConfig.FromSchema(schema)
 	ShareRecipient = ShareRecipient.FromSchema(schema)
+	UploadSession = UploadSession.FromSchema(schema)
 }

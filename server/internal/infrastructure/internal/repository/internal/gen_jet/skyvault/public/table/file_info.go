@@ -25,13 +25,14 @@ type fileInfoTable struct {
 	Extension postgres.ColumnString
 	MimeType  postgres.ColumnString
 	Category  postgres.ColumnString
-	Preview   postgres.ColumnString
+	Preview   postgres.ColumnBytea
 	TrashedAt postgres.ColumnTimestamp
 	CreatedAt postgres.ColumnTimestamp
 	UpdatedAt postgres.ColumnTimestamp
 
 	AllColumns     postgres.ColumnList
 	MutableColumns postgres.ColumnList
+	DefaultColumns postgres.ColumnList
 }
 
 type FileInfoTable struct {
@@ -77,12 +78,13 @@ func newFileInfoTableImpl(schemaName, tableName, alias string) fileInfoTable {
 		ExtensionColumn = postgres.StringColumn("extension")
 		MimeTypeColumn  = postgres.StringColumn("mime_type")
 		CategoryColumn  = postgres.StringColumn("category")
-		PreviewColumn   = postgres.StringColumn("preview")
+		PreviewColumn   = postgres.ByteaColumn("preview")
 		TrashedAtColumn = postgres.TimestampColumn("trashed_at")
 		CreatedAtColumn = postgres.TimestampColumn("created_at")
 		UpdatedAtColumn = postgres.TimestampColumn("updated_at")
 		allColumns      = postgres.ColumnList{IDColumn, OwnerIDColumn, FolderIDColumn, NameColumn, SizeColumn, ExtensionColumn, MimeTypeColumn, CategoryColumn, PreviewColumn, TrashedAtColumn, CreatedAtColumn, UpdatedAtColumn}
 		mutableColumns  = postgres.ColumnList{OwnerIDColumn, FolderIDColumn, NameColumn, SizeColumn, ExtensionColumn, MimeTypeColumn, CategoryColumn, PreviewColumn, TrashedAtColumn, CreatedAtColumn, UpdatedAtColumn}
+		defaultColumns  = postgres.ColumnList{CreatedAtColumn, UpdatedAtColumn}
 	)
 
 	return fileInfoTable{
@@ -104,5 +106,6 @@ func newFileInfoTableImpl(schemaName, tableName, alias string) fileInfoTable {
 
 		AllColumns:     allColumns,
 		MutableColumns: mutableColumns,
+		DefaultColumns: defaultColumns,
 	}
 }

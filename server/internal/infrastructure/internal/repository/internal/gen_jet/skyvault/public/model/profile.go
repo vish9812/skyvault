@@ -13,10 +13,12 @@ import (
 )
 
 type Profile struct {
-	ID        uuid.UUID `sql:"primary_key"`
-	Email     string
-	FullName  string
-	Avatar    *[]byte
-	CreatedAt time.Time
-	UpdatedAt time.Time
+	ID           uuid.UUID `sql:"primary_key"`
+	Email        string
+	FullName     string
+	Avatar       *[]byte
+	CreatedAt    time.Time
+	UpdatedAt    time.Time
+	StorageQuota int64
+	StorageUsed  int64
 }

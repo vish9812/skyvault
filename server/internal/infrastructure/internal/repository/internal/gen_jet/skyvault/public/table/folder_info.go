@@ -27,6 +27,7 @@ type folderInfoTable struct {
 
 	AllColumns     postgres.ColumnList
 	MutableColumns postgres.ColumnList
+	DefaultColumns postgres.ColumnList
 }
 
 type FolderInfoTable struct {
@@ -73,6 +74,7 @@ func newFolderInfoTableImpl(schemaName, tableName, alias string) folderInfoTable
 		UpdatedAtColumn      = postgres.TimestampColumn("updated_at")
 		allColumns           = postgres.ColumnList{IDColumn, OwnerIDColumn, NameColumn, ParentFolderIDColumn, TrashedAtColumn, CreatedAtColumn, UpdatedAtColumn}
 		mutableColumns       = postgres.ColumnList{OwnerIDColumn, NameColumn, ParentFolderIDColumn, TrashedAtColumn, CreatedAtColumn, UpdatedAtColumn}
+		defaultColumns       = postgres.ColumnList{CreatedAtColumn, UpdatedAtColumn}
 	)
 
 	return folderInfoTable{
@@ -89,5 +91,6 @@ func newFolderInfoTableImpl(schemaName, tableName, alias string) folderInfoTable
 
 		AllColumns:     allColumns,
 		MutableColumns: mutableColumns,
+		DefaultColumns: defaultColumns,
 	}
 }

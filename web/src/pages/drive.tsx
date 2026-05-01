@@ -1,10 +1,11 @@
 import { Button } from "@kobalte/core/button";
-import { getProfile } from "@sv/apis/auth";
+import { getProfile } from "@sv/apis/profile";
 import { fetchFolderContent, fetchFolderInfo } from "@sv/apis/media";
 import Breadcrumbs from "@sv/components/breadcrumbs";
 import FolderContent from "@sv/components/folderContent";
 import Icon from "@sv/components/icons";
 import useAppCtx from "@sv/store/appCtxProvider";
+import { CONTENT_VIEWS } from "@sv/utils/consts";
 import { Show, createResource, createSignal } from "solid-js";
 
 function Drive() {
@@ -12,8 +13,11 @@ function Drive() {
 
   // TODO: Replace with tanstack query
   const [folderContent] = createResource(
-    () => appCtx.currentFolderId(),
-    fetchFolderContent
+    () => ({
+      id: appCtx.currentFolderId(),
+      version: appCtx.folderContentVersion(),
+    }),
+    ({ id }) => fetchFolderContent(id)
   );
 
   const [folderInfo] = createResource(
@@ -22,7 +26,7 @@ function Drive() {
   );
 
   const [isListView, setIsListView] = createSignal(
-    getProfile()!.preferences.contentView === "list"
+    getProfile()!.preferences.contentView === CONTENT_VIEWS.LIST
   );
 
   const handleContentViewChange = () => {
