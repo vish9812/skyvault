@@ -14,6 +14,7 @@ import type {
   FileInfo,
   FolderContent,
   FolderInfo,
+  Page,
   UploadConfig,
   UploadFileInfo,
   UploadFileResult,
@@ -22,6 +23,15 @@ import type {
 const urlMedia = "media";
 const urlFolders = `${urlMedia}/folders`;
 const urlFiles = `${urlMedia}/files`;
+
+interface PagingParams {
+  limit?: number;
+  direction?: string;
+  sort?: string;
+  sortBy?: string;
+  nextCursor?: string;
+  prevCursor?: string;
+}
 
 export async function fetchFolderInfo(id: string): Promise<FolderInfo> {
   if (id === ROOT_FOLDER_ID) {
@@ -42,6 +52,14 @@ export async function fetchFolderInfo(id: string): Promise<FolderInfo> {
 export async function fetchFolderContent(id: string): Promise<FolderContent> {
   const res = await get(`${urlFolders}/${id}/content`);
   return handleJSONResponse<FolderContent>(res);
+}
+
+export async function fetchChildFolders(
+  id: string,
+  paging?: PagingParams
+): Promise<Page<FolderInfo>> {
+  const res = await get(`${urlFolders}/${id}/folders${queryString(paging)}`);
+  return handleJSONResponse<Page<FolderInfo>>(res);
 }
 
 export async function createFolder(
@@ -242,4 +260,19 @@ export async function trashFolders(folderIds: string[]): Promise<void> {
 async function handleEmptyResponse(res: Response): Promise<void> {
   if (res.status === 204) return;
   await handleJSONResponse<unknown>(res);
+}
+
+function queryString(params?: PagingParams): string {
+  if (!params) return "";
+
+  const query = new URLSearchParams();
+  if (params.limit !== undefined) query.set("limit", String(params.limit));
+  if (params.direction) query.set("direction", params.direction);
+  if (params.sort) query.set("sort", params.sort);
+  if (params.sortBy) query.set("sort-by", params.sortBy);
+  if (params.nextCursor) query.set("next-cursor", params.nextCursor);
+  if (params.prevCursor) query.set("prev-cursor", params.prevCursor);
+
+  const value = query.toString();
+  return value ? `?${value}` : "";
 }

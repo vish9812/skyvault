@@ -45,10 +45,20 @@ function initials(name: string) {
   return `${firstChar}${lastChar}`.toUpperCase();
 }
 
+/**
+ * Capitalize the first letter of a string
+ * @param value - The string to capitalize
+ * @returns The capitalized string
+ */
+function capitalize(value: string) {
+  return value.charAt(0).toUpperCase() + value.slice(1);
+}
+
 const Format = {
   initials,
   size,
   date,
+  capitalize,
 } as const;
 
 export default Format;

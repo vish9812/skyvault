@@ -13,11 +13,11 @@
     "isolatedModules": true,
     "skipLibCheck": true,
     "paths": {
-      "@sv/components/*": ["src/components/*"],
-      "@sv/utils/*": ["src/utils/*"],
-      "@sv/pages/*": ["src/pages/*"],
-      "@sv/apis/*": ["src/apis/*"],
-      "@sv/store/*": ["src/store/*"]
+      "@sv/components/*": ["./src/components/*"],
+      "@sv/utils/*": ["./src/utils/*"],
+      "@sv/pages/*": ["./src/pages/*"],
+      "@sv/apis/*": ["./src/apis/*"],
+      "@sv/store/*": ["./src/store/*"]
     }
   }
 }
