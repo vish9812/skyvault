@@ -57,14 +57,8 @@ function ItemActionMenu(props: Props) {
         <DropdownMenu.Trigger
           class="w-8 h-8 rounded-md flex-center hover:bg-bg-muted transition-colors"
           title={`${props.item.name} actions`}
-          onClick={(e) => {
-            e.stopPropagation();
-            ctx.handleTap({
-              id: props.item.id,
-              type: props.type,
-              name: props.item.name,
-            });
-          }}
+          onPointerDown={(e) => e.stopPropagation()}
+          onClick={(e) => e.stopPropagation()}
         >
           <Icon name="moreOptions" size={5} color="text-neutral-light" />
         </DropdownMenu.Trigger>
