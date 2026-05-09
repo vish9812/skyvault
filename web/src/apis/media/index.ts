@@ -211,6 +211,24 @@ export async function renameFolder(
   await handleEmptyResponse(response);
 }
 
+export async function moveFile(
+  fileId: string,
+  folderId: string
+): Promise<void> {
+  const response = await patch(`${urlFiles}/${fileId}/move`, { folderId });
+  await handleEmptyResponse(response);
+}
+
+export async function moveFolder(
+  folderId: string,
+  destinationFolderId: string
+): Promise<void> {
+  const response = await patch(`${urlFolders}/${folderId}/move`, {
+    folderId: destinationFolderId,
+  });
+  await handleEmptyResponse(response);
+}
+
 export async function trashFiles(fileIds: string[]): Promise<void> {
   const response = await del(`${urlFiles}/`, { fileIds });
   await handleEmptyResponse(response);

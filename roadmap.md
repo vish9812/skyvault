@@ -37,17 +37,17 @@ Server status:
 - [x] `DELETE /api/v1/media/folders/`
 
 Web work:
-- [ ] Add media API client methods for download, rename, move, and trash.
-- [ ] Add file actions in grid and list views: download, rename, move, trash. (download, rename, and trash complete; move pending)
-- [ ] Add folder actions in grid and list views: rename, move, trash. (rename and trash complete; move pending)
+- [x] Add media API client methods for download, rename, move, and trash.
+- [x] Add file actions in grid and list views: download, rename, move, trash.
+- [x] Add folder actions in grid and list views: rename, move, trash.
 - [x] Add a consistent action menu for mouse, keyboard, and touch users.
 - [x] Add reusable rename dialogs with validation for files and folders.
-- [ ] Add a folder picker for move operations, including root selection.
-- [ ] Exclude invalid move targets, including moving a folder into itself or descendants.
+- [x] Add a folder picker for move operations, including root selection.
+- [x] Exclude invalid move targets, including moving a folder into itself or descendants.
 - [x] Add destructive confirmation dialogs for trash operations.
-- [ ] Show loading states while actions are running. (download, rename, and trash complete; move pending)
-- [ ] Show user-friendly errors for validation, permission, network, and server failures. (rename and trash complete; move pending)
-- [ ] Refresh or update local state after successful rename, move, and trash operations. (rename and trash complete; move pending)
+- [x] Show loading states while actions are running.
+- [x] Show user-friendly errors for validation, permission, network, and server failures.
+- [x] Refresh or update local state after successful rename, move, and trash operations.
 - [x] Keep grid and list behavior consistent.
 - [ ] Verify keyboard navigation and accessible dialog behavior.
 

@@ -461,8 +461,10 @@ func (r *MediaRepository) getNestedFoldersCTE(ownerID string, folderIDs []string
 func (r *MediaRepository) GetDescendantFolderIDs(ctx context.Context, ownerID, folderID string) ([]string, error) {
 	nestedFoldersCTE := r.getNestedFoldersCTE(ownerID, []string{folderID}, false)
 
-	stmt := SELECT(FolderInfo.ID.From(nestedFoldersCTE)).
-		FROM(nestedFoldersCTE)
+	stmt := WITH_RECURSIVE(nestedFoldersCTE)(
+		SELECT(FolderInfo.ID.From(nestedFoldersCTE)).
+			FROM(nestedFoldersCTE),
+	)
 
 	var folderIDs []string
 	err := stmt.QueryContext(ctx, r.repository.dbTx, &folderIDs)
