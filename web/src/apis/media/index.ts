@@ -1,7 +1,9 @@
 import {
+  del,
   get,
   handleBlobResponse,
   handleJSONResponse,
+  patch,
   post,
   postFormData,
 } from "@sv/apis/common";
@@ -194,4 +196,32 @@ export async function downloadFile(
   const response = await post(`${urlFiles}/${fileId}/download`, {});
   const blob = await handleBlobResponse(response);
   FileUtils.downloadBlob(blob, fileName);
+}
+
+export async function renameFile(fileId: string, name: string): Promise<void> {
+  const response = await patch(`${urlFiles}/${fileId}/rename`, { name });
+  await handleEmptyResponse(response);
+}
+
+export async function renameFolder(
+  folderId: string,
+  name: string
+): Promise<void> {
+  const response = await patch(`${urlFolders}/${folderId}/rename`, { name });
+  await handleEmptyResponse(response);
+}
+
+export async function trashFiles(fileIds: string[]): Promise<void> {
+  const response = await del(`${urlFiles}/`, { fileIds });
+  await handleEmptyResponse(response);
+}
+
+export async function trashFolders(folderIds: string[]): Promise<void> {
+  const response = await del(`${urlFolders}/`, { folderIds });
+  await handleEmptyResponse(response);
+}
+
+async function handleEmptyResponse(res: Response): Promise<void> {
+  if (res.status === 204) return;
+  await handleJSONResponse<unknown>(res);
 }

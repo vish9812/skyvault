@@ -12,13 +12,12 @@
     "noEmit": true,
     "isolatedModules": true,
     "skipLibCheck": true,
-    "baseUrl": "src",
     "paths": {
-      "@sv/components/*": ["components/*"],
-      "@sv/utils/*": ["utils/*"],
-      "@sv/pages/*": ["pages/*"],
-      "@sv/apis/*": ["apis/*"],
-      "@sv/store/*": ["store/*"]
+      "@sv/components/*": ["src/components/*"],
+      "@sv/utils/*": ["src/utils/*"],
+      "@sv/pages/*": ["src/pages/*"],
+      "@sv/apis/*": ["src/apis/*"],
+      "@sv/store/*": ["src/store/*"]
     }
   }
 }

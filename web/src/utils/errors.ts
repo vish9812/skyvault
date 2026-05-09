@@ -23,7 +23,7 @@ const authErrorMessages: Record<string, string> = {
 };
 
 export function defaultErrorMessage(code: string): string {
-  return errorMessages[code] || errorMessages.COMMON_GENERIC_ERROR;
+  return errorMessages[code] || errorMessages[COMMON_ERR_KEYS.GENERIC];
 }
 
 export function getAuthErrorMessage(code: string): string {

@@ -1,9 +1,8 @@
-import { downloadFile } from "@sv/apis/media";
 import type { FileInfo, FolderInfo } from "@sv/apis/media/models";
-import Icon, { FileIcon } from "@sv/components/icons";
+import { FileIcon } from "@sv/components/icons";
 import { FOLDER_CONTENT_TYPES } from "@sv/utils/consts";
 import Format from "@sv/utils/format";
-import { Show, createSignal } from "solid-js";
+import ItemActionMenu from "./itemActionMenu";
 import useCtx from "./ctxProvider";
 
 interface ListItemProps {
@@ -13,7 +12,6 @@ interface ListItemProps {
 
 function ListItem(props: ListItemProps) {
   const ctx = useCtx();
-  const [isDownloading, setIsDownloading] = createSignal(false);
 
   const isSelected = () => ctx.selectedItem()?.id === props.item.id;
 
@@ -23,21 +21,6 @@ function ListItem(props: ListItemProps) {
       type: props.type,
       name: props.item.name,
     });
-  };
-
-  const handleDownload = async (e: Event) => {
-    e.stopPropagation();
-    if (isDownloading() || props.type !== FOLDER_CONTENT_TYPES.FILE) return;
-
-    setIsDownloading(true);
-    try {
-      await downloadFile(props.item.id, props.item.name);
-      ctx.clearSelection(); // Clear selection after download
-    } catch (error) {
-      console.error("Download failed:", error);
-    } finally {
-      setIsDownloading(false);
-    }
   };
 
   return (
@@ -63,20 +46,7 @@ function ListItem(props: ListItemProps) {
       </div>
       <div class="hidden md:block">{Format.date(props.item.updatedAt)}</div>
       <div class="flex justify-center">
-        <Show when={isSelected() && props.type === FOLDER_CONTENT_TYPES.FILE}>
-          <button
-            class="w-8 h-8 rounded-md flex-center hover:bg-bg-muted transition-colors"
-            onClick={handleDownload}
-            disabled={isDownloading()}
-            title="Download file"
-          >
-            <Icon
-              name="download"
-              size={4}
-              color={isDownloading() ? "text-neutral-lighter" : "text-primary"}
-            />
-          </button>
-        </Show>
+        <ItemActionMenu type={props.type} item={props.item} />
       </div>
     </div>
   );

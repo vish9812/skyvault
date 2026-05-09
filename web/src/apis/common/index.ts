@@ -34,6 +34,34 @@ export function post(url: string, data: any) {
   });
 }
 
+export function patch(url: string, data: any) {
+  const token = localStorage.getItem(LOCAL_STORAGE_KEYS.TOKEN);
+  if (!token) throw new Error("No token found");
+
+  return fetch(`${ROOT_URL}/${url}`, {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(data),
+  });
+}
+
+export function del(url: string, data: any) {
+  const token = localStorage.getItem(LOCAL_STORAGE_KEYS.TOKEN);
+  if (!token) throw new Error("No token found");
+
+  return fetch(`${ROOT_URL}/${url}`, {
+    method: "DELETE",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(data),
+  });
+}
+
 export function postFormData(
   url: string,
   formData: FormData,

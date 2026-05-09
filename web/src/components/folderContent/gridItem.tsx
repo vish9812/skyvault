@@ -1,9 +1,9 @@
-import { downloadFile } from "@sv/apis/media";
 import type { FileInfo, FolderInfo } from "@sv/apis/media/models";
-import Icon, { FileIcon } from "@sv/components/icons";
+import { FileIcon } from "@sv/components/icons";
 import { FOLDER_CONTENT_TYPES } from "@sv/utils/consts";
 import Format from "@sv/utils/format";
-import { Show, createSignal } from "solid-js";
+import { Show } from "solid-js";
+import ItemActionMenu from "./itemActionMenu";
 import useCtx from "./ctxProvider";
 
 interface GridItemProps {
@@ -13,7 +13,6 @@ interface GridItemProps {
 
 function GridItem(props: GridItemProps) {
   const ctx = useCtx();
-  const [isDownloading, setIsDownloading] = createSignal(false);
 
   const isSelected = () => ctx.selectedItem()?.id === props.item.id;
 
@@ -25,21 +24,6 @@ function GridItem(props: GridItemProps) {
     });
   };
 
-  const handleDownload = async (e: Event) => {
-    e.stopPropagation();
-    if (isDownloading() || props.type !== FOLDER_CONTENT_TYPES.FILE) return;
-
-    setIsDownloading(true);
-    try {
-      await downloadFile(props.item.id, props.item.name);
-      ctx.clearSelection(); // Clear selection after download
-    } catch (error) {
-      console.error("Download failed:", error);
-    } finally {
-      setIsDownloading(false);
-    }
-  };
-
   return (
     <div
       class={`w-40 h-40 md:w-48 md:h-48 bg-white rounded-lg border shadow-sm transition-all cursor-pointer relative ${
@@ -49,23 +33,9 @@ function GridItem(props: GridItemProps) {
       }`}
       onClick={handleClick}
     >
-      {/* Context menu for selected files */}
-      <Show when={isSelected() && props.type === FOLDER_CONTENT_TYPES.FILE}>
-        <div class="absolute top-2 right-2 bg-white rounded-lg shadow-lg border border-border p-1 z-10">
-          <button
-            class="w-8 h-8 rounded-md flex-center hover:bg-bg-muted transition-colors"
-            onClick={handleDownload}
-            disabled={isDownloading()}
-            title="Download file"
-          >
-            <Icon
-              name="download"
-              size={4}
-              color={isDownloading() ? "text-neutral-lighter" : "text-primary"}
-            />
-          </button>
-        </div>
-      </Show>
+      <div class="absolute top-2 right-2 bg-white rounded-lg shadow-lg border border-border p-1 z-10">
+        <ItemActionMenu type={props.type} item={props.item} />
+      </div>
 
       {/* File/folder icon or preview */}
       <div class="flex-center h-28 md:h-34 rounded-t-lg border-b border-border bg-bg-subtle">

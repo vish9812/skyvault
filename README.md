@@ -215,7 +215,13 @@ docker compose down -v
    just postgres-up
    ```
 
-4. **Start development servers**
+4. **Migrate up the database**
+
+   ```bash
+   just migrate-up
+   ```
+
+5. **Start development servers**
 
    ```bash
    # Terminal 1: Start backend
