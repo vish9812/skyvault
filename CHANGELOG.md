@@ -158,7 +158,7 @@ This is the first public release of SkyVault, a self-hosted cloud storage soluti
 
 ### 🔮 Coming Soon
 
-See [TODO.md](TODO.md) for planned features:
+See [roadmap.md](roadmap.md) for planned features:
 
 - File operations (rename, move, delete)
 - Folder operations (rename, move, delete)

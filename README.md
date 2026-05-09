@@ -304,28 +304,7 @@ skyvault/
 
 ## 🗺️ Roadmap
 
-### Completed ✅
-
-- JWT-based authentication
-- Folder creation and navigation
-- File upload with chunked upload support
-- File download
-- Per-user storage quotas with real-time tracking
-- Storage usage visualization in UI
-
-### In Progress 🚧
-
-- Epic 1: File Operations (rename, move, delete)
-- Epic 2: Folder Operations (rename, move, delete)
-
-### Planned 📋
-
-- Epic 3: Contact Management System
-- Epic 4: Core File Sharing
-- Epic 5: Shared Content Management
-- Epic 6: Advanced Sharing Features
-
-See [TODO.md](TODO.md) for detailed roadmap.
+See [roadmap.md](roadmap.md) for application progress and next tasks.
 
 ## 🤝 Contributing
 

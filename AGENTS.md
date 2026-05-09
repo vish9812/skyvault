@@ -6,6 +6,8 @@ SkyVault is split into a Go backend and a SolidJS frontend. Backend code lives i
 
 Frontend code lives in `web/src`: `pages` for routes, `components` for reusable UI, `apis` for typed API clients, `store` for app context, `utils` for helpers, and `assets` for static files. Root files include Docker config and the `justfile` task runner.
 
+Application progress and next tasks are maintained in `roadmap.md`; keep roadmap status updates there instead of duplicating them in other docs.
+
 ## Build, Test, and Development Commands
 
 Use `just` from the repository root.
