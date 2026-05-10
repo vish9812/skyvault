@@ -8,6 +8,14 @@ Frontend code lives in `web/src`: `pages` for routes, `components` for reusable 
 
 Application progress and next tasks are maintained in `roadmap.md`; keep roadmap status updates there instead of duplicating them in other docs.
 
+## Product & Engineering Principles
+
+SkyVault is a file-storage application, so security, data integrity, and user trust are the default priorities. Treat authentication, authorization, path handling, quota enforcement, upload validation, error handling, and data ownership checks as core product behavior rather than incidental implementation details.
+
+Design backend changes with the full system in mind: keep domain rules explicit, preserve clean boundaries, consider transactionality and rollback behavior, and avoid shortcuts that make storage state, database state, or quota accounting diverge. Prefer simple, auditable flows over clever abstractions.
+
+Design frontend changes around a clear user experience. File operations should provide responsive feedback, accessible controls, useful loading and error states, and predictable behavior on slow or failed networks. UI changes should help users understand what happened, what is happening, and what they can do next.
+
 ## Architecture Notes
 
 Backend domains under `server/internal/domain` follow a clean architecture style. Keep write operations in `commands.go` and `command_handlers.go`, read operations in `queries.go` and `query_handlers.go`, input validation in `*_sanitizer.go`, and repository interfaces in the domain layer. Use `server/internal/workflows` only for cross-domain write operations such as signup/signin coordination, and keep transactional orchestration there.
