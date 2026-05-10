@@ -80,3 +80,12 @@ func (h *QueryHandlers) GetFolderContent(ctx context.Context, query *GetFolderCo
 		FolderPage: folders,
 	}, nil
 }
+
+func (h *QueryHandlers) GetChildFolders(ctx context.Context, query *GetChildFoldersQuery) (*paging.Page[*FolderInfo], error) {
+	folders, err := h.repository.GetFolderInfos(ctx, query.PagingOpt, query.OwnerID, query.FolderID)
+	if err != nil {
+		return nil, apperror.NewAppError(err, "QueryHandlers.GetChildFolders:GetFolderInfos")
+	}
+
+	return folders, nil
+}

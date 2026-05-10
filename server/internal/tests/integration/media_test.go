@@ -34,11 +34,18 @@ func TestMediaManagementFlow(t *testing.T) {
 	require.Equal(t, file1.Name, contents1.FilePage.Items[0].Name, "file in folder should have correct name")
 	require.Len(t, contents1.FolderPage.Items, 0, "folder should not contain any subfolders")
 
+	childFolders1 := getChildFolders(t, env, token, folder1.ID)
+	require.Len(t, childFolders1.Items, 0, "child folder endpoint should not include files")
+
 	// Verify root folder contents
 	rootContents := getFolderContents(t, env, token, "0")
 	require.Len(t, rootContents.FolderPage.Items, 1, "root should contain exactly one folder")
 	require.Equal(t, folder1.Name, rootContents.FolderPage.Items[0].Name, "folder in root should have correct name")
 	require.Len(t, rootContents.FilePage.Items, 0, "root should not contain any files")
+
+	rootChildFolders := getChildFolders(t, env, token, "0")
+	require.Len(t, rootChildFolders.Items, 1, "root child folders endpoint should contain exactly one folder")
+	require.Equal(t, folder1.ID, rootChildFolders.Items[0].ID, "root child folder should be the created folder")
 
 	// Download the file
 	buf := make([]byte, common.BytesPerKB)

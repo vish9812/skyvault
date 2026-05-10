@@ -16,6 +16,8 @@ type Queries interface {
 
 	GetFolderContent(ctx context.Context, query *GetFolderContentQuery) (*GetFolderContentRes, error)
 
+	GetChildFolders(ctx context.Context, query *GetChildFoldersQuery) (*paging.Page[*FolderInfo], error)
+
 	// The file MUST be CLOSED after use by the caller.
 	//
 	// App Errors:
@@ -45,6 +47,12 @@ type GetFolderContentQuery struct {
 type GetFolderContentRes struct {
 	FilePage   *paging.Page[*FileInfo]
 	FolderPage *paging.Page[*FolderInfo]
+}
+
+type GetChildFoldersQuery struct {
+	OwnerID   string
+	FolderID  *string
+	PagingOpt *paging.Options
 }
 
 type GetFileQuery struct {

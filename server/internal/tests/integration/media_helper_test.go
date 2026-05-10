@@ -120,6 +120,21 @@ func getFolderContents(t *testing.T, env *testEnv, token string, folderID string
 	return &content
 }
 
+func getChildFolders(t *testing.T, env *testEnv, token string, folderID string) *paging.Page[*dtos.GetFolderInfo] {
+	t.Helper()
+	req, err := http.NewRequest(http.MethodGet, folderURL(folderID)+"/folders", nil)
+	require.NoError(t, err, "should create new request for child folders")
+	req.Header.Set("Authorization", "Bearer "+token)
+
+	resp := executeRequest(t, env, req)
+	require.Equal(t, http.StatusOK, resp.Code, "should return status ok for child folders")
+
+	var folders paging.Page[*dtos.GetFolderInfo]
+	err = json.NewDecoder(resp.Body).Decode(&folders)
+	require.NoError(t, err)
+	return &folders
+}
+
 func renameFile(t *testing.T, env *testEnv, token string, fileID string, newName string) {
 	t.Helper()
 	body := map[string]string{"name": newName}

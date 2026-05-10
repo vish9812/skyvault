@@ -69,6 +69,7 @@ func (a *MediaAPI) InitRoutes() *MediaAPI {
 			r.Route(fmt.Sprintf("/{%s}", urlParamFolderID), func(r chi.Router) {
 				r.Get("/", a.GetFolderInfo)
 				r.Get("/content", a.GetFolderContent)
+				r.Get("/folders", a.GetChildFolders)
 				r.Post("/", a.CreateFolder)
 				r.Patch("/rename", a.RenameFolder)
 				r.Patch("/move", a.MoveFolder)
@@ -742,6 +743,41 @@ func (a *MediaAPI) GetFolderContent(w http.ResponseWriter, r *http.Request) {
 	err = copier.Copy(&dto, res)
 	if err != nil {
 		helper.RespondError(w, r, apperror.NewAppError(err, "mediaAPI.GetFolderContent:Copy"))
+		return
+	}
+
+	helper.RespondJSON(w, http.StatusOK, &dto)
+}
+
+func (a *MediaAPI) GetChildFolders(w http.ResponseWriter, r *http.Request) {
+	profileID := common.GetProfileIDFromContext(r.Context())
+	var folderID *string
+	if id := chi.URLParam(r, urlParamFolderID); validate.UUID(id) {
+		folderID = &id
+	}
+
+	pagingOpt, err := pagingOptionsFromQuery(r, "")
+	if err != nil {
+		helper.RespondError(w, r, apperror.NewAppError(err, "mediaAPI.GetChildFolders:PagingOptionsFromQuery"))
+		return
+	}
+
+	query := &media.GetChildFoldersQuery{
+		OwnerID:   profileID,
+		FolderID:  folderID,
+		PagingOpt: pagingOpt,
+	}
+
+	folders, err := a.queries.GetChildFolders(r.Context(), query)
+	if err != nil {
+		helper.RespondError(w, r, apperror.NewAppError(err, "mediaAPI.GetChildFolders:GetChildFolders"))
+		return
+	}
+
+	var dto paging.Page[*dtos.GetFolderInfo]
+	err = copier.Copy(&dto, folders)
+	if err != nil {
+		helper.RespondError(w, r, apperror.NewAppError(err, "mediaAPI.GetChildFolders:Copy"))
 		return
 	}
 
